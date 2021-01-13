@@ -16,6 +16,11 @@ The aimed structured is:
 - gaussian elimination
 - birthday search
 
+Sub-goals:
+- flexible: to easily implement wide scope of algorithms mentioned below.
+- allow low-level optimizations (minimize inner-loop operations, cache effects, simd)
+- (allow to bitslice and/or offload operations on simd/gpu?)
+
 ## Desired algorithms
 
 - Prange
