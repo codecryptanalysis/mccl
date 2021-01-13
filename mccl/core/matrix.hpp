@@ -435,7 +435,7 @@ void example_code {
     // <load content>
     
     // copy 16x16 submatrix to another submatrix
-    * matview.submatrix(0,16,0,16) ^= matview.submatrix(16,16,0,16);
+    * matview.submatrix(0,16,0,16) = matview.submatrix(16,16,0,16);
     // add 16x16 submatrix to another submatrix
     * matview.submatrix(0,16,0,16) ^= matview.submatrix(32,16,0,16);
     
