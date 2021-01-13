@@ -1,0 +1,11 @@
+#ifndef MCCL_CONFIG_CONFIG_H
+#define MCCL_CONFIG_CONFIG_H
+
+#define MCCL_NAMESPACE mccl
+
+#define MCCL_BEGIN_NAMESPACE namespace MCCL_NAMESPACE {
+#define MCCL_END_NAMESPACE }
+
+
+
+#endif
