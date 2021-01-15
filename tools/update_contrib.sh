@@ -1,24 +1,27 @@
 #!/bin/bash
 
+dir=$(dirname "$0")/../mccl/contrib
+
 function process_url
 {
 while read url; do
 	echo "==========================="
 	filename=$(basename $url)
 	echo "Checking for new version of $filename at $url"
-	if wget -qO ${filename}.new $url; then
-		if diff -sq ${filename} ${filename}.new; then
+	filename="${dir}/${filename}"
+	if wget -qO "${filename}.new" $url; then
+		if diff -sq "${filename}" "${filename}.new"; then
 			echo "No new version found"
 		else
 			# files differ
-			mv ${filename}.new ${filename}
+			mv "${filename}.new" "${filename}"
 			echo "New version found:"
-			head -n10 ${filename}
+			head -n10 "${filename}"
 		fi
 	else
 		echo "Update check failed"
 	fi
-	rm ${filename}.new 2>/dev/null
+	rm "${filename}.new" 2>/dev/null
 done
 }
 
