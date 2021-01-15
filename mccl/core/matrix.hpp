@@ -2,13 +2,9 @@
 #define MCCL_CORE_MATRIX_HPP
 
 #include <mccl/config/config.hpp>
+#include <mccl/core/matrix_storage.hpp>
 
 MCCL_BEGIN_NAMESPACE
-
-// matrix_storage allocates & manages memory for matrices
-class matrix_storage;
-// storage_traits helps distinguishing between non-const/const matrix_storage
-template<typename Storage> struct storage_traits;
 
 // matrix_view defines a submatrix of matrix_storage
 template<typename Storage = matrix_storage> class matrix_view;
@@ -19,74 +15,6 @@ template<typename Storage = matrix_storage> class matrix_view_content;
 template<typename Storage = matrix_storage> class vector_view;
 // vector_view_content is a short-lived wrapper around vector_view with intent to modify content
 template<typename Storage = matrix_storage> class vector_view_content;
-
-
-
-/* matrix storage */
-
-// matrix storage automatically rounds up columns
-class matrix_storage {
-public:
-    matrix_storage(size_t rows, size_t columns)
-    {
-        this->_alloc(rows, columns);
-    }
-    ~matrix_storage()
-    {
-        this->_free();
-    }
-    
-    size_t rows() const { return _rows; }
-    size_t columns() const { return _columns; }
-    size_t scratchcolumns() const { return _scratchcolumns; }
-
-    uint8_t* data(size_t r, size_t c);
-    const uint8_t* data(size_t r, size_t c) const;
-    const uint8_t* cdata(size_t r, size_t c) const;
-    size_t stride() const { return _stride; }
-    
-    matrix_view<matrix_storage> matrixview(); // { return matrix_view<matrix_storage>(*this, 0, rows(), 0, columns(), scratchcolumns()); }
-    matrix_view<matrix_storage> submatrixview(size_t row_offset, size_t rows, size_t column_offset, size_t columns);
-        
-private:
-    void _alloc(size_t rows, size_t columns);
-    void _free();
-    void* _ptr; // raw memory allocation
-
-    uint8_t* _data; // manually aligned memory
-    size_t _stride; // _stride * 8 = _columns + _scratchcolumns
-
-    size_t _rows, _columns, _scratchcolumns;
-};
-
-template<typename Storage>
-struct storage_traits;
-
-template<>
-struct storage_traits<matrix_storage>
-{
-    typedef uint8_t data_t;
-    typedef const uint8_t const_data_t;
-    typedef data_t* pointer_t;
-    typedef const_data_t* const_pointer_t;
-
-    static const bool modifiable = true;
-    static const size_t byte_alignment = 1; // <= will change in future with implementation
-};
-template<>
-struct storage_traits<const matrix_storage>
-{
-    typedef const uint8_t data_t;
-    typedef const uint8_t const_data_t;
-    typedef data_t* pointer_t;
-    typedef const_data_t* const_pointer_t;
-
-    static const bool modifiable = false;
-    static const size_t byte_alignment = 1; // <= will change in future with implementation
-};
-
-
-
 
 /* matrix & vector views */
 
@@ -446,7 +374,7 @@ inline void example_code() {
     matrix_storage matrix(512, 1024);
     matrix_storage helper_vectors(512, 1024);
     
-    matrix_view<matrix_storage> matview(matrix.matrixview());
+    matrix_view<matrix_storage> matview(matrix);
     
     // <load content>
     

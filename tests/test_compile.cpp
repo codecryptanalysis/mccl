@@ -1,4 +1,13 @@
+#include <mccl/config/config.hpp>
 #include <mccl/core/matrix.hpp>
+#include <mccl/core/birthday.hpp>
+
+#include <mccl/contrib/string_algo.hpp>
+#include <mccl/contrib/thread_pool.hpp>
+#include <mccl/contrib/parallel_algorithms.hpp>
+#include <mccl/contrib/json.hpp>
+#include <mccl/contrib/program_options.hpp>
+
 #include <iostream>
 
 #include "test_utils.h"
