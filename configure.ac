@@ -2,7 +2,6 @@ AC_PREREQ([2.68])
 # Important: DBLPBIBTEX version needs to match with: ./version src/core.hpp
 AC_INIT([mccl], [0.1], [marc@marc-stevens.nl],[mccl],[https://github.com/cr-marcstevens/mccl])
 AC_CONFIG_SRCDIR([README.md])
-AC_CONFIG_HEADERS([mccl/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
@@ -42,8 +41,11 @@ LIBS="$PTHREAD_LIBS $LIBS"
 CPPFLAGS="$CPPFLAGS"
 CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 
+AC_CONFIG_HEADERS([config.h])
+AX_PREFIX_CONFIG_H([mccl/config/config.h])
+
 AC_CONFIG_FILES([
-Makefile
+	Makefile
 ])
 
 AC_OUTPUT

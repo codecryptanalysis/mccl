@@ -1,7 +1,7 @@
 #ifndef MCCL_CORE_MATRIX_HPP
 #define MCCL_CORE_MATRIX_HPP
 
-#include <mccl/config/config.h>
+#include <mccl/config/config.hpp>
 
 MCCL_BEGIN_NAMESPACE
 
@@ -45,13 +45,13 @@ public:
     const uint8_t* cdata(size_t r, size_t c) const;
     size_t stride() const { return _stride; }
     
-    matrix_view<matrix_storage> matrix_view() { return matrix_view<matrix_storage>(*this, 0, rows(), 0, columns(), scratchcolumns()); }
-    matrix_view<matrix_storage> submatrix_view(size_t row_offset, size_t rows, size_t column_offset, size_t columns);
+    matrix_view<matrix_storage> matrixview(); // { return matrix_view<matrix_storage>(*this, 0, rows(), 0, columns(), scratchcolumns()); }
+    matrix_view<matrix_storage> submatrixview(size_t row_offset, size_t rows, size_t column_offset, size_t columns);
         
 private:
-    void _alloc(size_t rows);
+    void _alloc(size_t rows, size_t columns);
     void _free();
-    void* _alloc; // raw memory allocation
+    void* _ptr; // raw memory allocation
 
     uint8_t* _data; // manually aligned memory
     size_t _stride; // _stride * 8 = _columns + _scratchcolumns
@@ -71,7 +71,7 @@ struct storage_traits<matrix_storage>
     typedef const_data_t* const_pointer_t;
 
     static const bool modifiable = true;
-    static const size_t byte_alignment = 1;
+    static const size_t byte_alignment = 1; // <= will change in future with implementation
 };
 template<>
 struct storage_traits<const matrix_storage>
@@ -82,7 +82,7 @@ struct storage_traits<const matrix_storage>
     typedef const_data_t* const_pointer_t;
 
     static const bool modifiable = false;
-    static const size_t byte_alignment = 1;
+    static const size_t byte_alignment = 1; // <= will change in future with implementation
 };
 
 
@@ -91,35 +91,43 @@ struct storage_traits<const matrix_storage>
 /* matrix & vector views */
 
 // matrix_view_content: wrapper around matrix_view with modify & compare operators
-template<typename Storage>
+template<typename MatrixView>
 class matrix_view_content {
-    matrix_view<Storage>& _matrix_view;
 public:
-    matrix_view_content(matrix_view<Storage>& matrix_view): _matrix_view(matrix_view) {}
+    typedef MatrixView matrix_view_t;
     
-    template<typename MatrixView>
-    matrix_view& operator=(const MatrixView& matrix) { return _matrix_view.assign(matrix); }
-    template<typename MatrixView>
-    matrix_view& operator^=(const MatrixView& matrix) { return _matrix_view.add(matrix); }
+    matrix_view_content(matrix_view_t& matrix_view): _matrix_view(matrix_view) {}
     
-    template<typename MatrixView>
-    bool operator==(const MatrixView& matrix) { return _matrix_view.compare(matrix); }
-    template<typename MatrixView>
-    bool operator!=(const MatrixView& matrix) { return !_matrix_view.compare(matrix); }
+    template<typename MatrixView2>
+    matrix_view_t& operator=(const MatrixView2& matrix) { return _matrix_view.assign(matrix); }
+    template<typename MatrixView2>
+    matrix_view_t& operator^=(const MatrixView2& matrix) { return _matrix_view.add(matrix); }
+    
+    template<typename MatrixView2>
+    bool operator==(const MatrixView2& matrix) { return _matrix_view.compare(matrix); }
+    template<typename MatrixView2>
+    bool operator!=(const MatrixView2& matrix) { return !_matrix_view.compare(matrix); }
+private:
+    matrix_view_t& _matrix_view;
 };
 
 // matrix_view
 template<typename Storage>
 class matrix_view {
 public:
-    using typename storage_traits<Storage>::pointer_t;
-    using typename storage_traits<Storage>::const_pointer_t;
+//    using typename storage_traits<Storage>::pointer_t;
+//    using typename storage_traits<Storage>::const_pointer_t;
+    typedef typename storage_traits<Storage>::pointer_t pointer_t;
+    typedef typename storage_traits<Storage>::const_pointer_t const_pointer_t;
     
     /* CONSTRUCT MATRIX VIEW */
     // relative to full storage
     matrix_view(Storage& matrix);
     matrix_view(Storage& matrix, size_t row_offset, size_t rows, size_t column_offset, size_t columns, size_t scratchcolumns = 0);
     // relative to matrix_view
+    matrix_view(const matrix_view& matrix) = default;
+    matrix_view(matrix_view&& matrix) = default;
+    
     template<typename Storage2 = Storage>
     matrix_view(matrix_view<Storage2>& matrix);
     template<typename Storage2 = Storage>
@@ -179,10 +187,10 @@ public:
     void assign(bool b);
     
     template<typename MatrixView>
-    void assign(const MatrixView&);
+    matrix_view& assign(const MatrixView&);
     
     template<typename MatrixView>
-    void add(const MatrixView&);
+    matrix_view& add(const MatrixView&);
     
     template<typename MatrixView>
     bool compare(const MatrixView&);
@@ -193,10 +201,10 @@ public:
     bool operator!=(const matrix_view_content<MatrixView>&);
 
     template<typename MatrixView>
-    void assign_transposed(const MatrixView&);
+    matrix_view& assign_transposed(const MatrixView&);
     
     template<typename MatrixView>
-    void add_transposed(const MatrixView&);
+    matrix_view& add_transposed(const MatrixView&);
 
     
     // row/column operations
@@ -266,6 +274,8 @@ public:
     void setbit(size_t r, size_t c, bool b);
     template<bool b> void setbit(size_t r, size_t c);
     
+    bool operator()(size_t r, size_t c) const { return getbit(r, c); }
+    
     // manipulate raw bytes: return pointer to byte containing bit at row r column c
     // WARNING: must ensure alignment to full bytes yourself
     pointer_t data(size_t r, size_t c);
@@ -300,35 +310,41 @@ private:
 
 
 // vector_view_content: wrapper around vector_view with modify operators
-template<typename Storage>
+template<typename VectorView>
 class vector_view_content {
-    vector_view<Storage>& _vector_view;
 public:
-    vector_view_content(vector_view<Storage>& vector_view): _vector_view(vector_view) {}
+    typedef VectorView vector_view_t;
+    vector_view_content(vector_view_t& vector_view): _vector_view(vector_view) {}
     
-    template<typename VectorView>
-    vector_view& operator=(const VectorView& vector) { return _vector_view.assign(vector); }
-    template<typename VectorView>
-    vector_view& operator^=(const VectorView& vector) { return _vector_view.add(vector); }
-    template<typename VectorView>
-    vector_view& operator&=(const VectorView& vector) { return _vector_view.and(vector); }
-    template<typename VectorView>
-    vector_view& operator|=(const VectorView& vector) { return _vector_view.or(vector); }
+    template<typename VectorView2>
+    vector_view_t& operator=(const VectorView2& vector);// { return _vector_view.assign(vector); }
+    template<typename VectorView2>
+    vector_view_t& operator^=(const VectorView2& vector);// { return _vector_view.add(vector); }
+    template<typename VectorView2>
+    vector_view_t& operator&=(const VectorView2& vector);// { return _vector_view.and(vector); }
+    template<typename VectorView2>
+    vector_view_t& operator|=(const VectorView2& vector);// { return _vector_view.or(vector); }
 
-    template<typename VectorView>
-    bool operator==(const VectorView& vector) { return _vector_view.compare(vector); }
-    template<typename VectorView>
-    bool operator!=(const VectorView& vector) { return !_vector_view.compare(vector); }
+    template<typename VectorView2>
+    bool operator==(const VectorView2& vector);// { return _vector_view.compare(vector); }
+    template<typename VectorView2>
+    bool operator!=(const VectorView2& vector);// { return !_vector_view.compare(vector); }
+
+private:
+    vector_view_t& _vector_view;
 };
 
 // vector_view<matrix_storage>, vector_view<const matrix_storage>
-template<typename Storage = matrix_storage>
+template<typename Storage>
 class vector_view {
+public:
+    typedef typename storage_traits<Storage>::pointer_t pointer_t;
+    typedef typename storage_traits<Storage>::const_pointer_t const_pointer_t;
 
     /* CONSTRUCT VECTOR VIEW */
 
     // relative to storage
-    vector_view(Storage& matrix, size_t column_offset, size_t columns, size_t row, scratch_columns = 0);
+    vector_view(Storage& matrix, size_t column_offset, size_t columns, size_t row, size_t scratch_columns = 0);
     // relative to matrix_view
     template<typename MatrixView>
     vector_view(MatrixView& matrix, size_t column_offset, size_t columns, size_t row, size_t scratch_columns = 0);
@@ -375,21 +391,21 @@ class vector_view {
     void assign(const VectorView& vector);
 
     template<typename MatrixView>
-    void add(const MatrixView& matrix, size_t src);
+    void vadd(const MatrixView& matrix, size_t src);
     template<typename VectorView>
-    void add(const VectorView& vector);
+    void vadd(const VectorView& vector);
     
     template<typename MatrixView>
-    void and(const MatrixView& matrix, size_t src);
+    void vand(const MatrixView& matrix, size_t src);
     template<typename VectorView>
-    void and(const VectorView& vector);
+    void vand(const VectorView& vector);
 
     template<typename MatrixView>
-    void or(const MatrixView& matrix, size_t src);
+    void vor(const MatrixView& matrix, size_t src);
     template<typename VectorView>
-    void or(const VectorView& vector);
+    void vor(const VectorView& vector);
 
-    void not();
+    void vnot();
 
     size_t row_weight() const;
     
@@ -426,18 +442,18 @@ private:
 
 
 
-void example_code {
+inline void example_code() {
     matrix_storage matrix(512, 1024);
     matrix_storage helper_vectors(512, 1024);
     
-    matrix_view matview(matrix);
+    matrix_view<matrix_storage> matview(matrix.matrixview());
     
     // <load content>
     
     // copy 16x16 submatrix to another submatrix
-    * matview.submatrix(0,16,0,16) = matview.submatrix(16,16,0,16);
+    * matview.submatrix_view(0,16,0,16) = matview.submatrix_view(16,16,0,16);
     // add 16x16 submatrix to another submatrix
-    * matview.submatrix(0,16,0,16) ^= matview.submatrix(32,16,0,16);
+    * matview.submatrix_view(0,16,0,16) ^= matview.submatrix_view(32,16,0,16);
     
     // one step of gaussian elimination
     size_t pivot = matview.find_in_column(0, 1);
