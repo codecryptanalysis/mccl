@@ -38,4 +38,5 @@ https://github.com/cr-marcstevens/mccl/blob/main/mccl/core/matrix.hpp
 autoreconf --install
 ./configure
 make
+make check
 ```
