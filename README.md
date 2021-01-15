@@ -31,3 +31,11 @@ https://github.com/cr-marcstevens/mccl/blob/main/mccl/core/matrix.hpp
 - `tools`: additional tools for mccl project
   - `update_contrib.sh`: update contrib files
 - `m4`, `configure.ac`, `Makefile.am`: autotools build system files
+
+# Building
+
+```
+autoreconf --install
+./configure
+make
+```
