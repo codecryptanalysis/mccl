@@ -11,7 +11,7 @@ MCCL_BEGIN_NAMESPACE
 
 // virtual base class: interface for ISD for a given syndrome target
 template<typename data_t>
-class ISDAPI_target
+class ISD_API_target
 {
 public:
     // pass parameters to actual object
@@ -39,7 +39,7 @@ public:
 
 // virtual base class: interface for exhaustive ISD returning all solutions
 template<typename data_t>
-class ISDAPI_exhaustive
+class ISD_API_exhaustive
 {
 public:
     // pass parameters to actual object
@@ -64,10 +64,15 @@ public:
 };
 
 
-template<typename data_t>
-class ISD_target_generic: public ISDAPI_target<data_t>
+template<typename data_t, typename subISD_t = ISD_API_exhaustive<data_t> >
+class ISD_target_generic: public ISD_API_target<data_t>
 {
 public:
+    ISD_target_generic(subISD_t& sI)
+        : subISD(&sI)
+    {
+    }
+    
     // pass parameters to actual object
     //virtual void configure(const parameters_t& params) = 0;
     
@@ -95,6 +100,8 @@ public:
         while (!loop_next())
             ;
     }*/
+    
+    subISD_t* subISD;
     
     vector_t<data_t> e;
     matrix_t<data_t> H;
