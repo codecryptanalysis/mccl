@@ -46,7 +46,7 @@ public:
     //virtual void configure(const parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, std::function<void,vector_ref_t<data_t>&>& callback) = 0;
+    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, std::function<bool,vector_ref_t<data_t>&>& callback) = 0;
     
     // preparation of loop invariant
     virtual void prepare_loop() = 0;
