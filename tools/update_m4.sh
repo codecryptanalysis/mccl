@@ -31,3 +31,6 @@ https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax
 https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_pthread.m4
 EOT
 
+# https://raw.githubusercontent.com/malb/m4rie/master/m4/ax_m4ri_flags.m4 <= has hardcoded M4RIE_M4RI_CFLAGS
+
+

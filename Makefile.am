@@ -1,5 +1,5 @@
 EXTRA_DIST = README.md LICENSE
-AMLOCAL_AMFLAGS = -I m4
+ACLOCAL_AMFLAGS = -I m4
 
 #lib_libmccl_la_SOURCES=\
 #	mccl/contrib/string_algo.hpp \

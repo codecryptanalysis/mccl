@@ -37,9 +37,23 @@ AX_PTHREAD()
 
 CHECK_ATOMIC()
 
-LIBS="$PTHREAD_LIBS $LIBS"
-CPPFLAGS="$CPPFLAGS"
-CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
+
+AC_ARG_WITH(m4ri,
+        AS_HELP_STRING([--with-m4ri@<:@=VALUE@:>@], [Optional prefix for M4RI library]),[m4riprefix=$withval])
+AS_IF([test "x$m4riprefix" != "x" ],
+	[M4RI_CPPFLAGS="-I${m4riprefix}/include"]
+	[M4RI_LIBS="-L${m4prefix}/lib -lm4ri"]
+	,
+	[M4RI_CPPFLAGS=""])
+	[M4RI_LIBS="-lm4ri"]
+AX_M4RI_CFLAGS()
+M4RI_CFLAGS=$ax_cv_m4ri_cflags
+        
+
+
+CPPFLAGS="$CPPFLAGS $M4RI_CPPFLAGS"
+CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS $M4RI_CFLAGS"
+LIBS="$M4RI_LIBS $PTHREAD_LIBS $LIBS"
 
 AC_CONFIG_HEADERS([config.h])
 AX_PREFIX_CONFIG_H([mccl/config/config.h])
