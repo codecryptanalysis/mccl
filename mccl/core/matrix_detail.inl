@@ -486,6 +486,135 @@ namespace detail
 	GENERATE_VECTOR_OP3(vector_orni, binary_orni);
 
 
+	template<typename data_t, size_t bits>
+	inline void block_transpose(data_t* dst, size_t dststride, const data_t* src, size_t srcstride)
+	{
+		static_assert(0 == (bits&(bits-1))); // bits must be power of 2
+		// mask of lower half bits
+		data_t m = (data_t(1) << (bits/2))-1;
+		int j = (bits/2);
+		data_t tmp[bits];
+
+		// first loop iteration, load src store in tmp
+#pragma unroll
+		for (int k=0;  k<bits/2;  ++k)
+		{
+			// j = (bits/2)
+			data_t a = src[k*srcstride], b = src[k*srcstride + (bits/2)*srcstride];
+			data_t t = (a ^ (b >> (bits/2))) & m;
+			tmp[k] = a ^ t;
+			tmp[k+(bits/2)] = b ^ (t << (bits/2));
+		}
+		j>>=1; m^=m<<j;
+		// main loop
+		for (;  1 != j;  j>>=1,m^=m<<j)
+		{
+#pragma unroll
+			for (int l=0,k=0;  l<bits/2;  ++l)
+			{
+				data_t t = (tmp[k] ^ (tmp[k+j] >> j)) & m;
+				tmp[k] ^= t;
+				tmp[k+j] ^= (t << j);
+				k=(k+j+1)&~j;
+			}
+		}
+		// last loop iteration (j==1), load tmp store in dst
+#pragma unroll
+		for (int k=0;  k<bits;  k += 2)
+		{
+			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
+			dst[k*dststride] = tmp[k] ^ t;
+			dst[k*dststride+dststride] = tmp[k+1] ^ (t << 1);
+		}
+	}
+
+	template<typename data_t, size_t bits>
+	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows)
+	{
+		static_assert(0 == (bits&(bits-1))); // bits must be power of 2
+		// mask of lower half bits
+		data_t m = (data_t(1) << (bits/2))-1;
+		int j = (bits/2);
+		data_t tmp[bits];
+
+		// first loop iteration, load src store in tmp
+#pragma unroll
+		for (int k=0;  k<bits/2;  ++k)
+		{
+			if (k < srcrows)
+			{
+				data_t a = src[k*srcstride], b = 0;
+				if ((k+(bits/2)) < srcrows)
+					b = src[k*srcstride + (bits/2)*srcstride];
+				data_t t = (a ^ (b >> (bits/2))) & m;
+				tmp[k] = a ^ t;
+				tmp[k+(bits/2)] = b ^ (t << (bits/2));
+			}
+			else
+			{
+				tmp[k] = 0;
+				tmp[k+j] = 0;
+			}
+		}
+		j>>=1; m^=m<<j;
+		// main loop
+		for (;  1 != j;  j>>=1,m^=m<<j)
+		{
+#pragma unroll
+			for (int l=0,k=0;  l<bits/2;  ++l)
+			{
+				data_t t = (tmp[k] ^ (tmp[k+j] >> j)) & m;
+				tmp[k] ^= t;
+				tmp[k+j] ^= (t << j);
+				k=(k+j+1)&~j;
+			}
+		}
+		// last loop iteration (j==1), load tmp store in dst
+#pragma unroll
+		int k=0;
+		for (;  k+1 < dstrows;  k += 2)
+		{
+			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
+			dst[k*dststride] = tmp[k] ^ t;
+			dst[k*dststride+dststride] = tmp[k+1] ^ (t << 1);
+		}
+		if (k < dstrows)
+		{
+			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
+			dst[k*dststride] = tmp[k] ^ t;
+		}
+	}
+
+	template<typename data_t>
+	inline void matrix_transpose(matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src)
+	{
+		static const size_t bits = sizeof(data_t)*8;
+		if (dst.columns != src.rows || dst.rows != src.columns)
+			throw std::runtime_error("matrix_transpose: matrix sizes do not match");
+		// process batch of bits rows
+		size_t r = 0;
+		for (; r+bits <= src.rows; r += bits)
+		{
+			// process block of bits columns
+			size_t c = 0;
+			for (; c+bits <= src.columns; c += bits)
+				block_transpose(dst.data(c,r), dst.stride, src.data(r,c), src.stride);
+			// process block of partial C columns
+			if (c < src.columns)
+				block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, bits);
+		}
+		// process last rows
+		if (r < src.rows)
+		{
+			size_t c = 0;
+			for (; c+bits <= src.columns; c += bits)
+				block_transpose(dst.data(c,r), dst.stride, bits, src.data(r,c), src.stride, (src.rows % bits));
+			// process final bits x C submatrix
+			if (c < src.columns)
+				block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, (src.rows % bits));
+		}
+	}
+
 } // namespace detail
 
 MCCL_END_NAMESPACE

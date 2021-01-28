@@ -224,6 +224,16 @@ namespace detail
 	template<typename data_t>
 	inline void vector_not(const matrix_base_ref_t<data_t>& m);
 
+	// block transpose of bits x bits bit matrix (i.e., dst and src are data_t[bits] arrays)
+	// bits must be a power of 2
+	template<typename data_t, size_t bits = sizeof(data_t)*8>
+	inline void block_transpose(data_t* dst, size_t dststride, const data_t* src, size_t srcstride);
+	// specialization for partial matrix
+	template<typename data_t, size_t bits = sizeof(data_t)*8>
+	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows);
+
+	template<typename data_t>
+	inline void matrix_transpose(matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src);
 
 	/* binary boolean functions
 
