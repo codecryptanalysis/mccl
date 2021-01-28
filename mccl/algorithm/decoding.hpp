@@ -64,6 +64,17 @@ public:
 };
 
 
+
+/*
+This is the generic algorithm solving target-ISD using a to-be-specified subISD algorithm
+Therefore it is derived from ISD_API_target<data_t>.
+The subISD algorithm class is a template parameter defaulted to ISD_API_exhaustive<data_t> for flexibility:
+This enables it to work with any ISD_API_exhaustive derived object.
+However, for optimized performance it is also possible to pass the exhaustive-ISD algorithm type directly
+and remove the overhead of virtualized function calls.
+In that case, be sure to make the crucial functions as final.
+*/
+
 template<typename data_t, typename subISD_t = ISD_API_exhaustive<data_t> >
 class ISD_target_generic: public ISD_API_target<data_t>
 {
