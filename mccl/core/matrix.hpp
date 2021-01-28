@@ -347,6 +347,8 @@ public:
     matrix_ref_t& op_orin (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_orin (base(), m1.base(), m2.base()); return *this; }
     matrix_ref_t& op_orni (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_orni (base(), m1.base(), m2.base()); return *this; }
 
+    matrix_ref_t& transpose(const matrix_ref_t& src) { detail::matrix_transpose(base(), src.base()); return *this; }
+    
     // comparison operators
     bool operator==(const matrix_ref_t& m) const { return matrix_compare(base(), m.base()); }
     bool operator!=(const matrix_ref_t& m) const { return !matrix_compare(base(), m.base()); }
@@ -567,6 +569,22 @@ public:
     matrix_t& operator|=(const matrix_ref& m) { detail::matrix_or(base(), m.base()); return *this; }
     matrix_t& operator&=(const matrix_ref& m) { detail::matrix_and(base(), m.base()); return *this; }
 
+    // resize as needed for write-only operations (e.g. dst = f(src), dst = f(src1,src2))
+    matrix_t& transpose(const matrix_ref& src) { _realloc(src.columns(),src.rows()); detail::matrix_transpose(base(), src.base()); return *this; }
+    
+    matrix_t& op_not(const matrix_ref& m2) { _realloc(m2.rows(), m2.columns()); detail::matrix_copynot(base()); return *this; }
+    
+    matrix_t& op_and  (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_and  (base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_xor  (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_xor  (base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_or   (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_or   (base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_nand (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_nand (base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_nxor (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_nxor (base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_nor  (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_nor  (base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_andin(const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_andin(base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_andni(const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_andni(base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_orin (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_orin (base(), m1.base(), m2.base()); return *this; }
+    matrix_t& op_orni (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_orni (base(), m1.base(), m2.base()); return *this; }
+
     // comparison operators
     bool operator==(const matrix_ref& m) const { return matrix_compare(base(), m.base()); }
     bool operator!=(const matrix_ref& m) const { return !matrix_compare(base(), m.base()); }
@@ -577,10 +595,12 @@ public:
     bool operator()(size_t r, size_t c) const { return base()(r, c); }
 
 private:
-    void _realloc(size_t rows, size_t columns, bool zero = false)
+    void _realloc(size_t _rows, size_t _columns, bool zero = false)
     {
-        size_t totalcol = ((columns + bitalignment - 1) / bitalignment) * bitalignment;
-        size_t totalbytes = rows * totalcol / 8;
+        if (rows() == _rows && columns() == _columns)
+            return;
+        size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
+        size_t totalbytes = _rows * totalcol / 8;
         size_t newallocbytes = totalbytes + bytealignment;
         if (newallocbytes > _allocbytes)
         {
@@ -592,7 +612,7 @@ private:
         if (zero)
             memset(_allocptr, 0, _allocbytes);
         uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
-        matrix_ref::reset((data_t*)alignedptr, rows, columns, totalcol - columns, totalcol / sizeof(data_t));
+        matrix_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / sizeof(data_t));
     }
     void _free()
     {
@@ -623,10 +643,14 @@ private:
     using vector_ref::reset;
     using vector_ref::reset_subvector;
 public:
+    static const size_t bitalignment = matrix_t<data_t>::bitalignment;
+    static const size_t bytealignment = bitalignment / 8;
+
+
     ~vector_t() { _free(); }
     /* constructors */
     vector_t(size_t columns = 0) { _realloc(1, columns, true); }
-    vector_t(const vector_t& m) : vector_t(1, m.columns()) { *this = m; }
+    vector_t(const vector_t& m) : vector_t(m.columns()) { *this = m; }
     vector_t(vector_t&& m) : vector_t(0) { swap(m); }
 
     vector_t& operator=(const vector_t& m) { _realloc(1, m.columns()); detail::vector_copy(base(), m.base()); return *this; }
@@ -639,6 +663,19 @@ public:
     vector_t& operator|=(const vector_ref& m) { detail::vector_or(base(), m.base()); return *this; }
     vector_t& operator&=(const vector_ref& m) { detail::vector_and(base(), m.base()); return *this; }
 
+    vector_t& op_not(const matrix_ref& m2) { _realloc(m2.rows(), m2.columns()); detail::matrix_copynot(base()); return *this; }
+    
+    vector_t& op_and  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_and  (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_xor  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_xor  (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_or   (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_or   (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_nand (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_nand (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_nxor (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_nxor (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_nor  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_nor  (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_andin(const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_andin(base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_andni(const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_andni(base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_orin (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_orin (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_orni (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_orni (base(), m1.base(), m2.base()); return *this; }
+
     // comparison operators
     bool operator==(const vector_ref& m) const { return vector_compare(base(), m.base()); }
     bool operator!=(const vector_ref& m) const { return !vector_compare(base(), m.base()); }
@@ -647,26 +684,24 @@ public:
     bool operator()(size_t c) const { return base()(0, c); }
 
 private:
-    void _realloc(size_t rows, size_t columns, bool zero = false)
+    void _realloc(size_t _rows, size_t _columns, bool zero = false)
     {
-        static const size_t bitalignment = 512;
-        static const size_t bytealignment = bitalignment / 8;
-
-        size_t totalcol = ((columns + bitalignment - 1) / bitalignment) * bitalignment;
-        size_t totalbytes = rows * totalcol / 8;
+        if (rows() == _rows && columns() == _columns)
+            return;
+        size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
+        size_t totalbytes = _rows * totalcol / 8;
         size_t newallocbytes = totalbytes + bytealignment;
         if (newallocbytes > _allocbytes)
         {
             if (_allocptr != nullptr)
-                free(_allocptr);
-            data_t* newallocptr = (data_t*)malloc(newallocbytes);
-            _allocptr = newallocptr;
+               free(_allocptr);
+            _allocptr = (data_t*)malloc(newallocbytes);
             _allocbytes = newallocbytes;
         }
         if (zero)
             memset(_allocptr, 0, _allocbytes);
         uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
-        vector_ref::reset((data_t*)alignedptr, rows, columns, totalcol - columns, totalcol / sizeof(data_t));
+        vector_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / sizeof(data_t));
     }
     void _free()
     {

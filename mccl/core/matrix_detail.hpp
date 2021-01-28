@@ -217,6 +217,10 @@ namespace detail
 	{
 		vector_setcolumns(m, m.columns, m.scratchcolumns, b);
 	}
+	template<typename data_t>
+	inline void matrix_flipcolumns(matrix_base_ref_t<data_t>& m, size_t column_offset, size_t columns);
+	template<typename data_t>
+	inline void vector_flipcolumns(matrix_base_ref_t<data_t>& m, size_t column_offset, size_t columns);
 
 	// flip every bit (scratchcolumns may be partially affected)
 	template<typename data_t>

@@ -189,6 +189,48 @@ namespace detail
 			*(m.data(0) + lastword) &= ~lastwordmask;
 		}
 	}
+	template<typename data_t>
+	inline void matrix_flipcolumns(matrix_base_ref_t<data_t>& m, size_t column_offset, size_t columns)
+	{
+		MCCL_MATRIX_BASE_ASSERT(column_offset + columns <= m.columns + m.scratchcolumns);
+		const size_t firstword = column_offset / m.word_bits;
+		const size_t lastword = (column_offset + columns) / m.word_bits;
+		data_t firstwordmask = m.wordmaskhigh(column_offset);
+		data_t lastwordmask = ~m.wordmaskhigh(column_offset + columns);
+		if (firstword == lastword)
+		{
+			firstwordmask &= lastwordmask;
+			for (size_t r = 0; r < m.rows; ++r)
+				*(m.data(r) + firstword) ^= firstwordmask;
+			return;
+		}
+		for (size_t r = 0; r < m.rows; ++r)
+		{
+			*(m.data(r) + firstword) ^= firstwordmask;
+			for (auto ptr = m.data(r) + firstword + 1; ptr != m.data(r) + lastword; ++ptr)
+				*ptr = ~(*ptr);
+			*(m.data(r) + lastword) ^= lastwordmask;
+		}
+	}
+	template<typename data_t>
+	inline void vector_flipcolumns(matrix_base_ref_t<data_t>& m, size_t column_offset, size_t columns)
+	{
+		MCCL_MATRIX_BASE_ASSERT(column_offset + columns <= m.columns + m.scratchcolumns);
+		const size_t firstword = column_offset / m.word_bits;
+		const size_t lastword = (column_offset + columns) / m.word_bits;
+		data_t firstwordmask = m.wordmaskhigh(column_offset);
+		data_t lastwordmask = ~m.wordmaskhigh(column_offset + columns);
+		if (firstword == lastword)
+		{
+			firstwordmask &= lastwordmask;
+			*(m.data(0) + firstword) ^= firstwordmask;
+			return;
+		}
+		*(m.data(0) + firstword) ^= firstwordmask;
+		for (auto ptr = m.data() + firstword + 1; ptr != m.data() + lastword; ++ptr)
+			*ptr = ~(*ptr);
+		*(m.data(0) + lastword) ^= lastwordmask;
+	}
 
 
 
