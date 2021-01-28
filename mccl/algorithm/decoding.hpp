@@ -9,16 +9,16 @@
 
 MCCL_BEGIN_NAMESPACE
 
-// virtual base class: interface for ISD for a given syndrome target
+// virtual base class: interface to find a single solution for ISD for a given syndrome target
 template<typename data_t>
-class ISD_API_target
+class ISD_API_single
 {
 public:
     // pass parameters to actual object
     //virtual void configure(const parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0) = 0;
+    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, unsigned int w) = 0;
     
     // probabilistic preparation of loop invariant
     virtual void prepare_loop() = 0;
@@ -38,7 +38,7 @@ public:
 };
 
 // virtual base class: interface for exhaustive ISD returning all solutions
-template<typename data_t>
+template<typename data_t, typename callback_t = std::function<bool,vector_ref_t<data_t>&>>
 class ISD_API_exhaustive
 {
 public:
@@ -46,7 +46,7 @@ public:
     //virtual void configure(const parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, std::function<bool,vector_ref_t<data_t>&>& callback) = 0;
+    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, unsigned int w, callback_t& callback) = 0;
     
     // preparation of loop invariant
     virtual void prepare_loop() = 0;
@@ -88,10 +88,11 @@ public:
     //virtual void configure(const parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0) final
+    void initialize(const matrix_ref_t<data_t>& _H0, const vector_ref_t<data_t>& _s0, unsigned int _w) final
     {
-        H = H0;
-        s = s0;
+        H0 = _H0;
+        s0 = _s0;
+        w = _w;
     }
     
     // probabilistic preparation of loop invariant
@@ -105,18 +106,19 @@ public:
     }
     
     // run loop until a solution is found
-    /*void solve()
+    void solve() final
     {
         prepare_loop();
         while (!loop_next())
             ;
-    }*/
+    }
     
     subISD_t* subISD;
     
     vector_t<data_t> e;
-    matrix_t<data_t> H;
-    vector_t<data_t> s;
+    matrix_t<data_t> H0, H;
+    vector_t<data_t> s0, s;
+    unsigned int w;
 };
 
 MCCL_END_NAMESPACE
