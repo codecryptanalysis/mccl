@@ -132,6 +132,28 @@ public:
     bool operator[](size_t c) const { return base()(0, c); }
     bool operator()(size_t c) const { return base()(0, c); }
 
+    void bitset  (size_t c) { base().bitset(0,c); }
+    void bitreset(size_t c) { base().bitreset(0,c); }
+    void bitflip (size_t c) { base().bitflip(0,c); }
+    void bitset  (size_t c, bool b) { base().bitset(0,c,b); }
+    
+    void setcolumns(size_t column_offset, size_t columns, bool b)
+    {
+        detail::vector_setcolumns(base(), column_offset, columns, b);
+    }
+    void flipcolumns(size_t column_offset, size_t columns)
+    {
+        detail::vector_flipcolumns(base(), column_offset, columns);
+    }
+    void setscratch(bool b = false)
+    {
+        detail::vector_setcolumns(base(), columns(), scratchcolumns(), b);
+    }
+    void flipscratch()
+    {
+        detail::vector_flipcolumns(base(), columns(), scratchcolumns());
+    }
+
     /* reset the reference */
     void reset(const base_ref_t& m)
     {
@@ -358,6 +380,29 @@ public:
     const vector_ref operator[](size_t r) const { return vector_ref(base().subvector(r, 0, columns(), scratchcolumns())); }
     bool operator()(size_t r, size_t c) const { return base()(r, c); }
 
+    void bitset  (size_t r, size_t c) { base().bitset(r,c); }
+    void bitreset(size_t r, size_t c) { base().bitreset(r,c); }
+    void bitflip (size_t r, size_t c) { base().bitflip(r,c); }
+    void bitset  (size_t r, size_t c, bool b) { base().bitset(r,c,b); }
+
+    void setcolumns(size_t column_offset, size_t columns, bool b)
+    {
+        detail::matrix_setcolumns(base(), column_offset, columns, b);
+    }
+    void flipcolumns(size_t column_offset, size_t columns)
+    {
+        detail::matrix_flipcolumns(base(), column_offset, columns);
+    }
+    void setscratch(bool b = false)
+    {
+        detail::matrix_setcolumns(base(), columns(), scratchcolumns(), b);
+    }
+    void flipscratch()
+    {
+        detail::matrix_flipcolumns(base(), columns(), scratchcolumns());
+    }
+
+
     /* reset the reference */
     void reset(const base_ref_t& m)
     {
@@ -560,7 +605,7 @@ public:
     matrix_t(matrix_t&& m) : matrix_t(0, 0) { swap(m); }
 
     matrix_t& operator=(const matrix_t& m) { _realloc(m.rows(), m.columns()); detail::matrix_copy(base(), m.base()); return *this; }
-    matrix_t& operator=(matrix_t&& m) { swap(m); }
+    matrix_t& operator=(matrix_t&& m) { swap(m); return *this; }
 
     matrix_t(const matrix_ref& m) : matrix_t(m.rows(), m.columns()) { *this = m; }
     matrix_t& operator=(const matrix_ref& m) { _realloc(m.rows(), m.columns()); detail::matrix_copy(base(), m.base()); return *this; }
@@ -569,7 +614,8 @@ public:
     matrix_t& operator|=(const matrix_ref& m) { detail::matrix_or(base(), m.base()); return *this; }
     matrix_t& operator&=(const matrix_ref& m) { detail::matrix_and(base(), m.base()); return *this; }
 
-    // resize as needed for write-only operations (e.g. dst = f(src), dst = f(src1,src2))
+    // override write-only operations (e.g. dst = f(src), dst = f(src1,src2))
+    // to resize as needed
     matrix_t& transpose(const matrix_ref& src) { _realloc(src.columns(),src.rows()); detail::matrix_transpose(base(), src.base()); return *this; }
     
     matrix_t& op_not(const matrix_ref& m2) { _realloc(m2.rows(), m2.columns()); detail::matrix_copynot(base()); return *this; }
@@ -654,16 +700,16 @@ public:
     vector_t(vector_t&& m) : vector_t(0) { swap(m); }
 
     vector_t& operator=(const vector_t& m) { _realloc(1, m.columns()); detail::vector_copy(base(), m.base()); return *this; }
-    vector_t& operator=(vector_t&& m) { swap(m); }
+    vector_t& operator=(vector_t&& m) { swap(m); return *this; }
 
-    vector_t(const vector_ref& m) : vector_t(m.rows(), m.columns()) { *this = m; }
+    vector_t(const vector_ref& m) : vector_t(m.columns()) { *this = m; }
     vector_t& operator=(const vector_ref& m) { _realloc(1, m.columns()); detail::vector_copy(base(), m.base()); return *this; }
 
     vector_t& operator^=(const vector_ref& m) { detail::vector_xor(base(), m.base()); return *this; }
     vector_t& operator|=(const vector_ref& m) { detail::vector_or(base(), m.base()); return *this; }
     vector_t& operator&=(const vector_ref& m) { detail::vector_and(base(), m.base()); return *this; }
 
-    vector_t& op_not(const matrix_ref& m2) { _realloc(m2.rows(), m2.columns()); detail::matrix_copynot(base()); return *this; }
+    vector_t& op_not(const vector_ref& m2) { _realloc(m2.rows(), m2.columns()); detail::matrix_copynot(base()); return *this; }
     
     vector_t& op_and  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_and  (base(), m1.base(), m2.base()); return *this; }
     vector_t& op_xor  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_xor  (base(), m1.base(), m2.base()); return *this; }
@@ -681,7 +727,13 @@ public:
     bool operator!=(const vector_ref& m) const { return !vector_compare(base(), m.base()); }
 
     // indexing
+    bool operator[](size_t c) const { return base()(0, c); }
     bool operator()(size_t c) const { return base()(0, c); }
+
+    // automatic conversions
+    // a vector is a matrix, so allow automatic conversion to matrix_ref_t
+    operator matrix_ref& () { return *reinterpret_cast<matrix_ref*>( static_cast<vector_ref*>(this) ); }
+    operator const matrix_ref& () const { return *reinterpret_cast<const matrix_ref*>( static_cast<const vector_ref*>(this) ); }
 
 private:
     void _realloc(size_t _rows, size_t _columns, bool zero = false)

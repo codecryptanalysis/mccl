@@ -27,6 +27,21 @@ namespace detail
 	{
 		return (v >> pos) & 1;
 	}
+	template<typename data_t>
+	void set_bit(const data_t& v, unsigned int pos)
+	{
+		v |= data_t(1) << pos;
+	}
+	template<typename data_t>
+	void reset_bit(const data_t& v, unsigned int pos)
+	{
+		v &= ~(data_t(1) << pos);
+	}
+	template<typename data_t>
+	void flip_bit(const data_t& v, unsigned int pos)
+	{
+		v ^= data_t(1) << pos;
+	}
 
 	/* matrix_base_ref_t: a struct containing a (sub)matrix description 
 	* data_t: the underlying base word type. 
@@ -84,6 +99,17 @@ namespace detail
 		static data_t wordmasklow(size_t c) { return _dataones >> ((word_bits - 1 - c) % word_bits); }		
 
 		bool operator()(size_t r, size_t c) const { return get_bit<data_t>(*data(r,c), c % word_bits);  }
+		
+		void bitset(size_t r, size_t c) { set_bit<data_t>(*data(r,c), c % word_bits); }
+		void bitreset(size_t r, size_t c) { reset_bit<data_t>(*data(r,c), c % word_bits); }
+		void bitflip(size_t r, size_t c) { flip_bit<data_t>(*data(r,c), c % word_bits); }
+		void bitset(size_t r, size_t c, bool b)
+		{
+			if (b)
+				set_bit<data_t>(*data(r,c), c % word_bits);
+			else
+				reset_bit<data_t>(*data(r,c), c % word_bits);
+		}
 
 		/* change the dividing line between columns and scratchcolumns, but do not change the sum */
 		void reset_columns(size_t _columns, size_t _scratchcolumns)
