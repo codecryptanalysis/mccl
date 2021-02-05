@@ -2,7 +2,10 @@
 #define MCCL_CORE_MATRIX_HPP
 
 #include <mccl/core/matrix_detail.hpp>
-#include <stdlib.h>
+
+#include <iostream>
+#include <functional>
+#include <random>
 
 MCCL_BEGIN_NAMESPACE
 
@@ -87,6 +90,9 @@ public:
     size_t scratchcolumns() const { return base().scratchcolumns; }
     size_t allcolumns()     const { return base().columns + base().scratchcolumns; }
     size_t stride()         const { return base().stride; }
+    size_t word_bits()      const { return base().word_bits; }
+          data_t* data(size_t c = 0)       { return base().data(c); }
+    const data_t* data(size_t c = 0) const { return base().data(c); }
     
     size_t hammingweight()  const { return detail::vector_hammingweight(base()); }
     size_t hw()  const { return detail::vector_hammingweight(base()); }
@@ -335,6 +341,10 @@ public:
     size_t scratchcolumns() const { return base().scratchcolumns; }
     size_t allcolumns()     const { return base().columns + base().scratchcolumns; }
     size_t stride()         const { return base().stride; }
+    size_t word_bits()      const { return base().word_bits; }
+
+          data_t* data(size_t r = 0, size_t c = 0)       { return base().data(r, c); }
+    const data_t* data(size_t r = 0, size_t c = 0) const { return base().data(r, c); }
 
     size_t hammingweight()  const { return detail::matrix_hammingweight(base()); }
     size_t hw()  const { return detail::matrix_hammingweight(base()); }
@@ -606,7 +616,7 @@ public:
 
     ~matrix_t() { _free(); }
     /* constructors */
-    matrix_t(size_t rows = 0, size_t columns = 0) { _realloc(rows, columns, true); }
+    matrix_t(size_t rows = 0, size_t columns = 0): _allocptr(nullptr), _allocbytes(0) { _realloc(rows, columns, true); }
     matrix_t(const matrix_t& m) : matrix_t(m.rows(), m.columns()) { *this = m; }
     matrix_t(matrix_t&& m) : matrix_t(0, 0) { swap(m); }
 
@@ -652,7 +662,7 @@ private:
         if (rows() == _rows && columns() == _columns)
             return;
         size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
-        size_t totalbytes = _rows * totalcol / 8;
+        size_t totalbytes = (_rows * totalcol) / 8;
         size_t newallocbytes = totalbytes + bytealignment;
         if (newallocbytes > _allocbytes)
         {
@@ -664,7 +674,7 @@ private:
         if (zero)
             memset(_allocptr, 0, _allocbytes);
         uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
-        matrix_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / sizeof(data_t));
+        matrix_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / base().word_bits);
     }
     void _free()
     {
@@ -701,7 +711,7 @@ public:
 
     ~vector_t() { _free(); }
     /* constructors */
-    vector_t(size_t columns = 0) { _realloc(1, columns, true); }
+    vector_t(size_t columns = 0): _allocptr(nullptr), _allocbytes(0) { _realloc(1, columns, true); }
     vector_t(const vector_t& m) : vector_t(m.columns()) { *this = m; }
     vector_t(vector_t&& m) : vector_t(0) { swap(m); }
 
@@ -747,7 +757,7 @@ private:
         if (rows() == _rows && columns() == _columns)
             return;
         size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
-        size_t totalbytes = _rows * totalcol / 8;
+        size_t totalbytes = (_rows * totalcol) / 8;
         size_t newallocbytes = totalbytes + bytealignment;
         if (newallocbytes > _allocbytes)
         {
@@ -759,7 +769,7 @@ private:
         if (zero)
             memset(_allocptr, 0, _allocbytes);
         uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
-        vector_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / sizeof(data_t));
+        vector_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / base().word_bits);
     }
     void _free()
     {
@@ -776,6 +786,106 @@ template<typename data_t> inline size_t hammingweight(const vector_ref_t<data_t>
 template<typename data_t> inline size_t hammingweight_and(const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_and(m1.base(),m2.base()); }
 template<typename data_t> inline size_t hammingweight_xor(const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_xor(m1.base(),m2.base()); }
 template<typename data_t> inline size_t hammingweight_or (const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_or(m1.base(),m2.base()); }
+
+template<typename data_t, typename Func = std::function<bool(size_t,size_t)>>
+void fill(matrix_ref_t<data_t>& m, Func& f)
+{
+    for (size_t r = 0; r < m.rows(); ++r)
+        for (size_t c = 0; c < m.columns(); ++c)
+            m.bitset(r,c, f(r,c));
+}
+
+template<typename data_t, typename Func = std::function<bool(size_t)>>
+void fill(vector_ref_t<data_t>& m, Func& f)
+{
+    for (size_t c = 0; c < m.columns(); ++c)
+        m.bitset(c, f(c));
+}
+
+template<typename data_t, typename Func = std::function<data_t(size_t,size_t)>>
+void fillword(matrix_ref_t<data_t>& m, Func& f)
+{
+    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
+    for (size_t r = 0; r < m.rows(); ++r)
+    {
+        data_t* first = m.base().data(r);
+        data_t* last = first + words;
+        for (size_t w = 0; first != last; ++first,++w)
+            *first = f(r,w);
+    }
+}
+
+template<typename data_t, typename Func = std::function<data_t(size_t)>>
+void fillword(vector_ref_t<data_t>& m, Func& f)
+{
+    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
+    data_t* first = m.base().data(0);
+    data_t* last = first + words;
+    for (size_t w = 0; first != last; ++first,++w)
+        *first = f(w);
+}
+
+
+template<typename data_t, typename Generator>
+void fillgenerator(matrix_ref_t<data_t>& m, Generator& g)
+{
+    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
+    for (size_t r = 0; r < m.rows(); ++r)
+    {
+        data_t* first = m.base().data(r);
+        data_t* last = first + words;
+        for (; first != last; ++first)
+            g(*first);
+    }
+}
+
+template<typename data_t, typename Generator>
+void fillgenerator(vector_ref_t<data_t>& m, Generator& g)
+{
+    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
+    data_t* first = m.base().data(0);
+    data_t* last = first + words;
+    for (; first != last; ++first)
+        g(*first);
+}
+
+template<typename data_t>
+struct mccl_base_random_generator
+{
+    static const unsigned int count = (sizeof(data_t)+sizeof(uint64_t)-1)/sizeof(uint64_t);
+
+    mccl_base_random_generator()
+        : rnd(std::random_device()())
+    {
+    }
+
+    void operator()(data_t& word)
+    {
+        for (unsigned int i = 0; i < count; ++i)
+            data.u64[i] = rnd();
+        word = data.data;
+    }
+
+    union {
+        uint64_t u64[count];
+        data_t data;
+    } data;
+    std::mt19937_64 rnd;
+};
+
+template<typename data_t>
+void fillrandom(matrix_ref_t<data_t>& m)
+{
+    mccl_base_random_generator<data_t> gen;
+    fillgenerator(m, gen);
+}
+
+template<typename data_t>
+void fillrandom(vector_ref_t<data_t>& m)
+{
+    mccl_base_random_generator<data_t> gen;
+    fillgenerator(m, gen);
+}
 
 MCCL_END_NAMESPACE
 

@@ -38,7 +38,7 @@ public:
 };
 
 // virtual base class: interface for exhaustive ISD returning all solutions
-template<typename data_t, typename callback_t = std::function<bool,vector_ref_t<data_t>&>>
+template<typename data_t, typename callback_t = std::function<bool(vector_ref_t<data_t>&)>>
 class ISD_API_exhaustive
 {
 public:

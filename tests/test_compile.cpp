@@ -58,6 +58,11 @@ int test_matrixref()
     status |= test_bool(1 == hammingweight(mrefUR));
     status |= test_bool(1 == hammingweight(mrefLL));
     status |= test_bool(1 == hammingweight(mrefLR));
+
+    fillrandom(matrix);
+    status |= test_bool(hammingweight(matrix) == hammingweight(mrefUL)+hammingweight(mrefUR)+hammingweight(mrefLL)+hammingweight(mrefLR));
+    double f = double(hammingweight(matrix))/double(1024*1024);
+    std::cout << "matrix density: " << f << std::endl;
     return status;
 }
 
@@ -144,6 +149,8 @@ int main(int, char**)
     status |= test_assign     <      matrixptr>("      matrixptr", { 0,0,0,0, 1,1,0,0, 0,0,0,0, 1,1,0,0, 0,0,0,0 });
     status |= test_constructor<      vectorptr>("      vectorptr", { 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,1,0,0, 1,1,0,0 });
     status |= test_assign     <      vectorptr>("      vectorptr", { 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,1,0,0, 0,0,0,0 });
+
+    status |= test_matrixref();
 
     if (status == 0)
     {
