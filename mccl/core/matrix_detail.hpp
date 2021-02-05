@@ -3,6 +3,8 @@
 
 #include <mccl/config/config.hpp>
 
+#include <nmmintrin.h>
+
 #include <algorithm>
 #include <cstring>
 #include <cassert>
@@ -20,25 +22,48 @@ namespace detail
 
 	// return the lowest bit position belonging to a `1'-bit == the number of trailing zeroes
 	unsigned int trailing_zeroes(uint32_t n);
+	// return the smallest 2^t >= n
+	template<typename Int>
+	inline Int next_pow2(Int n)
+	{
+		static const unsigned bits = sizeof(Int)*8;
+		--n;
+		n |= n >> 1;
+		n |= n >> 2;
+		n |= n >> 4;
+		if (8 < bits) n |= n >> 8;
+		if (16 < bits) n |= n >> 16;
+		if (32 < bits) n |= n >> 32;
+		return ++n;
+	}
+	inline size_t hammingweight(uint64_t n)
+	{
+		return _mm_popcnt_u64(n);
+	}
+	inline size_t hammingweight(uint32_t n)
+	{
+		return _mm_popcnt_u32(n);
+	}
+
 
 	// allow more efficient overloads for simd vectors
 	template<typename data_t>
-	bool get_bit(const data_t& v, unsigned int pos)
+	inline bool get_bit(const data_t& v, unsigned int pos)
 	{
 		return (v >> pos) & 1;
 	}
 	template<typename data_t>
-	void set_bit(const data_t& v, unsigned int pos)
+	inline void set_bit(data_t& v, unsigned int pos)
 	{
 		v |= data_t(1) << pos;
 	}
 	template<typename data_t>
-	void reset_bit(const data_t& v, unsigned int pos)
+	inline void reset_bit(data_t& v, unsigned int pos)
 	{
 		v &= ~(data_t(1) << pos);
 	}
 	template<typename data_t>
-	void flip_bit(const data_t& v, unsigned int pos)
+	inline void flip_bit(data_t& v, unsigned int pos)
 	{
 		v ^= data_t(1) << pos;
 	}
@@ -92,11 +117,13 @@ namespace detail
 		// obtain pointer to the word containing value of row r column c
 		data_t* data(size_t r, size_t c) const { return ptr + r * stride + (c / word_bits); }
 		// obtain word mask for column c
-		static data_t wordmask(size_t c) { return _dataone << (c % word_bits); }
+		static data_t wordmaskbit(size_t c) { return _dataone << (c % word_bits); }
 		// obtain word mask for column c and higher
 		static data_t wordmaskhigh(size_t c) { return _dataones << (c % word_bits); }
-		// obtain word mask for column c and higher
+		// obtain word mask for column c and lower
 		static data_t wordmasklow(size_t c) { return _dataones >> ((word_bits - 1 - c) % word_bits); }		
+		// obtain word mask for column c
+		data_t lastwordmask() const { return ~wordmaskhigh(columns); }
 
 		bool operator()(size_t r, size_t c) const { return get_bit<data_t>(*data(r,c), c % word_bits);  }
 		
@@ -261,9 +288,27 @@ namespace detail
 	// specialization for partial matrix
 	template<typename data_t, size_t bits = sizeof(data_t)*8>
 	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows);
+	template<typename data_t>
+	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows, size_t bits);
 
 	template<typename data_t>
 	inline void matrix_transpose(matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src);
+
+
+
+	// hamming weight
+	template<typename data_t>
+	inline size_t matrix_hammingweight(const matrix_base_ref_t<const data_t>& m);
+	template<typename data_t>
+	inline size_t vector_hammingweight(const matrix_base_ref_t<const data_t>& m);
+	template<typename data_t>
+	inline size_t vector_hammingweight_and(const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2);
+	template<typename data_t>
+	inline size_t vector_hammingweight_xor(const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2);
+	template<typename data_t>
+	inline size_t vector_hammingweight_or (const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2);
+
+
 
 	/* binary boolean functions
 

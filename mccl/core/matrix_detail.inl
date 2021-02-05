@@ -24,7 +24,6 @@ namespace detail
 		if (m1.rows != m2.rows || m1.columns != m2.columns)
 			return false;
 		const size_t words = (m1.columns + m1.word_bits - 1) / m1.word_bits;
-		data_t lastwordignoremask = m1.wordmaskhigh(m1.columns);
 		if ((m1.columns % m1.word_bits) == 0)
 		{
 			for (size_t r = 0; r < m1.rows; ++r)
@@ -37,13 +36,14 @@ namespace detail
 		}
 		else
 		{
+			const data_t lastwordmask = m1.lastwordmask();
 			for (size_t r = 0; r < m1.rows; ++r)
 			{
 				data_t* first1 = m1.data(r), first2 = m2.data(r), last1 = m1.data(r) + words - 1;
 				for (; first1 != last1; ++first1, ++first2)
 					if (*first1 != *first2)
 						return false;
-				if ((lastwordignoremask | *first1) != (lastwordignoremask | *first2))
+				if ((lastwordmask & *first1) != (lastwordmask & *first2))
 					return false;
 			}
 		}
@@ -55,8 +55,6 @@ namespace detail
 		if (m1.columns != m2.columns)
 			return false;
 		const size_t words = (m1.columns + m1.word_bits - 1) / m1.word_bits;
-		const unsigned int shiftbits = m1.columns % m1.word_bits;
-		data_t lastwordignoremask = (~data_t()) << shiftbits;
 		if ((m1.columns % m1.word_bits) == 0)
 		{
 			data_t* first1 = m1.data(0), first2 = m2.data(0), last1 = m1.data(0) + words;
@@ -66,11 +64,12 @@ namespace detail
 		}
 		else
 		{
+			const data_t lastwordmask = m1.lastwordmask();
 			data_t* first1 = m1.data(0), first2 = m2.data(0), last1 = m1.data(0) + words - 1;
 			for (; first1 != last1; ++first1, ++first2)
 				if (*first1 != *first2)
 					return false;
-			if ((lastwordignoremask | *first1) != (lastwordignoremask | *first2))
+			if ((lastwordmask & *first1) != (lastwordmask & *first2))
 				return false;
 		}
 		return true;
@@ -528,10 +527,13 @@ namespace detail
 	GENERATE_VECTOR_OP3(vector_orni, binary_orni);
 
 
+
 	template<typename data_t, size_t bits>
 	inline void block_transpose(data_t* dst, size_t dststride, const data_t* src, size_t srcstride)
 	{
 		static_assert(0 == (bits&(bits-1))); // bits must be power of 2
+		static_assert(sizeof(data_t)*8 >= bits); // bits must not exceed data_t bitsize
+
 		// mask of lower half bits
 		data_t m = (data_t(1) << (bits/2))-1;
 		int j = (bits/2);
@@ -570,17 +572,22 @@ namespace detail
 		}
 	}
 
+
+
 	template<typename data_t, size_t bits>
 	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows)
 	{
 		static_assert(0 == (bits&(bits-1))); // bits must be power of 2
+		static_assert(sizeof(data_t)*8 >= bits); // bits must not exceed data_t bitsize
+		assert(dstrows <= bits);
+		assert(srcrows <= bits);
+
 		// mask of lower half bits
 		data_t m = (data_t(1) << (bits/2))-1;
 		int j = (bits/2);
 		data_t tmp[bits];
 
 		// first loop iteration, load src store in tmp
-#pragma unroll
 		for (int k=0;  k<bits/2;  ++k)
 		{
 			if (k < srcrows)
@@ -602,7 +609,6 @@ namespace detail
 		// main loop
 		for (;  1 != j;  j>>=1,m^=m<<j)
 		{
-#pragma unroll
 			for (int l=0,k=0;  l<bits/2;  ++l)
 			{
 				data_t t = (tmp[k] ^ (tmp[k+j] >> j)) & m;
@@ -612,7 +618,6 @@ namespace detail
 			}
 		}
 		// last loop iteration (j==1), load tmp store in dst
-#pragma unroll
 		int k=0;
 		for (;  k+1 < dstrows;  k += 2)
 		{
@@ -626,6 +631,68 @@ namespace detail
 			dst[k*dststride] = tmp[k] ^ t;
 		}
 	}
+
+
+
+	template<typename data_t>
+	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows, size_t bits)
+	{
+		assert(0 == (bits&(bits-1))); // bits must be power of 2
+		assert(sizeof(data_t)*8 >= bits); // bits must not exceed data_t bitsize
+		assert(dstrows <= bits);
+		assert(srcrows <= bits);
+
+		// mask of lower half bits
+		data_t m = (data_t(1) << (bits/2))-1;
+		int j = (bits/2);
+		data_t tmp[bits];
+
+		// first loop iteration, load src store in tmp
+		for (int k=0;  k<bits/2;  ++k)
+		{
+			if (k < srcrows)
+			{
+				data_t a = src[k*srcstride], b = 0;
+				if ((k+(bits/2)) < srcrows)
+					b = src[k*srcstride + (bits/2)*srcstride];
+				data_t t = (a ^ (b >> (bits/2))) & m;
+				tmp[k] = a ^ t;
+				tmp[k+(bits/2)] = b ^ (t << (bits/2));
+			}
+			else
+			{
+				tmp[k] = 0;
+				tmp[k+j] = 0;
+			}
+		}
+		j>>=1; m^=m<<j;
+		// main loop
+		for (;  1 != j;  j>>=1,m^=m<<j)
+		{
+			for (int l=0,k=0;  l<bits/2;  ++l)
+			{
+				data_t t = (tmp[k] ^ (tmp[k+j] >> j)) & m;
+				tmp[k] ^= t;
+				tmp[k+j] ^= (t << j);
+				k=(k+j+1)&~j;
+			}
+		}
+		// last loop iteration (j==1), load tmp store in dst
+		int k=0;
+		for (;  k+1 < dstrows;  k += 2)
+		{
+			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
+			dst[k*dststride] = tmp[k] ^ t;
+			dst[k*dststride+dststride] = tmp[k+1] ^ (t << 1);
+		}
+		if (k < dstrows)
+		{
+			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
+			dst[k*dststride] = tmp[k] ^ t;
+		}
+	}
+
+
 
 	template<typename data_t>
 	inline void matrix_transpose(matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src)
@@ -653,7 +720,200 @@ namespace detail
 				block_transpose(dst.data(c,r), dst.stride, bits, src.data(r,c), src.stride, (src.rows % bits));
 			// process final bits x C submatrix
 			if (c < src.columns)
-				block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, (src.rows % bits));
+			{
+				size_t partialbits = next_pow2<uint32_t>(std::max(src.columns % bits, src.rows % bits));
+				block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, (src.rows % bits), partialbits);
+			}
+		}
+	}
+
+
+
+
+	template<typename data_t>
+	inline size_t hammingweight(const data_t* first, const data_t* last)
+	{
+		size_t w = 0;
+		for (; first != last; ++first)
+			w += hammingweight(*first);
+		return w;
+	}
+	template<typename data_t> 
+	inline size_t hammingweight(const data_t* first, const data_t* last, data_t mask)
+	{
+		size_t w = 0;
+		for (; first != last; ++first)
+			w += hammingweight(mask & *first);
+		return w;
+	}
+	template<typename data_t> inline size_t hammingweight_and(const data_t* first1, const data_t* last1, const data_t* first2)
+	{
+		size_t w = 0;
+		for (; first1 != last1; ++first1,++first2)
+			w += hammingweight(*first1 & *first2);
+		return w;
+	}
+	template<typename data_t> inline size_t hammingweight_xor(const data_t* first1, const data_t* last1, const data_t* first2)
+	{
+		size_t w = 0;
+		for (; first1 != last1; ++first1,++first2)
+			w += hammingweight(*first1 ^ *first2);
+		return w;
+	}
+	template<typename data_t> inline size_t hammingweight_or (const data_t* first1, const data_t* last1, const data_t* first2)
+	{
+		size_t w = 0;
+		for (; first1 != last1; ++first1,++first2)
+			w += hammingweight(*first1 | *first2);
+		return w;
+	}
+
+	template<typename data_t>
+	inline size_t matrix_hammingweight(const matrix_base_ref_t<const data_t>& m)
+	{
+		size_t words = (m.columns + m.word_bits - 1) / m.word_bits;
+		if ((m.columns % m.word_bits) == 0)
+		{
+			size_t w = 0;
+			for (size_t r = 0; r < m.rows; ++r)
+			{
+				const data_t* first = m.data(r);
+				const data_t* last = m.data(r) + words;
+				for (; first != last; ++first)
+					w += hammingweight(*first);
+			}
+			return w;
+		}
+		else
+		{
+			--words;
+			const data_t lastwordmask = m.lastwordmask();
+			size_t w = 0;
+			for (size_t r = 0; r < m.rows; ++r)
+			{
+				const data_t* first = m.data(r);
+				const data_t* last = m.data(r) + words;
+				for (; first != last; ++first)
+					w += hammingweight(*first);
+				w += hammingweight(*first & lastwordmask);
+			}
+			return w;
+		}
+	}
+	template<typename data_t>
+	inline size_t vector_hammingweight(const matrix_base_ref_t<const data_t>& m)
+	{
+		size_t words = (m.columns + m.word_bits - 1) / m.word_bits;
+		if ((m.columns % m.word_bits) == 0)
+		{
+			size_t w = 0;
+			const data_t* first = m.data(0);
+			const data_t* last = m.data(0) + words;
+			for (; first != last; ++first)
+				w += hammingweight(*first);
+			return w;
+		}
+		else
+		{
+			--words;
+			const data_t lastwordmask = m.lastwordmask();
+			size_t w = 0;
+			const data_t* first = m.data(0);
+			const data_t* last = m.data(0) + words;
+			for (; first != last; ++first)
+				w += hammingweight(*first);
+			w += hammingweight(*first & lastwordmask);
+			return w;
+		}
+	}
+	template<typename data_t>
+	inline size_t vector_hammingweight_and(const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2)
+	{
+		if (m1.columns != m2.columns) \
+			throw std::runtime_error("vector_weight_and: vector sizes don't match"); \
+		size_t words = (m1.columns + m1.word_bits - 1) / m1.word_bits;
+		if ((m1.columns % m1.word_bits) == 0)
+		{
+			size_t w = 0;
+			const data_t* first1 = m1.data(0);
+			const data_t* first2 = m2.data(0);
+			const data_t* last1 = m1.data(0) + words;
+			for (; first1 != last1; ++first1,++first2)
+				w += hammingweight(*first1 & *first2);
+			return w;
+		}
+		else
+		{
+			--words;
+			const data_t lastwordmask = m1.lastwordmask();
+			size_t w = 0;
+			const data_t* first1 = m1.data(0);
+			const data_t* first2 = m2.data(0);
+			const data_t* last1 = m1.data(0) + words;
+			for (; first1 != last1; ++first1,++first2)
+				w += hammingweight(*first1 & *first2);
+			w += hammingweight((*first1 & *first2) & lastwordmask);
+			return w;
+		}
+	}
+	template<typename data_t>
+	inline size_t vector_hammingweight_xor(const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2)
+	{
+		if (m1.columns != m2.columns) \
+			throw std::runtime_error("vector_weight_xor: vector sizes don't match"); \
+		size_t words = (m1.columns + m1.word_bits - 1) / m1.word_bits;
+		if ((m1.columns % m1.word_bits) == 0)
+		{
+			size_t w = 0;
+			const data_t* first1 = m1.data(0);
+			const data_t* first2 = m2.data(0);
+			const data_t* last1 = m1.data(0) + words;
+			for (; first1 != last1; ++first1,++first2)
+				w += hammingweight(*first1 ^ *first2);
+			return w;
+		}
+		else
+		{
+			--words;
+			const data_t lastwordmask = m1.lastwordmask();
+			size_t w = 0;
+			const data_t* first1 = m1.data(0);
+			const data_t* first2 = m2.data(0);
+			const data_t* last1 = m1.data(0) + words;
+			for (; first1 != last1; ++first1,++first2)
+				w += hammingweight(*first1 & *first2);
+			w += hammingweight((*first1 ^ *first2) & lastwordmask);
+			return w;
+		}
+	}
+	template<typename data_t>
+	inline size_t vector_hammingweight_or (const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2)
+	{
+		if (m1.columns != m2.columns) \
+			throw std::runtime_error("vector_weight_or: vector sizes don't match"); \
+		size_t words = (m1.columns + m1.word_bits - 1) / m1.word_bits;
+		if ((m1.columns % m1.word_bits) == 0)
+		{
+			size_t w = 0;
+			const data_t* first1 = m1.data(0);
+			const data_t* first2 = m2.data(0);
+			const data_t* last1 = m1.data(0) + words;
+			for (; first1 != last1; ++first1,++first2)
+				w += hammingweight(*first1 | *first2);
+			return w;
+		}
+		else
+		{
+			--words;
+			const data_t lastwordmask = m1.lastwordmask();
+			size_t w = 0;
+			const data_t* first1 = m1.data(0);
+			const data_t* first2 = m2.data(0);
+			const data_t* last1 = m1.data(0) + words;
+			for (; first1 != last1; ++first1,++first2)
+				w += hammingweight(*first1 & *first2);
+			w += hammingweight((*first1 | *first2) & lastwordmask);
+			return w;
 		}
 	}
 

@@ -87,6 +87,9 @@ public:
     size_t scratchcolumns() const { return base().scratchcolumns; }
     size_t allcolumns()     const { return base().columns + base().scratchcolumns; }
     size_t stride()         const { return base().stride; }
+    
+    size_t hammingweight()  const { return detail::vector_hammingweight(base()); }
+    size_t hw()  const { return detail::vector_hammingweight(base()); }
 
     // assign & modify operators
     // reference semantics: (override) assign and modify&assign by acting on matrix content
@@ -333,6 +336,9 @@ public:
     size_t allcolumns()     const { return base().columns + base().scratchcolumns; }
     size_t stride()         const { return base().stride; }
 
+    size_t hammingweight()  const { return detail::matrix_hammingweight(base()); }
+    size_t hw()  const { return detail::matrix_hammingweight(base()); }
+
     // assign & modify operators
     // reference semantics: (override) assign and modify&assign by acting on matrix content
     matrix_ref_t& operator=(const matrix_ref_t& m) { detail::matrix_copy(base(), m.base()); return *this; }
@@ -420,7 +426,7 @@ public:
     {
         return matrix_ref_t(base().submatrix(row_offset, rows, column_offset, columns, scratchcolumns));
     }
-    vector_ref submatrix(size_t row_offset, size_t column_offset, size_t columns, size_t scratchcolumns = 0)
+    vector_ref subvector(size_t row_offset, size_t column_offset, size_t columns, size_t scratchcolumns = 0)
     {
         return vector_ref(base().subvector(row_offset, column_offset, columns, scratchcolumns));
     }
@@ -764,6 +770,12 @@ private:
     data_t* _allocptr;
     size_t _allocbytes;
 };
+
+template<typename data_t> inline size_t hammingweight(const matrix_ref_t<data_t>& m) { return detail::matrix_hammingweight(m.base()); }
+template<typename data_t> inline size_t hammingweight(const vector_ref_t<data_t>& m) { return detail::vector_hammingweight(m.base()); }
+template<typename data_t> inline size_t hammingweight_and(const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_and(m1.base(),m2.base()); }
+template<typename data_t> inline size_t hammingweight_xor(const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_xor(m1.base(),m2.base()); }
+template<typename data_t> inline size_t hammingweight_or (const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_or(m1.base(),m2.base()); }
 
 MCCL_END_NAMESPACE
 

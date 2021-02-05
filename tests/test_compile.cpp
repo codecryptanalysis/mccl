@@ -26,23 +26,42 @@ typedef mccl::matrix_t<uint64_t> mat_t;
 typedef mccl::vector_t<uint64_t> vec_t;
 typedef mccl::detail::matrix_base_ref_t<uint64_t> base_t;
 
-
-
-int test_matrixref()
-{
-    mat_t matrix(1024, 1024);
-    matrixref mref(matrix);
-    return 0;
-}
-
-
-int test_bool(bool val, const std::string& errmsg)
+int test_bool(bool val, const std::string& errmsg = "error")
 {
     if (val)
        return 0;
     LOG_CERR(errmsg);
     return -1;
 }
+
+
+int test_matrixref()
+{
+    mat_t matrix(1024, 1024);
+    matrixref mref1(matrix);
+    matrixref mrefUL(matrix.submatrix(0, 512, 0, 512));
+    matrixref mrefUR(matrix.submatrix(0, 512, 512, 512));
+    matrixref mrefLL(matrix.submatrix(512, 512, 0, 512));
+    matrixref mrefLR(matrix.submatrix(512, 512, 512, 512));
+    mrefUL.bitset(1,2);
+    mrefUR.bitset(3,4);
+    mrefLL.bitset(5,6);
+    mrefLR.bitset(7,8);
+
+    int status = 0;
+    status |= test_bool(mref1(1,2));
+    status |= test_bool(mref1(3,4+512));
+    status |= test_bool(mref1(5+512,6));
+    status |= test_bool(mref1(7+512,8+512));
+    status |= test_bool(mref1.hammingweight() == 4);
+    status |= test_bool(1 == hammingweight(mrefUL));
+    status |= test_bool(1 == hammingweight(mrefUR));
+    status |= test_bool(1 == hammingweight(mrefLL));
+    status |= test_bool(1 == hammingweight(mrefLR));
+    return status;
+}
+
+
 
 
 template<typename T>
