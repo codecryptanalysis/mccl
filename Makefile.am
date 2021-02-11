@@ -17,7 +17,7 @@ TESTS = tests/test_compile
 
 check_PROGRAMS= tests/test_compile
 
-tests_test_compile_SOURCES=tests/test_compile.cpp
+tests_test_compile_SOURCES=tests/test_compile.cpp mccl/core/matrix_m4ri.cpp
 
 		
 CLANGFORMAT ?= clang-format

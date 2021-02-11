@@ -2,6 +2,7 @@
 
 #include <mccl/core/matrix_detail.hpp>
 #include <mccl/core/matrix.hpp>
+#include <mccl/core/matrix_m4ri.hpp>
 
 #include <mccl/contrib/string_algo.hpp>
 #include <mccl/contrib/thread_pool.hpp>
@@ -71,7 +72,21 @@ int test_matrixref()
     double f = double(hammingweight(matrix))/double(1024*1024);
     status |= test_bool(f >= 0.45, "too low weight for random");
     status |= test_bool(f <= 0.55, "too high weight for random");
-    std::cout << mrefUL << std::endl;
+
+    std::cout << "===================" << std::endl;
+    std::cout << mref2 << std::endl;
+    std::cout << mref3 << std::endl;
+    
+    matrixref mref2(matrix.submatrix(0,64,0,64));
+    matrixref mref3(matrix.submatrix(64,64,0,64));
+    m4ri_handle_t m2 = create_m4ri_handle(mref2);
+    m4ri_handle_t m3 = create_m4ri_handle(mref3);
+    transpose(m3, m2);
+
+    std::cout << "===================" << std::endl;
+    std::cout << mref2 << std::endl;
+    std::cout << mref3 << std::endl;
+
     return status;
 }
 
