@@ -91,16 +91,18 @@ int test_matrixref()
     matrixref mref2(matrix.submatrix(0,64,0,64));
     matrixref mref3(matrix.submatrix(64,64,0,64));
 
-    m4ri_handle_t m2 = create_m4ri_handle(mref2);
-    m4ri_handle_t m3 = create_m4ri_handle(mref3);
-    m4ri_transpose(m3, m2);
+    m4ri_transpose(mref3, mref2);
     for (size_t r = 0; r < mref2.rows(); ++r)
         for (size_t c = 0; c < mref2.columns(); ++c)
             status |= test_bool(mref2(r,c) == mref3(c,r), "transpose failed");
 
 //    std::cout << "===================" << std::endl;
-//    std::cout << mref2 << std::endl;
-//    std::cout << mref3 << std::endl;
+    matrixref mref4(matrix.submatrix(0,64,0,128));
+    matrixref mref5(matrix.submatrix(64,64,0,128));
+    std::cout << mref4 << std::endl;
+    mref5 = mref4;
+    m4ri_echelonize(mref5, true);
+    std::cout << mref5 << std::endl;
 
     return status;
 }
