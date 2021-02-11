@@ -5,10 +5,12 @@
 
 #include <nmmintrin.h>
 
+#include <iostream>
 #include <algorithm>
 #include <cstring>
 #include <cassert>
 #include <stdexcept>
+#include <string>
 
 //#define MCCL_MATRIX_BASE_ASSERT(s) assert(s);
 #define MCCL_MATRIX_BASE_ASSERT(s) if (!(s)) throw std::runtime_error("matrix_base_ref_t: assert throw");
@@ -237,6 +239,10 @@ namespace detail
 		}
 	};
 
+	template<typename data_t>
+	void matrix_print(std::ostream& o, const matrix_base_ref_t<data_t>& m, bool transpose = false);
+	template<typename data_t>
+	void vector_print(std::ostream& o, const matrix_base_ref_t<data_t>& m);
 
 	// return true if the matrices m1 and m2 are equal (same dimensions & same content, scratchcolumns are ignored)
 	template<typename data_t>

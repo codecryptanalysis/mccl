@@ -201,6 +201,10 @@ public:
     base_ref_t& base() { return _base; }
     const cbase_ref_t& base() const { return _base.as_const(); }
 
+    friend std::ostream& operator<<(std::ostream& os, const vector_ref& m) {
+        detail::vector_print(os, m.base());
+        return os;
+    }
 private:
     // do not access _base directly, use `base()` to maintain reference semantics
     base_ref_t _base;
@@ -496,6 +500,11 @@ public:
     base_ref_t& base() { return _base; }
     const cbase_ref_t& base() const { return _base.as_const(); }
 
+    friend std::ostream& operator<<(std::ostream& os, const matrix_ref& m) {
+        detail::matrix_print(os, m.base());
+        return os;
+    }
+
 private:
     // do not access _ref directly, use `ref()` to maintain reference semantics
     // exception is for iterators, they maintain reference semantics themselves
@@ -711,32 +720,32 @@ public:
 
     ~vector_t() { _free(); }
     /* constructors */
-    vector_t(size_t columns = 0): _allocptr(nullptr), _allocbytes(0) { _realloc(1, columns, true); }
+    vector_t(size_t columns = 0): _allocptr(nullptr), _allocbytes(0) { _realloc(columns, true); }
     vector_t(const vector_t& m) : vector_t(m.columns()) { *this = m; }
     vector_t(vector_t&& m) : vector_t(0) { swap(m); }
 
-    vector_t& operator=(const vector_t& m) { _realloc(1, m.columns()); detail::vector_copy(base(), m.base()); return *this; }
+    vector_t& operator=(const vector_t& m) { _realloc(m.columns()); detail::vector_copy(base(), m.base()); return *this; }
     vector_t& operator=(vector_t&& m) { swap(m); return *this; }
 
     vector_t(const vector_ref& m) : vector_t(m.columns()) { *this = m; }
-    vector_t& operator=(const vector_ref& m) { _realloc(1, m.columns()); detail::vector_copy(base(), m.base()); return *this; }
+    vector_t& operator=(const vector_ref& m) { _realloc(m.columns()); detail::vector_copy(base(), m.base()); return *this; }
 
     vector_t& operator^=(const vector_ref& m) { detail::vector_xor(base(), m.base()); return *this; }
     vector_t& operator|=(const vector_ref& m) { detail::vector_or(base(), m.base()); return *this; }
     vector_t& operator&=(const vector_ref& m) { detail::vector_and(base(), m.base()); return *this; }
 
-    vector_t& op_not(const vector_ref& m2) { _realloc(m2.rows(), m2.columns()); detail::matrix_copynot(base()); return *this; }
+    vector_t& op_not(const vector_ref& m2) { _realloc(m2.columns()); detail::matrix_copynot(base()); return *this; }
     
-    vector_t& op_and  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_and  (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_xor  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_xor  (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_or   (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_or   (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_nand (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_nand (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_nxor (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_nxor (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_nor  (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_nor  (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_andin(const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_andin(base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_andni(const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_andni(base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_orin (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_orin (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_orni (const vector_ref& m1, const vector_ref& m2) { _realloc(1, m1.columns()); detail::vector_orni (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_and  (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_and  (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_xor  (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_xor  (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_or   (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_or   (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_nand (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_nand (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_nxor (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_nxor (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_nor  (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_nor  (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_andin(const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_andin(base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_andni(const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_andni(base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_orin (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_orin (base(), m1.base(), m2.base()); return *this; }
+    vector_t& op_orni (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_orni (base(), m1.base(), m2.base()); return *this; }
 
     // comparison operators
     bool operator==(const vector_ref& m) const { return vector_compare(base(), m.base()); }
@@ -752,8 +761,9 @@ public:
     operator const matrix_ref& () const { return *reinterpret_cast<const matrix_ref*>( static_cast<const vector_ref*>(this) ); }
 
 private:
-    void _realloc(size_t _rows, size_t _columns, bool zero = false)
+    void _realloc(size_t _columns, bool zero = false)
     {
+        const size_t _rows = 1;
         if (rows() == _rows && columns() == _columns)
             return;
         size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
@@ -769,7 +779,7 @@ private:
         if (zero)
             memset(_allocptr, 0, _allocbytes);
         uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
-        vector_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / base().word_bits);
+        vector_ref::reset((data_t*)alignedptr, _columns, totalcol - _columns, totalcol / base().word_bits);
     }
     void _free()
     {

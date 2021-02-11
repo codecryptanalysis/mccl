@@ -34,6 +34,13 @@ int test_bool(bool val, const std::string& errmsg = "error")
     return -1;
 }
 
+void compile_test()
+{
+    mat_t mat(16,16);
+    vec_t vec(16);
+    vectorref vref(vec);
+    std::cout << mat << vec;
+}
 
 int test_matrixref()
 {
@@ -62,7 +69,9 @@ int test_matrixref()
     fillrandom(matrix);
     status |= test_bool(hammingweight(matrix) == hammingweight(mrefUL)+hammingweight(mrefUR)+hammingweight(mrefLL)+hammingweight(mrefLR));
     double f = double(hammingweight(matrix))/double(1024*1024);
-    std::cout << "matrix density: " << f << std::endl;
+    status |= test_bool(f >= 0.45, "too low weight for random");
+    status |= test_bool(f <= 0.55, "too high weight for random");
+    std::cout << mrefUL << std::endl;
     return status;
 }
 

@@ -18,6 +18,43 @@ namespace detail
 	}
 #endif
 
+	using namespace std;
+
+	template<typename data_t>
+	void matrix_print(std::ostream& o, const matrix_base_ref_t<data_t>& m, bool transpose)
+	{
+		o << "[";
+		if (!transpose)
+		{
+			for (size_t r = 0; r < m.rows; ++r)
+			{
+				o << (r==0 ? "[" : " [");
+				for (size_t c = 0; c < m.columns; ++c)
+					o << m(r,c);
+				o << "]" << std::endl;
+			}
+		}
+		else
+		{
+			for (size_t c = 0; c < m.columns; ++c)
+			{
+				o << "[";
+				for (size_t r = 0; r < m.rows; ++r)
+					o << m(r,c);
+				o << "]" << std::endl;
+			}
+		}
+		o << "]";
+	}
+	template<typename data_t>
+	void vector_print(std::ostream& o, const matrix_base_ref_t<data_t>& m)
+	{
+		o << "[";
+		for (size_t c = 0; c < m.columns; ++c)
+			o << m(0,c);
+		o << "]";
+	}
+
 	template<typename data_t>
 	inline bool matrix_compare(const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2)
 	{
