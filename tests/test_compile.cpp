@@ -41,6 +41,20 @@ void compile_test()
     vec_t vec(16);
     vectorref vref(vec);
     std::cout << mat << vec;
+
+    m4ri_transpose(mat, mat);
+    m4ri_add(mat, mat, mat);
+    m4ri_mul_naive(mat, mat, mat);
+    m4ri_addmul_naive(mat, mat, mat);
+    m4ri_gauss_delayed(mat);
+    m4ri_echelonize_naive(mat);
+    m4ri_invert_naive(mat, mat, mat);
+
+    m4ri_echelonize(mat);
+    m4ri_echelonize_pluq(mat);
+    m4ri_echelonize_m4ri(mat);
+    m4ri_mul(mat, mat, mat);
+    m4ri_addmul(mat, mat, mat);
 }
 
 int test_matrixref()
@@ -73,19 +87,20 @@ int test_matrixref()
     status |= test_bool(f >= 0.45, "too low weight for random");
     status |= test_bool(f <= 0.55, "too high weight for random");
 
-    std::cout << "===================" << std::endl;
-    std::cout << mref2 << std::endl;
-    std::cout << mref3 << std::endl;
     
     matrixref mref2(matrix.submatrix(0,64,0,64));
     matrixref mref3(matrix.submatrix(64,64,0,64));
+
     m4ri_handle_t m2 = create_m4ri_handle(mref2);
     m4ri_handle_t m3 = create_m4ri_handle(mref3);
-    transpose(m3, m2);
+    m4ri_transpose(m3, m2);
+    for (size_t r = 0; r < mref2.rows(); ++r)
+        for (size_t c = 0; c < mref2.columns(); ++c)
+            status |= test_bool(mref2(r,c) == mref3(c,r), "transpose failed");
 
-    std::cout << "===================" << std::endl;
-    std::cout << mref2 << std::endl;
-    std::cout << mref3 << std::endl;
+//    std::cout << "===================" << std::endl;
+//    std::cout << mref2 << std::endl;
+//    std::cout << mref3 << std::endl;
 
     return status;
 }

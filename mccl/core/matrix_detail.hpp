@@ -125,7 +125,7 @@ namespace detail
 		// obtain word mask for column c and lower
 		static data_t wordmasklow(size_t c) { return _dataones >> ((word_bits - 1 - c) % word_bits); }		
 		// obtain word mask for column c
-		data_t lastwordmask() const { return ~wordmaskhigh(columns); }
+		data_t lastwordmask() const { return columns % word_bits == 0 ? _dataones : ~wordmaskhigh(columns); }
 
 		bool operator()(size_t r, size_t c) const { return get_bit<data_t>(*data(r,c), c % word_bits);  }
 		
