@@ -625,7 +625,7 @@ public:
 
     ~matrix_t() { _free(); }
     /* constructors */
-    matrix_t(size_t rows = 0, size_t columns = 0): _allocptr(nullptr), _allocbytes(0) { _realloc(rows, columns, true); }
+    matrix_t(size_t rows = 0, size_t columns = 0): matrix_ref_t<data_t>(), _allocptr(nullptr), _allocbytes(0) { _realloc(rows, columns, true); }
     matrix_t(const matrix_t& m) : matrix_t(m.rows(), m.columns()) { *this = m; }
     matrix_t(matrix_t&& m) : matrix_t(0, 0) { swap(m); }
 
@@ -668,22 +668,20 @@ public:
 private:
     void _realloc(size_t _rows, size_t _columns, bool zero = false)
     {
-        if (rows() == _rows && columns() == _columns)
-            return;
         size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
         size_t totalbytes = (_rows * totalcol) / 8;
         size_t newallocbytes = totalbytes + bytealignment;
         if (newallocbytes > _allocbytes)
         {
             if (_allocptr != nullptr)
-               free(_allocptr);
+                free(_allocptr);
             _allocptr = (data_t*)malloc(newallocbytes);
             _allocbytes = newallocbytes;
         }
-        if (zero)
-            memset(_allocptr, 0, _allocbytes);
         uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
         matrix_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / base().word_bits);
+        if (zero)
+            memset(this->data(), 0, totalbytes);
     }
     void _free()
     {

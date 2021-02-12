@@ -472,18 +472,18 @@ namespace detail
 				binaryfunc(src.data(r), src.data(r)+words, dst.data(r)); \
 		} \
 	}
-	GENERATE_MATRIX_OP2(matrix_copy, std::copy);
-	GENERATE_MATRIX_OP2(matrix_copynot, copy_not);
-	GENERATE_MATRIX_OP2(matrix_and, binary_and);
-	GENERATE_MATRIX_OP2(matrix_xor, binary_xor);
-	GENERATE_MATRIX_OP2(matrix_or, binary_or);
-	GENERATE_MATRIX_OP2(matrix_nand, binary_nand);
-	GENERATE_MATRIX_OP2(matrix_nxor, binary_nxor);
-	GENERATE_MATRIX_OP2(matrix_nor, binary_nor);
-	GENERATE_MATRIX_OP2(matrix_andin, binary_andin);
-	GENERATE_MATRIX_OP2(matrix_andni, binary_andni);
-	GENERATE_MATRIX_OP2(matrix_orin, binary_orin);
-	GENERATE_MATRIX_OP2(matrix_orni, binary_orni);
+	GENERATE_MATRIX_OP2(matrix_copy, std::copy)
+	GENERATE_MATRIX_OP2(matrix_copynot, copy_not)
+	GENERATE_MATRIX_OP2(matrix_and, binary_and)
+	GENERATE_MATRIX_OP2(matrix_xor, binary_xor)
+	GENERATE_MATRIX_OP2(matrix_or, binary_or)
+	GENERATE_MATRIX_OP2(matrix_nand, binary_nand)
+	GENERATE_MATRIX_OP2(matrix_nxor, binary_nxor)
+	GENERATE_MATRIX_OP2(matrix_nor, binary_nor)
+	GENERATE_MATRIX_OP2(matrix_andin, binary_andin)
+	GENERATE_MATRIX_OP2(matrix_andni, binary_andni)
+	GENERATE_MATRIX_OP2(matrix_orin, binary_orin)
+	GENERATE_MATRIX_OP2(matrix_orni, binary_orni)
 
 #define GENERATE_MATRIX_OP3(matrixfunc, binaryfunc) \
 	template<typename data_t> \
@@ -504,18 +504,18 @@ namespace detail
 				binaryfunc(src1.data(r), src1.data(r)+words, src2.data(r), dst.data(r)); \
 		} \
 	}
-	GENERATE_MATRIX_OP3(matrix_copy, std::copy);
-	GENERATE_MATRIX_OP3(matrix_copynot, copy_not);
-	GENERATE_MATRIX_OP3(matrix_and, binary_and);
-	GENERATE_MATRIX_OP3(matrix_xor, binary_xor);
-	GENERATE_MATRIX_OP3(matrix_or, binary_or);
-	GENERATE_MATRIX_OP3(matrix_nand, binary_nand);
-	GENERATE_MATRIX_OP3(matrix_nxor, binary_nxor);
-	GENERATE_MATRIX_OP3(matrix_nor, binary_nor);
-	GENERATE_MATRIX_OP3(matrix_andin, binary_andin);
-	GENERATE_MATRIX_OP3(matrix_andni, binary_andni);
-	GENERATE_MATRIX_OP3(matrix_orin, binary_orin);
-	GENERATE_MATRIX_OP3(matrix_orni, binary_orni);
+	GENERATE_MATRIX_OP3(matrix_copy, std::copy)
+	GENERATE_MATRIX_OP3(matrix_copynot, copy_not)
+	GENERATE_MATRIX_OP3(matrix_and, binary_and)
+	GENERATE_MATRIX_OP3(matrix_xor, binary_xor)
+	GENERATE_MATRIX_OP3(matrix_or, binary_or)
+	GENERATE_MATRIX_OP3(matrix_nand, binary_nand)
+	GENERATE_MATRIX_OP3(matrix_nxor, binary_nxor)
+	GENERATE_MATRIX_OP3(matrix_nor, binary_nor)
+	GENERATE_MATRIX_OP3(matrix_andin, binary_andin)
+	GENERATE_MATRIX_OP3(matrix_andni, binary_andni)
+	GENERATE_MATRIX_OP3(matrix_orin, binary_orin)
+	GENERATE_MATRIX_OP3(matrix_orni, binary_orni)
 
 
 
@@ -528,18 +528,18 @@ namespace detail
 		const size_t words = (dst.columns + dst.word_bits - 1) / dst.word_bits; \
 		binaryfunc(src.data(0), src.data(0)+words, dst.data(0)); \
 	}
-	GENERATE_VECTOR_OP2(vector_copy, std::copy);
-	GENERATE_VECTOR_OP2(vector_copynot, copy_not);
-	GENERATE_VECTOR_OP2(vector_and, binary_and);
-	GENERATE_VECTOR_OP2(vector_xor, binary_xor);
-	GENERATE_VECTOR_OP2(vector_or, binary_or);
-	GENERATE_VECTOR_OP2(vector_nand, binary_nand);
-	GENERATE_VECTOR_OP2(vector_nxor, binary_nxor);
-	GENERATE_VECTOR_OP2(vector_nor, binary_nor);
-	GENERATE_VECTOR_OP2(vector_andin, binary_andin);
-	GENERATE_VECTOR_OP2(vector_andni, binary_andni);
-	GENERATE_VECTOR_OP2(vector_orin, binary_orin);
-	GENERATE_VECTOR_OP2(vector_orni, binary_orni);
+	GENERATE_VECTOR_OP2(vector_copy, std::copy)
+	GENERATE_VECTOR_OP2(vector_copynot, copy_not)
+	GENERATE_VECTOR_OP2(vector_and, binary_and)
+	GENERATE_VECTOR_OP2(vector_xor, binary_xor)
+	GENERATE_VECTOR_OP2(vector_or, binary_or)
+	GENERATE_VECTOR_OP2(vector_nand, binary_nand)
+	GENERATE_VECTOR_OP2(vector_nxor, binary_nxor)
+	GENERATE_VECTOR_OP2(vector_nor, binary_nor)
+	GENERATE_VECTOR_OP2(vector_andin, binary_andin)
+	GENERATE_VECTOR_OP2(vector_andni, binary_andni)
+	GENERATE_VECTOR_OP2(vector_orin, binary_orin)
+	GENERATE_VECTOR_OP2(vector_orni, binary_orni)
 
 #define GENERATE_VECTOR_OP3(vectorfunc, binaryfunc) \
 	template<typename data_t> \
@@ -550,62 +550,117 @@ namespace detail
 		const size_t words = (dst.columns + dst.word_bits - 1) / dst.word_bits; \
 		binaryfunc(src1.data(0), src1.data(0)+words, src2.data(0), dst.data(0)); \
 	}
-	GENERATE_VECTOR_OP3(vector_copy, std::copy);
-	GENERATE_VECTOR_OP3(vector_copynot, copy_not);
-	GENERATE_VECTOR_OP3(vector_and, binary_and);
-	GENERATE_VECTOR_OP3(vector_xor, binary_xor);
-	GENERATE_VECTOR_OP3(vector_or, binary_or);
-	GENERATE_VECTOR_OP3(vector_nand, binary_nand);
-	GENERATE_VECTOR_OP3(vector_nxor, binary_nxor);
-	GENERATE_VECTOR_OP3(vector_nor, binary_nor);
-	GENERATE_VECTOR_OP3(vector_andin, binary_andin);
-	GENERATE_VECTOR_OP3(vector_andni, binary_andni);
-	GENERATE_VECTOR_OP3(vector_orin, binary_orin);
-	GENERATE_VECTOR_OP3(vector_orni, binary_orni);
+	GENERATE_VECTOR_OP3(vector_copy, std::copy)
+	GENERATE_VECTOR_OP3(vector_copynot, copy_not)
+	GENERATE_VECTOR_OP3(vector_and, binary_and)
+	GENERATE_VECTOR_OP3(vector_xor, binary_xor)
+	GENERATE_VECTOR_OP3(vector_or, binary_or)
+	GENERATE_VECTOR_OP3(vector_nand, binary_nand)
+	GENERATE_VECTOR_OP3(vector_nxor, binary_nxor)
+	GENERATE_VECTOR_OP3(vector_nor, binary_nor)
+	GENERATE_VECTOR_OP3(vector_andin, binary_andin)
+	GENERATE_VECTOR_OP3(vector_andni, binary_andni)
+	GENERATE_VECTOR_OP3(vector_orin, binary_orin)
+	GENERATE_VECTOR_OP3(vector_orni, binary_orni)
 
 
 
 	template<typename data_t, size_t bits>
 	inline void block_transpose(data_t* dst, size_t dststride, const data_t* src, size_t srcstride)
 	{
-		static_assert(0 == (bits&(bits-1))); // bits must be power of 2
-		static_assert(sizeof(data_t)*8 >= bits); // bits must not exceed data_t bitsize
+		static_assert(0 == (bits&(bits-1)), "bits must be power of 2");
+		static_assert(sizeof(data_t)*8 >= bits, "bits must not exceed data_t bitsize");
 
 		// mask of lower half bits
 		data_t m = (data_t(1) << (bits/2))-1;
-		int j = (bits/2);
+		unsigned int j = (bits/2);
 		data_t tmp[bits];
 
 		// first loop iteration, load src store in tmp
-#pragma unroll
-		for (int k=0;  k<bits/2;  ++k)
+//#pragma unroll
+		const data_t* src2 = src + ((bits/2)*srcstride);
+		for (unsigned int k=0;  k<bits/2;  ++k, src+=srcstride, src2+=srcstride)
 		{
 			// j = (bits/2)
-			data_t a = src[k*srcstride], b = src[k*srcstride + (bits/2)*srcstride];
-			data_t t = (a ^ (b >> (bits/2))) & m;
-			tmp[k] = a ^ t;
-			tmp[k+(bits/2)] = b ^ (t << (bits/2));
+			data_t a = *src, b = *src2;
+			data_t t = ((a>>(bits/2)) ^ b) & m;
+			tmp[k] = a ^ (t << (bits/2));
+			tmp[k+(bits/2)] = b ^ t;
 		}
 		j>>=1; m^=m<<j;
 		// main loop
 		for (;  1 != j;  j>>=1,m^=m<<j)
 		{
-#pragma unroll
-			for (int l=0,k=0;  l<bits/2;  ++l)
+//#pragma unroll
+			for (unsigned int l=0,k=0;  l<bits/2;  ++l)
 			{
-				data_t t = (tmp[k] ^ (tmp[k+j] >> j)) & m;
-				tmp[k] ^= t;
-				tmp[k+j] ^= (t << j);
+				data_t t = ((tmp[k]>>j) ^ tmp[k+j]) & m;
+				tmp[k] ^= t<<j;
+				tmp[k+j] ^= t;
 				k=(k+j+1)&~j;
 			}
 		}
 		// last loop iteration (j==1), load tmp store in dst
-#pragma unroll
-		for (int k=0;  k<bits;  k += 2)
+//#pragma unroll
+		for (unsigned int k=0;  k<bits;  k += 2)
 		{
-			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
-			dst[k*dststride] = tmp[k] ^ t;
-			dst[k*dststride+dststride] = tmp[k+1] ^ (t << 1);
+			data_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
+			*dst = tmp[k] ^ (t<<1); dst+=dststride;
+			*dst = tmp[k+1] ^ t; dst+=dststride;
+		}
+	}
+
+	template<typename data_t, size_t bits>
+	inline void block_transpose2(data_t* dst, size_t dststride, const data_t* src, size_t srcstride)
+	{
+		static_assert(0 == (bits&(bits-1)), "bits must be power of 2");
+		static_assert(sizeof(data_t)*8 >= bits, "bits must not exceed data_t bitsize");
+
+		// mask of lower half bits
+		data_t m = (data_t(1) << (bits/2))-1;
+		unsigned int j = (bits/2);
+		data_t tmp[2*bits];
+
+		// first loop iteration, load src store in tmp
+//#pragma unroll
+		const data_t* src2 = src + ((bits/2)*srcstride);
+		for (unsigned int k=0;  k<bits/2;  ++k, src+=srcstride, src2+=srcstride)
+		{
+			// j = (bits/2)
+			data_t a1 = *src, b1 = *src2;
+			data_t t1 = ((a1>>(bits/2)) ^ b1) & m;
+			tmp[k] = a1 ^ (t1 << (bits/2));
+			tmp[k+(bits/2)] = b1 ^ t1;
+			data_t a2 = *(src+1), b2 = *(src2+1);
+			data_t t2 = ((a2>>(bits/2)) ^ b2) & m;
+			tmp[k+bits] = a2 ^ (t2 << (bits/2));
+			tmp[k+(bits/2)+bits] = b2 ^ t2;
+
+		}
+		j>>=1; m^=m<<j;
+		// main loop
+		for (;  1 != j;  j>>=1,m^=m<<j)
+		{
+//#pragma unroll
+			for (unsigned int l=0,k=0;  l<bits/2;  ++l)
+			{
+				data_t t = ((tmp[k]>>j) ^ tmp[k+j]) & m;
+				tmp[k] ^= t<<j;
+				tmp[k+j] ^= t;
+				data_t t2 = ((tmp[k+bits]>>j) ^ tmp[k+j+bits]) & m;
+				tmp[k+bits] ^= t2<<j;
+				tmp[k+j+bits] ^= t2;
+
+				k=(k+j+1)&~j;
+			}
+		}
+		// last loop iteration (j==1), load tmp store in dst
+//#pragma unroll
+		for (unsigned int k=0;  k<2*bits;  k += 2)
+		{
+			data_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
+			*dst = tmp[k] ^ (t<<1); dst+=dststride;
+			*dst = tmp[k+1] ^ t; dst+=dststride;
 		}
 	}
 
@@ -614,58 +669,66 @@ namespace detail
 	template<typename data_t, size_t bits>
 	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows)
 	{
-		static_assert(0 == (bits&(bits-1))); // bits must be power of 2
-		static_assert(sizeof(data_t)*8 >= bits); // bits must not exceed data_t bitsize
+		static_assert(bits >= 4, "bits >= 4");
+		static_assert(0 == (bits&(bits-1)), "bits must be power of 2");
+		static_assert(sizeof(data_t)*8 >= bits, "bits must not exceed data_t bitsize");
 		assert(dstrows <= bits);
 		assert(srcrows <= bits);
 
 		// mask of lower half bits
 		data_t m = (data_t(1) << (bits/2))-1;
-		int j = (bits/2);
-		data_t tmp[bits];
+		unsigned int j = (bits/2);
+		data_t tmp[bits+2]; // <= add 2 to avoid incorrect out-of-bounds warning
 
 		// first loop iteration, load src store in tmp
-		for (int k=0;  k<bits/2;  ++k)
+		const data_t* src2 = src + ((bits/2)*srcstride);
+		for (unsigned int k=0;  k<bits/2;  ++k)
 		{
 			if (k < srcrows)
 			{
-				data_t a = src[k*srcstride], b = 0;
+				data_t a = *src, b = 0;
+				src += srcstride;
 				if ((k+(bits/2)) < srcrows)
-					b = src[k*srcstride + (bits/2)*srcstride];
-				data_t t = (a ^ (b >> (bits/2))) & m;
-				tmp[k] = a ^ t;
-				tmp[k+(bits/2)] = b ^ (t << (bits/2));
+				{
+					b = *src2;
+					src2 += srcstride;
+				}
+				data_t t = (b ^ (a >> (bits/2))) & m;
+				tmp[k] = a ^ (t << (bits/2));
+				tmp[k+(bits/2)] = b ^ t;
 			}
 			else
 			{
 				tmp[k] = 0;
-				tmp[k+j] = 0;
+				tmp[k+(bits/2)] = 0;
 			}
 		}
 		j>>=1; m^=m<<j;
 		// main loop
 		for (;  1 != j;  j>>=1,m^=m<<j)
 		{
-			for (int l=0,k=0;  l<bits/2;  ++l)
+			for (unsigned int l=0,k=0;  l<bits/2;  ++l)
 			{
-				data_t t = (tmp[k] ^ (tmp[k+j] >> j)) & m;
-				tmp[k] ^= t;
-				tmp[k+j] ^= (t << j);
+				data_t t = ((tmp[k]>>j) ^ tmp[k+j]) & m;
+				tmp[k] ^= t<<j;
+				tmp[k+j] ^= t;
 				k=(k+j+1)&~j;
 			}
 		}
 		// last loop iteration (j==1), load tmp store in dst
-		int k=0;
+		unsigned int k=0;
 		for (;  k+1 < dstrows;  k += 2)
 		{
-			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
-			dst[k*dststride] = tmp[k] ^ t;
-			dst[k*dststride+dststride] = tmp[k+1] ^ (t << 1);
+			data_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
+			*dst = tmp[k] ^ (t<<1); dst+=dststride;
+			*dst = tmp[k+1] ^ t; dst+=dststride;
 		}
+		// note both k and bits are even and k < dstrows <= bits
+		// so k+1 < bits as well, nevertheless compilers may warn
 		if (k < dstrows)
 		{
-			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
-			dst[k*dststride] = tmp[k] ^ t;
+			data_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
+			*dst = tmp[k] ^ (t<<1);
 		}
 	}
 
@@ -678,54 +741,62 @@ namespace detail
 		assert(sizeof(data_t)*8 >= bits); // bits must not exceed data_t bitsize
 		assert(dstrows <= bits);
 		assert(srcrows <= bits);
+		if (bits < 4)
+			bits = 4;
+		if (bits > 8*sizeof(data_t)) throw;
 
 		// mask of lower half bits
 		data_t m = (data_t(1) << (bits/2))-1;
-		int j = (bits/2);
-		data_t tmp[bits];
+		unsigned int j = (bits/2);
+		data_t tmp[8*sizeof(data_t)];
 
 		// first loop iteration, load src store in tmp
-		for (int k=0;  k<bits/2;  ++k)
+		const data_t* src2 = src + ((bits/2)*srcstride);
+		for (unsigned int k=0;  k<bits/2;  ++k)
 		{
 			if (k < srcrows)
 			{
-				data_t a = src[k*srcstride], b = 0;
+				data_t a = *src, b = 0;
+				src += srcstride;
 				if ((k+(bits/2)) < srcrows)
-					b = src[k*srcstride + (bits/2)*srcstride];
-				data_t t = (a ^ (b >> (bits/2))) & m;
-				tmp[k] = a ^ t;
-				tmp[k+(bits/2)] = b ^ (t << (bits/2));
+				{
+					b = *src2;
+					src2 += srcstride;
+				}
+				data_t t = (b ^ (a >> (bits/2))) & m;
+				tmp[k] = a ^ (t << (bits/2));
+				tmp[k+(bits/2)] = b ^ t;
 			}
 			else
 			{
 				tmp[k] = 0;
-				tmp[k+j] = 0;
+				tmp[k+(bits/2)] = 0;
 			}
 		}
 		j>>=1; m^=m<<j;
 		// main loop
 		for (;  1 != j;  j>>=1,m^=m<<j)
 		{
-			for (int l=0,k=0;  l<bits/2;  ++l)
+			for (unsigned l=0,k=0;  l<bits/2;  ++l)
 			{
-				data_t t = (tmp[k] ^ (tmp[k+j] >> j)) & m;
-				tmp[k] ^= t;
-				tmp[k+j] ^= (t << j);
+				data_t t = ((tmp[k]>>j) ^ tmp[k+j]) & m;
+				tmp[k] ^= t<<j;
+				tmp[k+j] ^= t;
 				k=(k+j+1)&~j;
 			}
 		}
 		// last loop iteration (j==1), load tmp store in dst
-		int k=0;
+		unsigned int k=0;
 		for (;  k+1 < dstrows;  k += 2)
 		{
-			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
-			dst[k*dststride] = tmp[k] ^ t;
-			dst[k*dststride+dststride] = tmp[k+1] ^ (t << 1);
+			data_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
+			*dst = tmp[k] ^ (t<<1); dst+=dststride;
+			*dst = tmp[k+1] ^ t; dst+=dststride;
 		}
 		if (k < dstrows)
 		{
-			data_t t = (tmp[k] ^ (tmp[k+1] >> 1)) & m;
-			dst[k*dststride] = tmp[k] ^ t;
+			data_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
+			*dst = tmp[k] ^ (t<<1);
 		}
 	}
 
@@ -743,23 +814,37 @@ namespace detail
 		{
 			// process block of bits columns
 			size_t c = 0;
-			for (; c+bits <= src.columns; c += bits)
+			for (; c+2*bits <= src.columns; c += 2*bits)
+			{
+				block_transpose2(dst.data(c,r), dst.stride, src.data(r,c), src.stride);
+			}
+			if (c+bits <= src.columns)
+			{
 				block_transpose(dst.data(c,r), dst.stride, src.data(r,c), src.stride);
+				c += bits;
+			}
 			// process block of partial C columns
 			if (c < src.columns)
+			{
 				block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, bits);
+			}
 		}
 		// process last rows
 		if (r < src.rows)
 		{
 			size_t c = 0;
 			for (; c+bits <= src.columns; c += bits)
+			{
 				block_transpose(dst.data(c,r), dst.stride, bits, src.data(r,c), src.stride, (src.rows % bits));
+			}
 			// process final bits x C submatrix
 			if (c < src.columns)
 			{
 				size_t partialbits = next_pow2<uint32_t>(std::max(src.columns % bits, src.rows % bits));
-				block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, (src.rows % bits), partialbits);
+				if (partialbits == bits)
+					block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, (src.rows % bits));
+				else
+					block_transpose(dst.data(c,r), dst.stride, (src.columns % bits), src.data(r,c), src.stride, (src.rows % bits), partialbits);
 			}
 		}
 	}

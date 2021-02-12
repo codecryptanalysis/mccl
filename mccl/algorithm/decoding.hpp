@@ -122,3 +122,5 @@ public:
 };
 
 MCCL_END_NAMESPACE
+
+#endif

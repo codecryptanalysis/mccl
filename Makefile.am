@@ -1,24 +1,37 @@
 EXTRA_DIST = README.md LICENSE
 ACLOCAL_AMFLAGS = -I m4
 
-#lib_libmccl_la_SOURCES=\
-#	mccl/contrib/string_algo.hpp \
-#	mccl/contrib/thread_pool.hpp \
-#	mccl/contrib/parallel_algorithms.hpp \
-#	mccl/contrib/json.hpp \
-#	mccl/contrib/program_options.hpp \
-#	mccl/core/birthday.hpp \
-#	mccl/core/matrix.hpp \
-#	mccl/algorithm/decoding.hpp \
-#	mccl/algorithm/dumer.hpp \
-#	mccl/algorithm/dumer.cpp
+lib_LTLIBRARIES = libmccl.la
 
-TESTS = tests/test_compile
+libmccl_la_LDFLAGS= -version-info 1:0:1 -no-undefined
+libmccl_la_SOURCES=\
+	mccl/contrib/string_algo.hpp \
+	mccl/contrib/thread_pool.hpp \
+	mccl/contrib/parallel_algorithms.hpp \
+	mccl/contrib/json.hpp \
+	mccl/contrib/program_options.hpp \
+	\
+	mccl/config/config.h \
+	mccl/config/config.hpp \
+	\
+	mccl/core/matrix_detail.hpp \
+	mccl/core/matrix_detail.inl \
+	mccl/core/matrix.hpp \
+	mccl/core/matrix_m4ri.hpp \
+	mccl/core/matrix_m4ri.cpp
 
-check_PROGRAMS= tests/test_compile
+TESTS= tests/test_compile tests/test_matrix tests/test_m4ri
 
-tests_test_compile_SOURCES=tests/test_compile.cpp mccl/core/matrix_m4ri.cpp
+check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri
 
+tests_test_compile_SOURCES= tests/test_compile.cpp
+tests_test_compile_LDADD  = libmccl.la
+
+tests_test_matrix_SOURCES= tests/test_matrix.cpp
+tests_test_matrix_LDADD  = libmccl.la
+
+tests_test_m4ri_SOURCES= tests/test_m4ri.cpp
+tests_test_m4ri_LDADD  = libmccl.la
 		
 CLANGFORMAT ?= clang-format
 .PHONY: check-style

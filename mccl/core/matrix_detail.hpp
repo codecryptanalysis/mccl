@@ -91,7 +91,7 @@ namespace detail
 		size_t rows, columns, scratchcolumns;
 		size_t stride; // with unit data_t
 
-		matrix_base_ref_t() = default;
+		matrix_base_ref_t(): ptr(nullptr), rows(0), columns(0), scratchcolumns(0), stride(0) {}
 		matrix_base_ref_t(const matrix_base_ref_t&  m) = default;
 		matrix_base_ref_t(      matrix_base_ref_t&& m) = default;
 		matrix_base_ref_t(data_t* _ptr, size_t _rows, size_t _columns, size_t _scratchcolumns, size_t _stride)
@@ -233,7 +233,7 @@ namespace detail
 		template<typename T>
 		matrix_base_ref_t<T> to_data() const
 		{
-			static_assert(std::is_const<T>::value == std::is_const<data_t>::value);
+			static_assert(std::is_const<T>::value == std::is_const<data_t>::value, "not allowed to remove const");
 			MCCL_MATRIX_BASE_ASSERT((stride * sizeof(data_t)) % sizeof(T) == 0);
 			return matrix_base_ref_t<T>(reinterpret_cast<T*>(ptr), rows, columns, scratchcolumns, (stride * sizeof(data_t)) / sizeof(T));
 		}
@@ -291,6 +291,9 @@ namespace detail
 	// bits must be a power of 2
 	template<typename data_t, size_t bits = sizeof(data_t)*8>
 	inline void block_transpose(data_t* dst, size_t dststride, const data_t* src, size_t srcstride);
+	// variant that does two blocks simultaneously (src = (A B) => dst = (A B)^T)
+	template<typename data_t, size_t bits = sizeof(data_t)*8>
+	inline void block_transpose2(data_t* dst, size_t dststride, const data_t* src, size_t srcstride);
 	// specialization for partial matrix
 	template<typename data_t, size_t bits = sizeof(data_t)*8>
 	inline void block_transpose(data_t* dst, size_t dststride, size_t dstrows, const data_t* src, size_t srcstride, size_t srcrows);
@@ -367,33 +370,33 @@ namespace detail
 	template<typename data_t> \
 	inline void matrixfunc (matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src);
 
-	DEFINE_MATRIX_OP2(matrix_copy);    // dst = src
-	DEFINE_MATRIX_OP2(matrix_copynot); // dst = ~src
-	DEFINE_MATRIX_OP2(matrix_and);
-	DEFINE_MATRIX_OP2(matrix_xor);
-	DEFINE_MATRIX_OP2(matrix_or);
-	DEFINE_MATRIX_OP2(matrix_nand);
-	DEFINE_MATRIX_OP2(matrix_nxor);
-	DEFINE_MATRIX_OP2(matrix_nor);
-	DEFINE_MATRIX_OP2(matrix_andin);
-	DEFINE_MATRIX_OP2(matrix_andni);
-	DEFINE_MATRIX_OP2(matrix_orin);
-	DEFINE_MATRIX_OP2(matrix_orni);
+	DEFINE_MATRIX_OP2(matrix_copy)    // dst = src
+	DEFINE_MATRIX_OP2(matrix_copynot) // dst = ~src
+	DEFINE_MATRIX_OP2(matrix_and)
+	DEFINE_MATRIX_OP2(matrix_xor)
+	DEFINE_MATRIX_OP2(matrix_or)
+	DEFINE_MATRIX_OP2(matrix_nand)
+	DEFINE_MATRIX_OP2(matrix_nxor)
+	DEFINE_MATRIX_OP2(matrix_nor)
+	DEFINE_MATRIX_OP2(matrix_andin)
+	DEFINE_MATRIX_OP2(matrix_andni)
+	DEFINE_MATRIX_OP2(matrix_orin)
+	DEFINE_MATRIX_OP2(matrix_orni)
 
 #define DEFINE_MATRIX_OP3(matrixfunc) \
 	template<typename data_t> \
 	inline void matrixfunc (matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src1, const matrix_base_ref_t<const data_t>& src2);
 
-	DEFINE_MATRIX_OP3(matrix_and);   // dst = src1 & src2
-	DEFINE_MATRIX_OP3(matrix_xor);
-	DEFINE_MATRIX_OP3(matrix_or);
-	DEFINE_MATRIX_OP3(matrix_nand);
-	DEFINE_MATRIX_OP3(matrix_nxor);
-	DEFINE_MATRIX_OP3(matrix_nor);
-	DEFINE_MATRIX_OP3(matrix_andin);
-	DEFINE_MATRIX_OP3(matrix_andni);
-	DEFINE_MATRIX_OP3(matrix_orin);
-	DEFINE_MATRIX_OP3(matrix_orni);
+	DEFINE_MATRIX_OP3(matrix_and)   // dst = src1 & src2
+	DEFINE_MATRIX_OP3(matrix_xor)
+	DEFINE_MATRIX_OP3(matrix_or)
+	DEFINE_MATRIX_OP3(matrix_nand)
+	DEFINE_MATRIX_OP3(matrix_nxor)
+	DEFINE_MATRIX_OP3(matrix_nor)
+	DEFINE_MATRIX_OP3(matrix_andin)
+	DEFINE_MATRIX_OP3(matrix_andni)
+	DEFINE_MATRIX_OP3(matrix_orin)
+	DEFINE_MATRIX_OP3(matrix_orni)
 
 
 		// same as above, but assume rows == 1
@@ -401,35 +404,35 @@ namespace detail
 	template<typename data_t> \
 	inline void vectorfunc (matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src);
 
-	DEFINE_VECTOR_OP2(vector_copy);
-	DEFINE_VECTOR_OP2(vector_copynot);
-	DEFINE_VECTOR_OP2(vector_and);
-	DEFINE_VECTOR_OP2(vector_xor);
-	DEFINE_VECTOR_OP2(vector_or);
-	DEFINE_VECTOR_OP2(vector_nand);
-	DEFINE_VECTOR_OP2(vector_nxor);
-	DEFINE_VECTOR_OP2(vector_nor);
-	DEFINE_VECTOR_OP2(vector_andin);
-	DEFINE_VECTOR_OP2(vector_andni);
-	DEFINE_VECTOR_OP2(vector_orin);
-	DEFINE_VECTOR_OP2(vector_orni);
+	DEFINE_VECTOR_OP2(vector_copy)
+	DEFINE_VECTOR_OP2(vector_copynot)
+	DEFINE_VECTOR_OP2(vector_and)
+	DEFINE_VECTOR_OP2(vector_xor)
+	DEFINE_VECTOR_OP2(vector_or)
+	DEFINE_VECTOR_OP2(vector_nand)
+	DEFINE_VECTOR_OP2(vector_nxor)
+	DEFINE_VECTOR_OP2(vector_nor)
+	DEFINE_VECTOR_OP2(vector_andin)
+	DEFINE_VECTOR_OP2(vector_andni)
+	DEFINE_VECTOR_OP2(vector_orin)
+	DEFINE_VECTOR_OP2(vector_orni)
 
 #define DEFINE_VECTOR_OP3(vectorfunc) \
 	template<typename data_t> \
 	inline void vectorfunc (matrix_base_ref_t<data_t>& dst, const matrix_base_ref_t<const data_t>& src1, const matrix_base_ref_t<const data_t>& src2);
 
-	DEFINE_VECTOR_OP3(vector_copy);
-	DEFINE_VECTOR_OP3(vector_copynot);
-	DEFINE_VECTOR_OP3(vector_and);
-	DEFINE_VECTOR_OP3(vector_xor);
-	DEFINE_VECTOR_OP3(vector_or);
-	DEFINE_VECTOR_OP3(vector_nand);
-	DEFINE_VECTOR_OP3(vector_nxor);
-	DEFINE_VECTOR_OP3(vector_nor);
-	DEFINE_VECTOR_OP3(vector_andin);
-	DEFINE_VECTOR_OP3(vector_andni);
-	DEFINE_VECTOR_OP3(vector_orin);
-	DEFINE_VECTOR_OP3(vector_orni);
+	DEFINE_VECTOR_OP3(vector_copy)
+	DEFINE_VECTOR_OP3(vector_copynot)
+	DEFINE_VECTOR_OP3(vector_and)
+	DEFINE_VECTOR_OP3(vector_xor)
+	DEFINE_VECTOR_OP3(vector_or)
+	DEFINE_VECTOR_OP3(vector_nand)
+	DEFINE_VECTOR_OP3(vector_nxor)
+	DEFINE_VECTOR_OP3(vector_nor)
+	DEFINE_VECTOR_OP3(vector_andin)
+	DEFINE_VECTOR_OP3(vector_andni)
+	DEFINE_VECTOR_OP3(vector_orin)
+	DEFINE_VECTOR_OP3(vector_orni)
 
 } // namespace detail
 

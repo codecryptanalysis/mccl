@@ -41,8 +41,8 @@ struct m4ri_data_helper_t
     
     m4ri_handle_t h;
     
-    operator m4ri_handle_t() { return h; }
-    operator const m4ri_handle_t() const { return h; }
+    operator m4ri_handle_t&() { return h; }
+    operator const m4ri_handle_t&() const { return h; }
 };
 
 /* m4ri functions taking mccl matrix_ref_t, which create temporary m4ri handles */

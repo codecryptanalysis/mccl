@@ -1,0 +1,189 @@
+#include <mccl/config/config.hpp>
+
+#include <mccl/core/matrix_detail.hpp>
+#include <mccl/core/matrix.hpp>
+
+#include <iostream>
+#include <vector>
+#include <set>
+#include <utility>
+
+#include "test_utils.hpp"
+
+using namespace mccl;
+
+typedef mccl::matrix_ref_t<uint64_t> matrixref;
+typedef mccl::matrix_ptr_t<uint64_t> matrixptr;
+typedef mccl::vector_ref_t<uint64_t> vectorref;
+typedef mccl::vector_ptr_t<uint64_t> vectorptr;
+typedef mccl::matrix_t<uint64_t> mat_t;
+typedef mccl::vector_t<uint64_t> vec_t;
+typedef mccl::detail::matrix_base_ref_t<uint64_t> base_t;
+
+int test_bool(bool val, const std::string& errmsg = "error")
+{
+    if (val)
+       return 0;
+    LOG_CERR(errmsg);
+    return -1;
+}
+
+int test_transpose(size_t r = 512, size_t c = 512)
+{
+    std::cout << r << "," << c << std::endl;
+
+    mat_t m1(r , c+1);
+    mat_t m2(c+1 , r);
+
+    fillrandom(m1);
+    m2.transpose(m1);
+    int status = 0;
+    for (size_t i = 0; i < m1.rows() && status == 0; ++i)
+        for (size_t j = 0; j < m1.columns() && status == 0; ++j)
+            status |= test_bool(m1(i,j) == m2(j,i), "transpose failed");
+    return status;
+}
+
+int test_matrixref(size_t r = 512, size_t c = 512)
+{
+    if (r%64 != 0) return 0;
+    if (c%64 != 0) return 0;
+    mat_t matrix(2*r, 2*c);
+    matrixref mref1(matrix);
+    matrixref mrefUL(matrix.submatrix(0, r, 0, c));
+    matrixref mrefUR(matrix.submatrix(0, r, c, c));
+    matrixref mrefLL(matrix.submatrix(r, r, 0, c));
+    matrixref mrefLR(matrix.submatrix(r, r, c, c));
+    mrefUL.bitset(1,2);
+    mrefUR.bitset(3,4);
+    mrefLL.bitset(5,6);
+    mrefLR.bitset(7,8);
+
+    int status = 0;
+    status |= test_bool(mref1(1,2));
+    status |= test_bool(mref1(3,4+c));
+    status |= test_bool(mref1(5+r,6));
+    status |= test_bool(mref1(7+r,8+c));
+    status |= test_bool(mref1.hammingweight() == 4);
+    status |= test_bool(1 == hammingweight(mrefUL));
+    status |= test_bool(1 == hammingweight(mrefUR));
+    status |= test_bool(1 == hammingweight(mrefLL));
+    status |= test_bool(1 == hammingweight(mrefLR));
+
+    fillrandom(matrix);
+    status |= test_bool(hammingweight(matrix) == hammingweight(mrefUL)+hammingweight(mrefUR)+hammingweight(mrefLL)+hammingweight(mrefLR));
+    double f = double(hammingweight(matrix))/double(4*r*c);
+    status |= test_bool(f >= 0.45, "too low weight for random");
+    status |= test_bool(f <= 0.55, "too high weight for random");
+    
+    if (r == c)
+    {
+        mrefUL.transpose(mrefUR);
+        for (size_t i = 0; i < mrefUL.rows() && status == 0; ++i)
+            for (size_t j = 0; j < mrefUL.columns() && status == 0; ++j)
+                status |= test_bool(mrefUL(i,j) == mrefUR(j,i), "transpose failed");
+    }
+    return status;
+}
+
+
+
+
+template<typename T>
+int test_constructor(const std::string& Tname, std::vector<bool> truthtable)
+{
+    int status = 0;
+    status |= test_bool(truthtable[ 0] == std::is_constructible<T,             matrixref&>::value, "test constructor `" + Tname + "(            matrixref&)` failed: " + std::to_string(truthtable[0]));
+    status |= test_bool(truthtable[ 1] == std::is_constructible<T, const       matrixref&>::value, "test constructor `" + Tname + "(const       matrixref&)` failed: " + std::to_string(truthtable[1]));
+    status |= test_bool(truthtable[ 2] == std::is_constructible<T,             matrixref*>::value, "test constructor `" + Tname + "(            matrixref*)` failed: " + std::to_string(truthtable[2]));
+    status |= test_bool(truthtable[ 3] == std::is_constructible<T, const       matrixref*>::value, "test constructor `" + Tname + "(const       matrixref*)` failed: " + std::to_string(truthtable[3]));
+
+    status |= test_bool(truthtable[ 4] == std::is_constructible<T,             matrixptr&>::value, "test constructor `" + Tname + "(            matrixptr&)` failed: " + std::to_string(truthtable[4]));
+    status |= test_bool(truthtable[ 5] == std::is_constructible<T, const       matrixptr&>::value, "test constructor `" + Tname + "(const       matrixptr&)` failed: " + std::to_string(truthtable[5]));
+    status |= test_bool(truthtable[ 6] == std::is_constructible<T,             matrixptr*>::value, "test constructor `" + Tname + "(            matrixptr*)` failed: " + std::to_string(truthtable[6]));
+    status |= test_bool(truthtable[ 7] == std::is_constructible<T, const       matrixptr*>::value, "test constructor `" + Tname + "(const       matrixptr*)` failed: " + std::to_string(truthtable[7]));
+
+    status |= test_bool(truthtable[ 8] == std::is_constructible<T,             vectorref&>::value, "test constructor `" + Tname + "(            vectorref&)` failed: " + std::to_string(truthtable[8]));
+    status |= test_bool(truthtable[ 9] == std::is_constructible<T, const       vectorref&>::value, "test constructor `" + Tname + "(const       vectorref&)` failed: " + std::to_string(truthtable[9]));
+    status |= test_bool(truthtable[10] == std::is_constructible<T,             vectorref*>::value, "test constructor `" + Tname + "(            vectorref*)` failed: " + std::to_string(truthtable[10]));
+    status |= test_bool(truthtable[11] == std::is_constructible<T, const       vectorref*>::value, "test constructor `" + Tname + "(const       vectorref*)` failed: " + std::to_string(truthtable[11]));
+
+    status |= test_bool(truthtable[12] == std::is_constructible<T,             vectorptr&>::value, "test constructor `" + Tname + "(            vectorptr&)` failed: " + std::to_string(truthtable[12]));
+    status |= test_bool(truthtable[13] == std::is_constructible<T, const       vectorptr&>::value, "test constructor `" + Tname + "(const       vectorptr&)` failed: " + std::to_string(truthtable[13]));
+    status |= test_bool(truthtable[14] == std::is_constructible<T,             vectorptr*>::value, "test constructor `" + Tname + "(            vectorptr*)` failed: " + std::to_string(truthtable[14]));
+    status |= test_bool(truthtable[15] == std::is_constructible<T, const       vectorptr*>::value, "test constructor `" + Tname + "(const       vectorptr*)` failed: " + std::to_string(truthtable[15]));
+
+    status |= test_bool(truthtable[16] == std::is_constructible<T,        base_t&>::value, "test constructor `" + Tname + "(       base_t&)` failed: " + std::to_string(truthtable[16]));
+    status |= test_bool(truthtable[17] == std::is_constructible<T, const  base_t&>::value, "test constructor `" + Tname + "(const  base_t&)` failed: " + std::to_string(truthtable[17]));
+    status |= test_bool(truthtable[18] == std::is_constructible<T,        base_t*>::value, "test constructor `" + Tname + "(       base_t*)` failed: " + std::to_string(truthtable[18]));
+    status |= test_bool(truthtable[19] == std::is_constructible<T, const  base_t*>::value, "test constructor `" + Tname + "(const  base_t*)` failed: " + std::to_string(truthtable[19]));
+
+    if (status == 0)
+        return 0;
+    return -1;
+}
+
+template<typename T>
+int test_assign(const std::string& Tname, std::vector<bool> truthtable)
+{
+    int status = 0;
+    status |= test_bool(truthtable[ 0] == std::is_assignable<T,             matrixref&>::value, "test assign `" + Tname + "(            matrixref&)` failed: " + std::to_string(truthtable[0]));
+    status |= test_bool(truthtable[ 1] == std::is_assignable<T, const       matrixref&>::value, "test assign `" + Tname + "(const       matrixref&)` failed: " + std::to_string(truthtable[1]));
+    status |= test_bool(truthtable[ 2] == std::is_assignable<T,             matrixref*>::value, "test assign `" + Tname + "(            matrixref*)` failed: " + std::to_string(truthtable[2]));
+    status |= test_bool(truthtable[ 3] == std::is_assignable<T, const       matrixref*>::value, "test assign `" + Tname + "(const       matrixref*)` failed: " + std::to_string(truthtable[3]));
+
+    status |= test_bool(truthtable[ 4] == std::is_assignable<T,             matrixptr&>::value, "test assign `" + Tname + "(            matrixptr&)` failed: " + std::to_string(truthtable[4]));
+    status |= test_bool(truthtable[ 5] == std::is_assignable<T, const       matrixptr&>::value, "test assign `" + Tname + "(const       matrixptr&)` failed: " + std::to_string(truthtable[5]));
+    status |= test_bool(truthtable[ 6] == std::is_assignable<T,             matrixptr*>::value, "test assign `" + Tname + "(            matrixptr*)` failed: " + std::to_string(truthtable[6]));
+    status |= test_bool(truthtable[ 7] == std::is_assignable<T, const       matrixptr*>::value, "test assign `" + Tname + "(const       matrixptr*)` failed: " + std::to_string(truthtable[7]));
+
+    status |= test_bool(truthtable[ 8] == std::is_assignable<T,             vectorref&>::value, "test assign `" + Tname + "(            vectorref&)` failed: " + std::to_string(truthtable[8]));
+    status |= test_bool(truthtable[ 9] == std::is_assignable<T, const       vectorref&>::value, "test assign `" + Tname + "(const       vectorref&)` failed: " + std::to_string(truthtable[9]));
+    status |= test_bool(truthtable[10] == std::is_assignable<T,             vectorref*>::value, "test assign `" + Tname + "(            vectorref*)` failed: " + std::to_string(truthtable[10]));
+    status |= test_bool(truthtable[11] == std::is_assignable<T, const       vectorref*>::value, "test assign `" + Tname + "(const       vectorref*)` failed: " + std::to_string(truthtable[11]));
+
+    status |= test_bool(truthtable[12] == std::is_assignable<T,             vectorptr&>::value, "test assign `" + Tname + "(            vectorptr&)` failed: " + std::to_string(truthtable[12]));
+    status |= test_bool(truthtable[13] == std::is_assignable<T, const       vectorptr&>::value, "test assign `" + Tname + "(const       vectorptr&)` failed: " + std::to_string(truthtable[13]));
+    status |= test_bool(truthtable[14] == std::is_assignable<T,             vectorptr*>::value, "test assign `" + Tname + "(            vectorptr*)` failed: " + std::to_string(truthtable[14]));
+    status |= test_bool(truthtable[15] == std::is_assignable<T, const       vectorptr*>::value, "test assign `" + Tname + "(const       vectorptr*)` failed: " + std::to_string(truthtable[15]));
+
+    status |= test_bool(truthtable[16] == std::is_assignable<T,        base_t&>::value, "test assign `" + Tname + "(       base_t&)` failed: " + std::to_string(truthtable[16]));
+    status |= test_bool(truthtable[17] == std::is_assignable<T, const  base_t&>::value, "test assign `" + Tname + "(const  base_t&)` failed: " + std::to_string(truthtable[17]));
+    status |= test_bool(truthtable[18] == std::is_assignable<T,        base_t*>::value, "test assign `" + Tname + "(       base_t*)` failed: " + std::to_string(truthtable[18]));
+    status |= test_bool(truthtable[19] == std::is_assignable<T, const  base_t*>::value, "test assign `" + Tname + "(const  base_t*)` failed: " + std::to_string(truthtable[19]));
+    if (status == 0)
+        return 0;
+    return -1;
+}
+
+int main(int, char**)
+{
+    int status = 0;
+
+    status |= test_constructor<      matrixref>("      matrixref", { 1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 1,1,0,0 });
+    status |= test_assign     <      matrixref>("      matrixref", { 1,1,0,0, 0,0,0,0, 1,1,0,0, 0,0,0,0, 0,0,0,0 });
+    status |= test_constructor<      vectorref>("      vectorref", { 0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0, 1,1,0,0 });
+    status |= test_assign     <      vectorref>("      vectorref", { 0,0,0,0, 0,0,0,0, 1,1,0,0, 0,0,0,0, 0,0,0,0 });
+
+    status |= test_constructor<      matrixptr>("      matrixptr", { 0,0,0,0, 1,1,0,0, 0,0,0,0, 1,1,0,0, 1,1,0,0 });
+    status |= test_assign     <      matrixptr>("      matrixptr", { 0,0,0,0, 1,1,0,0, 0,0,0,0, 1,1,0,0, 0,0,0,0 });
+    status |= test_constructor<      vectorptr>("      vectorptr", { 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,1,0,0, 1,1,0,0 });
+    status |= test_assign     <      vectorptr>("      vectorptr", { 0,0,0,0, 0,0,0,0, 0,0,0,0, 1,1,0,0, 0,0,0,0 });
+
+    for (size_t i = 4; i <= 512; ++i)
+        status |= test_matrixref(i,i);
+    for (size_t i = 0; i <= 4*64; ++i)
+    {
+        status |= test_transpose(i,i);
+        status |= test_transpose(i,i+32);
+        status |= test_transpose(i,i+64);
+        status |= test_transpose(i,i+128);
+    }
+
+    if (status == 0)
+    {
+        LOG_CERR("All tests passed.");
+        return 0;
+    }
+    return -1;
+}
