@@ -134,7 +134,7 @@ namespace string_algo {
 		std::size_t ret = 0;
 		auto it = str.begin(), end = str.end();
 		for (; it != end; ++it)
-			if (!*it != c)
+			if (*it != c)
 				++ret;
 		return ret;
 	}

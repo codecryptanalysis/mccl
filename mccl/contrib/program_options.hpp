@@ -297,24 +297,24 @@ namespace program_options {
 		{
 			*target = false;
 		}
-		virtual ~bool_switch() {}
+		~bool_switch() final {}
 
-		virtual bool _takesvalue()
+		bool _takesvalue() final
 		{
 			return false;
 		}
 
-		virtual bool _hasdefaultvalue()
+		bool _hasdefaultvalue() final
 		{
 			return false;
 		}
 
-		virtual std::vector<std::string> _defaultvaluestr()
+		std::vector<std::string> _defaultvaluestr() final
 		{
 			return std::vector<std::string>();
 		}
 
-		virtual void _parse(const detail::parser& arg)
+		void _parse(const detail::parser&) final
 		{
 			if (_target != nullptr)
 				*_target = true;
@@ -332,7 +332,7 @@ namespace program_options {
 	public:
 		value(): _target(nullptr) {}
 		value(Type* target): _target(target) {}
-		virtual ~value() {}
+		~value() final {}
 
 		value* operator->() { return this; }
 
@@ -344,23 +344,23 @@ namespace program_options {
 			return *this;
 		}
 
-		virtual bool _takesvalue()
+		bool _takesvalue() final
 		{
 			return true;
 		}
 
-		virtual bool _hasdefaultvalue()
+		bool _hasdefaultvalue() final
 		{
 			return _defaultvalue.get() != nullptr;
 		}
-		virtual std::vector<std::string> _defaultvaluestr()
+		std::vector<std::string> _defaultvaluestr() final
 		{
 			if (_defaultvalue.get() != nullptr)
 				return detail::to_string(*_defaultvalue);
 			return std::vector<std::string>();
 		}
 
-		virtual void _parse(const detail::parser& arg)
+		void _parse(const detail::parser& arg) final
 		{
 			if (_target != nullptr)
 				arg.to(*_target);
