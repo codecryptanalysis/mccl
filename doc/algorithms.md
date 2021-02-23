@@ -40,6 +40,11 @@ vector ISD_generic(matrix H, vector s, int w, int p, int ell):
     while(true)
         random_permute_matrix(pH)
         gaussian_elimination(pH, s, n-k-ell)
+        //       ||     Id    |   H1   || s1 (n-k-ell) 
+        //  pH=  ||     0     |   H2   || s2 (ell)
+        //       ----------------------
+        //  e=   ||     e1    |   e2   ||
+        //         (n-k-ell)    (k+ell)
         L = Sub_ISD(H2, s2, p)
         // Returns a set of vectors e2 of length k+ell
         // s.t. H2 * e2 = s2 and e2.weight = p
