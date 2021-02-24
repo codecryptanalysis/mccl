@@ -35,7 +35,8 @@
 ``` cpp
 vector ISD_generic(matrix H, vector s, int w, int p, int ell):
     int n = H.dimensions[0]
-    int k = H.dimensions[1]
+    int r = H.dimensions[1]
+    int k = n-r
     permuted_matrix pH = permuted_matrix(H)
     while(true)
         random_permute_matrix(pH)
