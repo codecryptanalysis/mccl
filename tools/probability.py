@@ -64,7 +64,6 @@ def subISD_MMT(ell2):
         p = [pp//4, pp//4+(pp%4>0), pp//4+(pp%4>2), pp//4+(pp%4>1)]
         E13 = weights_ball_addition((nn+1)//2, p[0], p[2])
         E24 = weights_ball_addition(nn//2, p[1], p[3])
-        print(sum(E13),sum(E24), p)
         return convol(E13, E24), 2**(rr+ell2)
     return subISD
 
