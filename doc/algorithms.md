@@ -48,10 +48,10 @@ vector ISD_generic(matrix H, vector s, int w, int p, int ell):
         //         (n-k-ell)    (k+ell)
         L = Sub_ISD(H2, s2, p)
         // Returns a set of vectors e2 of length k+ell
-        // s.t. H2 * e2 = s2 and e2.weight = p
-        for e2 in L:
+        // s.t. H2 * e2 = s2 and w2 = e2.weight <= p
+        for (e2,w2) in L:
             e1 = H1 * e2 - s1
-            if (e1.weight <= w-p):
+            if (e1.weight <= w-w2):
                 e = (e1 || e2)
                 permute_vector(e, inverse_permutation(pH.permutation))
                 return e
