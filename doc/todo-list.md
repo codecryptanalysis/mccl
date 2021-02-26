@@ -25,7 +25,7 @@ Discussion
 
 ## 11/02/21
 
-- [x] adapting the row reduction of M4RI to 64 bits int
+- [x] interface to M4RI row reduction, multiplication, etc for matrices with 64 bits int
 - [x] list of references [biblio.md](https://github.com/cr-marcstevens/mccl/blob/main/doc/biblio.md)
 - [x] [script](https://github.com/cr-marcstevens/mccl/blob/main/tools/challenges.py) to generate/download challenges
 
@@ -50,7 +50,7 @@ Discussion:
 	- In Sub-ISD, the condition H2 * e2 = s2 is replaced by checking that the last ell bits of H2' * e2 are equal to s2. We also compute the weight w2 of the first (ell2-ell) bits of H2 * e2. If the relative weight value w2 is too high, we discard the solution. Else, we return in L the solution (e2,w2).
 
 ## 11/03/21
-- [ ] finish adapting M4RI to have efficient matrix transposition
+- [ ] more flexible and optimized row-reduction
 - [ ] implementation of Prange's algorithm
 - [ ] parser to use the instances of the challenge as input
 - [ ] write a more detailed pseudocode for the sub_isd (including optimization tricks)
