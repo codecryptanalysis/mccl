@@ -47,12 +47,12 @@ vector ISD_generic(matrix H, vector s, int w, int p, int ell):
         gaussian_elimination(pH.matrix, s, n-k-ell)
 		// pH is now of the form
 		//         -------------------
-        //       ||     Id    |   *   || (n-k-ell) 
-        //  pH=  ||     0     |   *   || (ell)
+  	      	//       ||     Id    |   *   || (n-k-ell) 
+	       	//  pH=  ||     0     |   *   || (ell)
 		//         -------------------
-        //         (n-k-ell)    (k+ell)
+        	//          (n-k-ell)    (k+ell)
 		// We will denote e1 e2 such that 
-        //  e=   ||     e1    |   e2   ||
+        	//  e=   ||     e1    |   e2   ||
 		// Let Htranspose be the transposition of the right block matrix of pH
 		Htranspose = transpose(pH.matrix.submatrix([:],[n-k-ell:]))
 		// Let ell2 be the smallest integer such that 
@@ -60,14 +60,14 @@ vector ISD_generic(matrix H, vector s, int w, int p, int ell):
 		int ell2 = ell / (int) 64 * 64 - ell
 		// Define H1 H2 the submatrices of Ht such that
 		//          ----------------------
-        //  Ht =  ||     H1      |   H2   || (k+ell)
+	        //  Ht =  ||     H1      |   H2   || (k+ell)
 		//          ----------------------
 		//         (n-k-ell-ell2) (ell+ell2)
 		// and similarly
-        //  s =   ||     s1      |   s2   ||
+	        //  s =   ||     s1      |   s2   ||
 		L = Sub_ISD(H2, s2, p)
-        // Returns a set of vectors e2 of length k+ell+ell2 s.t.
-        // 		1. e2[ell2:] * H2[ell2:] = s2[ell2:]   
+	        // Returns a set of vectors e2 of length k+ell+ell2 s.t.
+        	// 		1. e2[ell2:] * H2[ell2:] = s2[ell2:]   
 		// 		2. e2[ell2:].weight <= p
 		//		3. e2[:ell2] = e2[ell2:]*H2[:ell2] - s2[:ell2]
 		//		3. w2 < w2max,
@@ -131,7 +131,7 @@ List<vector> Sub_ISD_Dumer(matrix H2, vector s2, int p, int ell, int w2max):
 	matrix H21 = H2[:L1]
 	matrix H22 = H2[L1:]
 	// Let H be a hash-table
-    // for all vectors e1 of length L1 and weight p1:
+	// for all vectors e1 of length L1 and weight p1:
 		vector v1 = e1*H21
 		H[v1[ell2:]].append(e1,v1[ell2:])
 	// for all vectors e2 of length L2 and weight p2:
