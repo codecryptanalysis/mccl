@@ -1039,6 +1039,17 @@ namespace detail
 		}
 	}
 
+	template<typename data_t>
+	inline void vector_swap(data_t* first1, data_t* last1, data_t* first2)
+	{
+		for (; first1 != last1; ++first1,++first2)
+		{
+			data_t tmp = *first1;
+			*first1 = *first2;
+			*first2 = tmp;
+		}
+	}
+
 } // namespace detail
 
 MCCL_END_NAMESPACE

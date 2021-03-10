@@ -7,7 +7,8 @@
 MCCL_BEGIN_NAMESPACE
 
 // m4ri only operates with matrices using uint64_t words
-typedef matrix_ref_t<uint64_t> m4ri_ref_t;
+typedef matrix64_ref_t m4ri_ref_t;
+
 // m4ri uses its own data structures, this is a pointer to a m4ri handle
 struct m4ri_data_t;
 typedef m4ri_data_t* m4ri_handle_t;

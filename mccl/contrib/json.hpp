@@ -2658,10 +2658,10 @@ class exception : public std::exception
         return "[json.exception." + ename + "." + std::to_string(id_) + "] ";
     }
 
+#if JSON_DIAGNOSTICS
     template<typename BasicJsonType>
     static std::string diagnostics(const BasicJsonType& leaf_element)
     {
-#if JSON_DIAGNOSTICS
         std::vector<std::string> tokens;
         for (const auto* current = &leaf_element; current->m_parent != nullptr; current = current->m_parent)
         {
@@ -2709,6 +2709,9 @@ class exception : public std::exception
             return a + "/" + detail::escape(b);
         }) + ") ";
 #else
+    template<typename BasicJsonType>
+    static std::string diagnostics(const BasicJsonType&)
+    {
         return "";
 #endif
     }

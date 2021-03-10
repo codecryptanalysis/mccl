@@ -76,9 +76,10 @@ namespace detail
 	*         Total number of columns (incl scratchcolumns) must be a whole number of words.
 	*         the expression `data_t(-1)` should efficiently convert to all `1`-bits 
 	*/
-	template<typename data_t>
+	template<typename _data_t>
 	struct matrix_base_ref_t
 	{
+		typedef _data_t data_t;
 		static const size_t word_bytes = sizeof(data_t);
 		static const size_t word_bits = sizeof(data_t) * 8;
 		static const size_t bit_alignment = word_bits;
@@ -317,7 +318,7 @@ namespace detail
 	template<typename data_t>
 	inline size_t vector_hammingweight_or (const matrix_base_ref_t<const data_t>& m1, const matrix_base_ref_t<const data_t>& m2);
 
-
+	template<typename data_t> inline void vector_swap(data_t* first1, data_t* last1, data_t* first2);
 
 	/* binary boolean functions
 

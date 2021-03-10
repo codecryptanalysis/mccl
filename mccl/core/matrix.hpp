@@ -18,10 +18,17 @@ class matrix_ptr_t;
 template<typename data_t>
 class matrix_ref_t;
 
-template<typename data_t>
+/* allocation bitalignment is based on cacheline of 64 bytes = 512 bits */
+template<typename data_t, size_t bitalignment = 512>
 class vector_t;
-template<typename data_t>
+template<typename data_t, size_t bitalignment = 512>
 class matrix_t;
+
+/* default type to use is with largest machine unsigned integer: uint64_t */
+typedef vector_ref_t<uint64_t> vector64_ref_t;
+typedef vector_ptr_t<uint64_t> vector64_ptr_t;
+typedef matrix_ref_t<uint64_t> matrix64_ref_t;
+typedef matrix_ptr_t<uint64_t> matrix64_ptr_t;
 
 /*
     1) matrix_base_ref_t: struct containing pointer to submatrix (ptr, rows, stride, columns, scratchcolumns)
@@ -161,6 +168,18 @@ public:
     void flipscratch()
     {
         detail::vector_flipcolumns(base(), columns(), scratchcolumns());
+    }
+    void set(bool b = true)
+    {
+        detail::vector_set(base(), b);
+    }
+    void setzero()
+    {
+        detail::vector_set(base(), false);
+    }
+    void setone()
+    {
+        detail::vector_set(base(), true);
     }
 
     /* reset the reference */
@@ -421,6 +440,30 @@ public:
     {
         detail::matrix_flipcolumns(base(), columns(), scratchcolumns());
     }
+    void set(bool b = true)
+    {
+        detail::matrix_set(base(), b);
+    }
+    void setzero()
+    {
+        detail::matrix_set(base(), false);
+    }
+    void setone()
+    {
+        detail::matrix_set(base(), true);
+    }
+    void setidentity()
+    {
+        setzero();
+        size_t l = std::min(rows(), columns());
+        for (size_t i = 0; i < l; ++i)
+            bitset(i,i);
+    }
+    void swap_rows(size_t i, size_t j)
+    {
+        size_t words = (columns() + word_bits() - 1) / word_bits();
+        detail::vector_swap(data(i), data(i) + words, data(j));
+    }
 
 
     /* reset the reference */
@@ -597,7 +640,7 @@ private:
 
 
 
-template<typename data_t>
+template<typename data_t, size_t _bitalignment>
 class matrix_t : public matrix_ref_t<data_t>
 {
 public:
@@ -620,7 +663,7 @@ private:
     using matrix_ref::reset;
     using matrix_ref::reset_submatrix;
 public:
-    static const size_t bitalignment = 512;
+    static const size_t bitalignment = _bitalignment;
     static const size_t bytealignment = bitalignment / 8;
 
     ~matrix_t() { _free(); }
@@ -695,7 +738,7 @@ private:
 
 
 
-template<typename data_t>
+template<typename data_t, size_t _bitalignment>
 class vector_t : public vector_ref_t<data_t>
 {
 public:
@@ -712,7 +755,7 @@ private:
     using vector_ref::reset;
     using vector_ref::reset_subvector;
 public:
-    static const size_t bitalignment = matrix_t<data_t>::bitalignment;
+    static const size_t bitalignment = _bitalignment;
     static const size_t bytealignment = bitalignment / 8;
 
 
