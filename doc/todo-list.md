@@ -50,11 +50,15 @@ Discussion:
 	- In Sub-ISD, the condition H2 * e2 = s2 is replaced by checking that the last ell bits of H2' * e2 are equal to s2. We also compute the weight w2 of the first (ell2-ell) bits of H2 * e2. If the relative weight value w2 is too high, we discard the solution. Else, we return in L the solution (e2,w2).
 
 ## 11/03/21
+- [x] parser to use the instances of the challenge as input
+- [x] write a more detailed pseudocode for the sub_isd (including optimization tricks)
+
+## 25/03/21
 - [ ] more flexible and optimized row-reduction
+- [ ] non-optimized random permutation of columns
 - [ ] implementation of Prange's algorithm
-- [ ] parser to use the instances of the challenge as input
-- [ ] write a more detailed pseudocode for the sub_isd (including optimization tricks)
 - [ ] python tool to compute the cost given the parameters (with the actual cost of each operation as a variable)
+- [ ] read litterature on implementations of MTT/BJMM
 
 # Phase 2
 
