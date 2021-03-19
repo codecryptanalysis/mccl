@@ -938,6 +938,44 @@ void fillrandom(vector_ref_t<data_t>& m)
     fillgenerator(m, gen);
 }
 
+// full row reduction of matrix m over columns [column_start,column_end)
+// pivots may be selected from rows [pivot_start,rows())
+// returns pivotend = pivot_start + nrnewrowpivots
+template<typename data_t>
+size_t echelonize(matrix_ref_t<data_t>& m, size_t column_start = 0, size_t column_end = ~size_t(0), size_t pivot_start = 0)
+{
+    if (column_end > m.columns())
+        column_end = m.columns();
+    for (size_t c = column_start; c < column_end; ++c)
+    {
+        // find pivot for column c
+        size_t p = pivot_start;
+        for (; p < m.rows() && m(p,c) == false; ++p)
+            ;
+        // if no pivot found the continue with next column
+        if (p >= m.rows)
+            continue;
+        // swap row if necessary
+        if (p != pivot_start)
+            m.swap_rows(pivot_start, p);
+        // reduce column c
+        auto& pivotrow = m[pivot_start];
+        auto mrowit = m.begin();
+        for (size_t r = 0; r < pivot_start; ++r,++mrowit)
+            if (m(r,c))
+                *mrowit ^= pivotrow;
+        // skip pivotrow itself
+        ++mrowit;
+        for (size_t r = pivot_start+1; r < m.rows(); ++r,++mrowit)
+            if (m(r,c))
+                *mrowit ^= pivotrow;
+        // increase pivot_start for next column
+        ++pivot_start;
+    }
+    return pivot_start;
+}
+
+
 MCCL_END_NAMESPACE
 
 #endif
