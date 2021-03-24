@@ -20,9 +20,9 @@ libmccl_la_SOURCES=\
 	mccl/core/matrix_m4ri.hpp \
 	mccl/core/matrix_m4ri.cpp
 
-TESTS= tests/test_compile tests/test_matrix tests/test_m4ri
+TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser
 
-check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri
+check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
@@ -32,6 +32,9 @@ tests_test_matrix_LDADD  = libmccl.la
 
 tests_test_m4ri_SOURCES= tests/test_m4ri.cpp
 tests_test_m4ri_LDADD  = libmccl.la
+
+tests_test_parser_SOURCES= tests/test_parser.cpp
+tests_test_parser_LDADD  = libmccl.la
 		
 CLANGFORMAT ?= clang-format
 .PHONY: check-style

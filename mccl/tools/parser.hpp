@@ -7,6 +7,9 @@ namespace sa = string_algo;
 #include <fstream>
 #include <iostream>
 
+#include <mccl/core/matrix_detail.hpp>
+#include <mccl/core/matrix.hpp>
+
 enum Marker {
 	MARK_NONE, MARK_N, MARK_K, MARK_W, MARK_SEED, MARK_HT, MARK_ST
 };
@@ -24,13 +27,32 @@ template<typename data_t>
 class Parser {
 	public:
 		bool load_file(std::string filename);
+		mccl::matrix_ref_t<data_t> get_H();
+		mccl::vector_ref_t<data_t> get_S();
+		size_t get_n() { return n; };
+		size_t get_k() { return k; };
+		size_t get_w() { return w; };
+		size_t get_seed() { return seed; };
 	private:
 		//mccl::matrix_t<data_t> H;
 		bool Nset=false, Kset=false, Wset=false, Seedset=false;
-		int n, k, w, seed;
+		size_t n, k, w, seed;
 		std::vector<bool> ST;
 		std::vector<std::vector<bool>> HT;
+		mccl::matrix_ptr_t<data_t> H_ptr;
+		mccl::vector_ptr_t<data_t> S_ptr;
 };
+
+template<typename data_t>
+mccl::matrix_ref_t<data_t> Parser<data_t>::get_H(){
+	return H_ptr.as_ref();
+}
+
+template<typename data_t>
+mccl::vector_ref_t<data_t> Parser<data_t>::get_S(){
+	return S_ptr.as_ref();
+}
+
 
 template<typename data_t>
 bool Parser<data_t>::load_file(std::string filename) {
@@ -96,7 +118,25 @@ bool Parser<data_t>::load_file(std::string filename) {
 		HT.push_back(row);
 	}
 
-	std::cerr << n << " " << k << " " << w << std::endl;
+	mccl::matrix_t<data_t> H_mat(n-k, n);
+	mccl::matrix_ref_t<data_t>H_ref(H_mat);
+	H_ref.setidentity();
+	for( size_t r = 0; r < n-k; r++) {
+		for( size_t c = 0; c < k; c++ ) {
+			if(HT[c][r])
+				H_ref.bitset(r, n-k+c);
+		}
+	}
+	H_ptr = H_ref.as_ptr();
+
+	mccl::vector_t<data_t> S_vec(n-k);
+	mccl::vector_ref_t<data_t>S_ref(S_vec);
+	for( size_t r = 0; r < n-k; r++ ) {
+		if(ST[r])
+			S_ref.bitset(r);
+	}
+	S_ptr = S_ref.as_ptr();
+	return true;
 }
 
 #endif
