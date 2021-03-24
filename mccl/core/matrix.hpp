@@ -548,6 +548,11 @@ public:
         return os;
     }
 
+    // explicit conversion
+    matrix_ptr& as_ptr()       { return *reinterpret_cast<matrix_ptr*>(this); }
+    const matrix_ptr& as_ptr() const { return *reinterpret_cast<matrix_ptr*>(this); }
+    matrix_ptr ptr() { return matrix_ptr(base()); }
+
 private:
     // do not access _ref directly, use `ref()` to maintain reference semantics
     // exception is for iterators, they maintain reference semantics themselves
