@@ -502,33 +502,33 @@ public:
         typedef iterator_t<const T> const_iterator_t;
 
         iterator_t(const base_ref_t& m)
-            : _vptr(m)
+            : _vecptr(m)
         {}
         iterator_t(const iterator_t& it) = default;
         iterator_t(iterator_t&& it) = default;
         iterator_t& operator=(const iterator_t& it) = default;
         iterator_t& operator=(iterator_t&& it) = default;
 
-        T& operator*() const { return _vptr.operator*(); }
-        T* operator->() const { return _vptr.operator->(); }
+        T& operator*() const { return _vecptr.operator*(); }
+        T* operator->() const { return _vecptr.operator->(); }
 
-        bool operator==(const const_iterator_t& it) const { return _vptr == it._vptr; }
-        bool operator!=(const const_iterator_t& it) const { return _vptr != it._vptr; }
+        bool operator==(const const_iterator_t& it) const { return _vecptr == it._vecptr; }
+        bool operator!=(const const_iterator_t& it) const { return _vecptr != it._vecptr; }
 
-        iterator_t& operator++()            { ++_vptr; return *this; }
-        iterator_t& operator--()            { --_vptr; return *this; }
-        iterator_t& operator+=(ptrdiff_t a) { _vptr += a; return *this; }
-        iterator_t& operator-=(ptrdiff_t a) { _vptr -= a; return *this; }
+        iterator_t& operator++()            { ++_vecptr; return *this; }
+        iterator_t& operator--()            { --_vecptr; return *this; }
+        iterator_t& operator+=(ptrdiff_t a) { _vecptr += a; return *this; }
+        iterator_t& operator-=(ptrdiff_t a) { _vecptr -= a; return *this; }
         iterator_t  operator++(int)         const { iterator_t tmp(*this); ++tmp; return tmp; }
         iterator_t  operator--(int)         const { iterator_t tmp(*this); --tmp; return tmp; }
         iterator_t  operator+ (ptrdiff_t a) const { iterator_t tmp(*this); tmp += a; return tmp; }
         iterator_t  operator- (ptrdiff_t a) const { iterator_t tmp(*this); tmp -= a; return tmp; }
-        iterator_t  operator- (const const_iterator_t& r) const { return _vptr - r._vptr; }
+        iterator_t  operator- (const const_iterator_t& r) const { return _vecptr - r._vecptr; }
 
         operator const_iterator_t& ()       { return *reinterpret_cast<      const_iterator_t*>(this); }
         operator const_iterator_t& () const { return *reinterpret_cast<const const_iterator_t*>(this); }
     private:
-        vector_ptr _vptr;
+        vector_ptr _vecptr;
     };
     typedef iterator_t<vector_ref> iterator;
     typedef iterator_t<const vector_ref> const_iterator;
