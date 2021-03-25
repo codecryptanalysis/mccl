@@ -26,6 +26,7 @@ std::vector<bool> string_to_booleans(std::string& str) {
 template<typename data_t>
 class Parser {
 	public:
+		~Parser() { free();}
 		bool load_file(std::string filename);
 		mccl::matrix_ref_t<data_t> get_H();
 		mccl::vector_ref_t<data_t> get_S();
@@ -39,18 +40,22 @@ class Parser {
 		size_t n, k, w, seed;
 		std::vector<bool> ST;
 		std::vector<std::vector<bool>> HT;
-		mccl::matrix_ptr_t<data_t> H_ptr;
-		mccl::vector_ptr_t<data_t> S_ptr;
+		mccl::matrix_t<data_t>* H_ptr = nullptr;
+		mccl::vector_t<data_t>* S_ptr = nullptr;
+		void free() {
+			if( H_ptr != nullptr ) delete H_ptr;
+			if( S_ptr != nullptr ) delete S_ptr;
+		};
 };
 
 template<typename data_t>
 mccl::matrix_ref_t<data_t> Parser<data_t>::get_H(){
-	return H_ptr.as_ref();
+	return mccl::matrix_ref_t<data_t>(*H_ptr);
 }
 
 template<typename data_t>
 mccl::vector_ref_t<data_t> Parser<data_t>::get_S(){
-	return S_ptr.as_ref();
+	return mccl::vector_ref_t<data_t>(*S_ptr);
 }
 
 
@@ -118,24 +123,21 @@ bool Parser<data_t>::load_file(std::string filename) {
 		HT.push_back(row);
 	}
 
-	mccl::matrix_t<data_t> H_mat(n-k, n);
-	mccl::matrix_ref_t<data_t>H_ref(H_mat);
-	H_ref.setidentity();
+	free();
+	H_ptr = new mccl::matrix_t<data_t>(n-k, n);
+	H_ptr->setidentity();
 	for( size_t r = 0; r < n-k; r++) {
 		for( size_t c = 0; c < k; c++ ) {
 			if(HT[c][r])
-				H_ref.bitset(r, n-k+c);
+				H_ptr->bitset(r, n-k+c);
 		}
 	}
-	H_ptr = H_ref.as_ptr();
 
-	mccl::vector_t<data_t> S_vec(n-k);
-	mccl::vector_ref_t<data_t>S_ref(S_vec);
+	S_ptr = new mccl::vector_t<data_t>(n-k);
 	for( size_t r = 0; r < n-k; r++ ) {
 		if(ST[r])
-			S_ref.bitset(r);
+			S_ptr->bitset(r);
 	}
-	S_ptr = S_ref.as_ptr();
 	return true;
 }
 
