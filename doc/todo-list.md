@@ -54,11 +54,14 @@ Discussion:
 - [x] write a more detailed pseudocode for the sub_isd (including optimization tricks)
 
 ## 25/03/21
-- [ ] more flexible and optimized row-reduction
-- [ ] non-optimized random permutation of columns
+- [x] basic echelonize function
+- [x] non-optimized random permutation of columns
+
+## 08/04/21
 - [ ] implementation of Prange's algorithm
+- [ ] presentation of MTT and BJMM papers
+- [ ] more flexible and optimized row-reduction
 - [ ] python tool to compute the cost given the parameters (with the actual cost of each operation as a variable)
-- [ ] read litterature on implementations of MTT/BJMM
 
 # Phase 2
 
