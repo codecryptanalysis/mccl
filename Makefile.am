@@ -21,9 +21,9 @@ libmccl_la_SOURCES=\
 	mccl/core/matrix_m4ri.cpp \
 	mccl/core/matrix_permute.hpp
 
-TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute
+TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange
 
-check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute
+check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
@@ -39,6 +39,9 @@ tests_test_parser_LDADD  = libmccl.la
 
 tests_test_permute_SOURCES= tests/test_permute.cpp
 tests_test_permute_LDADD  = libmccl.la
+
+tests_test_prange_SOURCES= tests/test_prange.cpp
+tests_test_prange_LDADD  = libmccl.la
 		
 CLANGFORMAT ?= clang-format
 .PHONY: check-style
