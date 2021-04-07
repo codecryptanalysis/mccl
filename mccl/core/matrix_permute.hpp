@@ -12,15 +12,6 @@
 MCCL_BEGIN_NAMESPACE
 
 template<typename data_t>
-class vector_ptr_t;
-template<typename data_t>
-class vector_ref_t;
-template<typename data_t>
-class matrix_ptr_t;
-template<typename data_t>
-class matrix_ref_t;
-
-template<typename data_t>
 class matrix_permute_t
 {
 public:
@@ -32,19 +23,19 @@ public:
     	std::iota(permutation.begin(), permutation.end(), 0);
     };
 
-    // permute uniformly random columns into first l columns
+    // permute uniformly random columns from [l:r] into [l:m]
     // non-optimized
-    void random_permute(size_t l) {
-    	size_t n = mat_ref.columns();
+    void random_permute(size_t l, size_t m, size_t r) {
+    	size_t n = r-l;
     	uint64_t rng;
-    	for(size_t i = 0; i < l-1; i++) {
+    	for(size_t i = 0; i < m-l; i++) {
     		gen(rng);
     		size_t j = i + (rng%(n-i));
-    		std::swap(permutation[i], permutation[j]);
+    		std::swap(permutation[l+i], permutation[l+j]);
     		for(size_t k = 0; k < mat_ref.rows(); k++ ) {
-    			bool c = mat_ref(k,i);
-    			mat_ref.bitset(k,i,mat_ref(k,j));
-    			mat_ref.bitset(k,j,c);
+    			bool c = mat_ref(k,l+i);
+    			mat_ref.bitset(k,l+i,mat_ref(k,l+j));
+    			mat_ref.bitset(k,l+j,c);
     		}
     	}
     };

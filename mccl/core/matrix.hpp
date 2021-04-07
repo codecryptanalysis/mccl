@@ -321,7 +321,7 @@ public:
     // - ref returns a new vector_ref object
           vector_ref& as_ref()       { return *reinterpret_cast<vector_ref*>(this); }
     const vector_ref& as_ref() const { return *reinterpret_cast<vector_ref*>(this); }
-    vector_ref& to_ref() const { return *reinterpret_cast<vector_ref*>(this); }
+    vector_ref& to_ref() const { return *reinterpret_cast<vector_ref*>(const_cast<vector_ptr*>(this)); }
     vector_ref ref() const { return vector_ref(_base); }
 
 private:
@@ -958,14 +958,15 @@ size_t echelonize(matrix_ref_t<data_t>& m, size_t column_start = 0, size_t colum
         for (; p < m.rows() && m(p,c) == false; ++p)
             ;
         // if no pivot found the continue with next column
-        if (p >= m.rows)
+        if (p >= m.rows())
             continue;
         // swap row if necessary
         if (p != pivot_start)
             m.swap_rows(pivot_start, p);
         // reduce column c
-        auto& pivotrow = m[pivot_start];
+        const auto& pivotrow = m[pivot_start];
         auto mrowit = m.begin();
+        //std::cerr << (mrowit) << std::endl;
         for (size_t r = 0; r < pivot_start; ++r,++mrowit)
             if (m(r,c))
                 *mrowit ^= pivotrow;

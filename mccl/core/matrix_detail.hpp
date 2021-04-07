@@ -12,8 +12,8 @@
 #include <stdexcept>
 #include <string>
 
-//#define MCCL_MATRIX_BASE_ASSERT(s) assert(s);
-#define MCCL_MATRIX_BASE_ASSERT(s) if (!(s)) throw std::runtime_error("matrix_base_ref_t: assert throw");
+#define MCCL_MATRIX_BASE_ASSERT(s) assert(s);
+//#define MCCL_MATRIX_BASE_ASSERT(s) if (!(s)) throw std::runtime_error("matrix_base_ref_t: assert throw");
 //#define MCCL_MATRIX_BASE_ASSERT(s)
 
 
