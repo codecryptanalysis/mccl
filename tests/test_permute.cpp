@@ -17,7 +17,7 @@ int main(int, char**)
     int status = 0;
 
     Parser<uint64_t> parse;
-    status |= !parse.load_file("./tests/data/Goppa_20.txt");
+    status |= !parse.load_file("./tests/data/Goppa_197.txt");
 
     auto H = parse.get_H();
     auto S = parse.get_S();
@@ -31,7 +31,7 @@ int main(int, char**)
     auto total_hw = hammingweight(H);
 
     matrix_permute_t<uint64_t> permutator(H);
-    permutator.random_permute(10);
+    permutator.random_permute(0,n,n);
 
     status |= (total_hw != hammingweight(H));
     for( size_t r = 0; r < n-k; r++)
