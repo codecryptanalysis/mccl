@@ -45,6 +45,40 @@
   - H2 is the reverse-transpose of the bottom-right c'x(b-a-c') submatrix of H (by "reverse-transpose" we mean the transpose matrix written in reverse order, i.e. each row read from left to right becomes a column read from bottom to top)
   - s1 is the first (a-c') bits of s
   - s2 is the last c' bits of s in reverse order
+  - Comments:
+    - Computing H1 and s1 could be performed only when a solution is found?
+- `random_vector`
+  - Input: none
+  - Output: random int(64) vector  
+- `build_LR_lists`
+  - Input:
+    - matrix H
+    - int p the total weight (each list should be of weight p/2)
+  - Output: two lists L1,L2 of elements of the form (v,e) such that
+    - v = H*e.transpose()
+    - S1 and S2 form a random partition of the matrix columns
+    - for L1,
+      - Support(e) $\subseteq$ S1,
+      - weight(e) = p//2
+    - for L2,
+      - Support(e) $\subseteq$ S2,
+      - weight(e) = p-p//2
+  - Comments:
+    - should the set S1 be specified as a parameter?
+    - in case p is odd, it could be better to break the symmetry of S1 and S2 to obtain lists of the same size.
+- `merge_lists`
+  - Input:
+    - a list L1 of couples (v,e)
+    - a list L2 of couples (v,e)
+    - a target t (the target)
+    - an integer r (the number of bits on which the sum should agree with the target)
+    - an integer p (the weight)
+  - Output: a list $L = \{(v=v1+v2, e=e1+e2) | (vi,ei) \in Li, v[:r]=t[:r], weight(e)=p \}$.
+  - Comments:
+    - could be worth to group the creation of base lists and the first merge in a single function
+    - when we already know that the sums will agree on r2 bits we only need to check the condition for r-r2 bits, could this be taken into account?
+    - merging can be done either by ordering or using hash tables. Landais finds hashtables more efficients. 
+    - Landais notes that not handling collisions in the hashtable can be more efficient. 
 
 ## ISD generic algorithm
 
@@ -65,7 +99,7 @@ vector ISD_generic(matrix H, vector s, int w, int p, int ell):
         //          (n-k-ell)    (k+ell)
         // We will denote e1 e2 such that
         //  e=   ||     e1    |   e2   ||
-        H1, H2, s1, s2 = decompose(pH.matrix,ell)
+        H1, H2, s1, s2 = decompose(pH.matrix,ell) // Useless to compute H1 here?
         callback = lambda (e2,w2) -> check_solution(H1,s1,perm,w,e2,w2)
         Sub_ISD(H2,s2,p,w2max,callback)
 ```
@@ -158,5 +192,64 @@ vector Sub_ISD_Dumer(matrix H2, vector s2, int p, int ell, int w2max, vector (..
 - without the disjoint support restriction
 - filtering to avoid multiple representations
 
+```cpp
+vector Sub_ISD_MMT(matrix H2, vector s2, int p, int ell, int r1, int w2max, vector (...) callback):
+  // We suppose that s2 and H2 are of length 64.
+
+  // initiate lists
+  List[(vector,List(int))] Li;
+
+  // random target vectors
+  vector  t = random_vector(64);
+
+  int p1 = p//2;
+  int p2 = p - p1;
+
+  L21, L22 = build_LR_lists(H2,p1);
+  L11 = merge_lists(L21,L22,t,r1,p1);
+
+  L23, L24 = build_LR_lists(H2,p2);
+  L12 = merge_lists(L23,L24,t+s2,r1,p2);
+
+  L0  = merge_lists(L11,L12,s,l,p);
+
+  for (v,e) in L0:
+    if (v[l:]).weight() <= w2max: // pre-filtering
+      callback((vector_reverse(v),e),w2)
+```
+
 ### BJMM
 - use the "1+1=0" idea to have even more representations
+
+```cpp
+vector Sub_ISD_BJMM(matrix H2, vector s2, int p, int p1, int p2, int ell, int r1, int r2, int w2max, vector (...) callback):
+  // We suppose that s2 and H2 are of length 64.
+
+  // initiate lists
+  List[(vector,List(int))] Li;
+
+  // random target vectors
+  vector t21 = random_vector(64);
+  vector t22 = random_vector(64);
+  vector  t1 = random_vector(64);
+
+  L311, L312 = build_LR_lists(H2,p2);
+  L21 = merge_lists(L311,L312,t21,r2,p2);
+
+  L321, L322 = build_LR_lists(H2,p2);
+  L22 = merge_lists(L321,L322,t1+t21,r2,p2);
+
+  L331, L332 = build_LR_lists(H2,p2);
+  L23 = merge_lists(L331,L332,t22,r2,p2);
+
+  L341, L342 = build_LR_lists(H2,p2);
+  L22 = merge_lists(L341,L342,t1+t22+s2,r2,p2);
+
+  L11 = merge_lists(L21,L22,t1,r1,p1);
+  L12 = merge_lists(L23,L24,t1+s,r1,p1);
+  L0  = merge_lists(L11,L12,s,l,p);
+
+  for (v,e) in L0:
+    if (v[l:]).weight() <= w2max: // pre-filtering
+      callback((vector_reverse(v),e),w2)
+```
