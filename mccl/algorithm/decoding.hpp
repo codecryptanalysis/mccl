@@ -37,7 +37,7 @@ public:
     vector_t<data_t> e;
 };
 
-// virtual base class: interface for exhaustive ISD returning all solutions
+// virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
 template<typename data_t, typename callback_t = std::function<bool(vector_ref_t<data_t>&)>>
 class ISD_API_exhaustive
 {
@@ -76,10 +76,10 @@ In that case, be sure to make the crucial functions as final.
 */
 
 template<typename data_t, typename subISD_t = ISD_API_exhaustive<data_t> >
-class ISD_target_generic: public ISD_API_target<data_t>
+class ISD_single_generic: public ISD_API_single<data_t>
 {
 public:
-    ISD_target_generic(subISD_t& sI)
+    ISD_single_generic(subISD_t& sI)
         : subISD(&sI)
     {
     }
