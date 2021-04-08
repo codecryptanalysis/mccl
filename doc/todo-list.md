@@ -58,10 +58,30 @@ Discussion:
 - [x] non-optimized random permutation of columns
 
 ## 08/04/21
-- [ ] implementation of Prange's algorithm
-- [ ] presentation of MTT and BJMM papers
-- [ ] more flexible and optimized row-reduction
+- [x] first implementation of Prange's algorithm
+- [x] presentation of MTT and BJMM papers
+
+Discussion:
+- tools needed for MMT/BJMM
+	- generating base lists
+	- merging
+	- python tool to evaluate complexity given parameters
+- merging lists
+	- lookup tables vs sorting
+	- [Landais](https://tel.archives-ouvertes.fr/tel-01142563/document) (Chap 11): lookup tables more efficient, in case of collision only store one element, to simplify the data structure
+	- direct addressing (using the last l bits as the address)
+- base lists
+	- construct two lists at level 1 using the same left/right baselists (with different targets) 
+- expected size of the parameters?
+	- see [Hobach](https://hackingthe.net/downloads/isd.pdf) (pp. 70-71)
+	
+## 22/04/21
+- [ ] write Prange (and Lee-Brickell) following the ISD API
+- [ ] presentation of Hobach's experimental results
 - [ ] python tool to compute the cost given the parameters (with the actual cost of each operation as a variable)
+- [ ] simplification of the `matrix` type
+- [ ] more flexible and optimized row-reduction
+- [ ] optimized (block) permutation
 
 # Phase 2
 
