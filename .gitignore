@@ -30,3 +30,31 @@
 *.exe
 *.out
 *.app
+
+# libtool generated files
+Makefile
+configure
+aclocal.m4
+Makefile.in
+autom4te.cache/*
+config.*
+stamp-h1
+libtool
+m4/libtool.m4
+m4/lt*.m4
+
+# build and test files
+*.log
+*.trs
+build-aux/*
+.deps
+.dirstamp
+.libs
+
+# executables
+tests/test_compile
+tests/test_m4ri
+tests/test_matrix
+tests/test_parser
+tests/test_permute
+tests/test_prange
