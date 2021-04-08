@@ -21,8 +21,9 @@
 ## Surveys and PhD thesis
 - [PhD thesis of Alexander Meurer](http://www-brs.ub.ruhr-uni-bochum.de/netahtml/HSS/Diss/MeurerAlexander/diss.pdf) "A Coding-Theoretic Approach to Cryptanalysis" supervised by Alexander May.
 - [PhD thesis of Gregory Landais](https://tel.archives-ouvertes.fr/tel-01142563/document) (in French) "Mise en oeuvre de cryptosystèmes basés sur les codes correcteurs d’erreurs et de leurs cryptanalyses" supervised by Nicolas Sendrier.
-- [PhD thesis of David Hochbach](https://hackingthe.net/downloads/isd.pdf) "Practical Analysis of Information Set Decoding Algorithms" supervised by Alexander Meurer.
+- [PhD thesis of David Hobach](https://hackingthe.net/downloads/isd.pdf) "Practical Analysis of Information Set Decoding Algorithms" supervised by Alexander Meurer.
 - [PhD thesis of Anja Becker](https://lqsn.fr/docs/isd/these_becker.pdf) "The representation technique: Applications to hard problems in cryptography" supervised by Antoine Joux.
+- [PhD thesis of Christiane Peters](https://christianepeters.files.wordpress.com/2012/10/20110510-diss.pdf) "Curves, Codes, and Cryptography" supervised by Tanja Lange and Daniel J. Bernstein.
 - [PhD thesis of Kevin Carrier](https://hal.archives-ouvertes.fr/tel-02955488v3/document) (in French) "Recherche de presque-collisions pour le décodage et la reconnaissance de codes correcteurs" supervised by Jean-Pierre Tillich and Nicolas Sendrier.
 - [Slides](https://lqsn.fr/docs/isd/MOOC-ISD.pdf) used by Nicolas Sendrier in his [MOOC on code-based crypto](https://www.fun-mooc.fr/courses/course-v1:inria+41006+archiveouvert/about)
 
