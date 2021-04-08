@@ -122,9 +122,9 @@ vector check_solution(matrix H1, vector s1, permutation perm, int w, vector e2, 
 Let ell0 denote the smallest integer such that ell+ell0 is a multiple of 64.
 
 This function finds vectors e2 of length k+ell+ell0 s.t.
-  - e2[:ell] * H2[:ell] = s2[:ell]
-  - e2[:ell].weight <= p
-  - e2[ell:].weight <= w2max.
+  - e2[:k+ell] * H2[:ell] = s2[:ell]
+  - e2[:k+ell].weight <= p
+  - e2[k+ell:].weight <= w2max.
 
 It calls the callback function on `(e2,w2)` where w2 is e2[ell:].weight.
 
