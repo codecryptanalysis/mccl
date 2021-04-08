@@ -29,7 +29,7 @@ int main(int, char**)
     int status = 0;
 
     Parser<uint64_t> parse;
-    status |= !parse.load_file("./tests/data/Goppa_197.txt");
+    status |= !parse.load_file("./tests/data/SD_100_0");
 
     auto Hraw = parse.get_H();
     auto S = parse.get_S();
@@ -93,7 +93,16 @@ int main(int, char**)
 
         // for prange we only have to check the weight of S0 as S1 is empty
         if(hammingweight(S0) <= w) {
+	  auto perm = permutator.get_permutation();
+	  mccl::vector_t<uint64_t> sol(n);
+	  for( size_t i = 0; i < n-k; i++ ) {
+	    if (S0[i])
+	      sol.bitset(perm[scratch0+i]-scratch0);
+	  }
+	  
             std::cerr << "Found solution after " << cnt << " iterations." << std::endl;
+	    std::cerr << S0 << std::endl;
+	    std::cerr << sol << std::endl;
             status |= 0;
             break;
         }

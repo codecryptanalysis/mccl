@@ -39,6 +39,11 @@ public:
     		}
     	}
     };
+
+  std::vector<uint32_t> get_permutation() {
+    return permutation;
+  }
+  
 private:
 	matrix_ref mat_ref;
 	std::vector<uint32_t> permutation;
