@@ -1,6 +1,7 @@
 #include <mccl/config/config.hpp>
 
 #include <mccl/tools/parser.hpp>
+#include <mccl/algorithm/decoding.hpp>
 #include <mccl/core/matrix_permute.hpp>
 
 #include "test_utils.hpp"
@@ -20,10 +21,6 @@ typedef mccl::matrix_t<uint64_t> mat_t;
 typedef mccl::vector_t<uint64_t> vec_t;
 typedef mccl::detail::matrix_base_ref_t<uint64_t> base_t;
 
-size_t get_scratch(size_t k, size_t sz) {
-    return ((k+sz-1)/sz) * sz - k;
-}
-
 int main(int, char**)
 {
     int status = 0;
@@ -42,6 +39,12 @@ int main(int, char**)
     for( size_t r = 0; r < n-k; r++)
         rowweights[r] = hammingweight(Hraw[r]);
     auto total_hw = hammingweight(Hraw);
+
+    // test decoding API
+    LB<uint64_t> decoder;
+    std::function<bool(vector_ref_t<uint64_t>&)> callback = nullptr;
+    decoder.initialize(Hraw, S, w, callback);
+    decoder.solve();
 
     // prepare H for ISD, split into two parts with appropriate column padding
     size_t rows = n-k;

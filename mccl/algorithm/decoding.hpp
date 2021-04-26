@@ -1,9 +1,10 @@
 // generic decoding API, virtual class from which decoding algorithms can be derived
 
-#ifndef MCCL_CORE_MATRIX_HPP
-#define MCCL_CORE_MATRIX_HPP
+#ifndef MCCL_ALGORITHM_DECODING_HPP
+#define MCCL_ALGORITHM_DECODING_HPP
 
 #include <mccl/core/matrix.hpp>
+#include <mccl/core/matrix_permute.hpp>
 #include <functional>
 #include <stdlib.h>
 
@@ -49,10 +50,12 @@ public:
     virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, unsigned int w, callback_t& callback) = 0;
     
     // preparation of loop invariant
-    virtual void prepare_loop() = 0;
+    virtual void prepare_loop(){
+    };
     
     // perform one loop iteration, return true if not finished
-    virtual bool loop_next() = 0;
+    virtual bool loop_next(){
+    };
     
     // run loop and pass all solutions through callback
     virtual void solve()
@@ -63,6 +66,99 @@ public:
     }
 };
 
+size_t get_scratch(size_t k, size_t sz) {
+    return ((k+sz-1)/sz) * sz - k;
+}
+
+template<typename data_t, typename callback_t = std::function<bool(vector_ref_t<data_t>&)>>
+class LB: public ISD_API_exhaustive<data_t, callback_t>
+{
+private:
+    mccl::matrix_t<data_t>* H_ptr = nullptr;
+    mccl::matrix_t<data_t>* H01T = nullptr;
+    mccl::vector_t<data_t>* S_ptr = nullptr;
+    mccl::matrix_ref_t<data_t>* H01_S_view = nullptr;
+    mccl::matrix_ref_t<data_t>* H01T_S_view = nullptr;
+    matrix_permute_t<uint64_t>* permutator = nullptr;
+    size_t n,k,w,rows,cols0,cols1,scratch0,cnt;
+
+public:    
+    // deterministic initialization for given parity check matrix H0 and target syndrome s0
+    void initialize(const matrix_ref_t<data_t>& H_, const vector_ref_t<data_t>& S, unsigned int w_, callback_t& callback) {
+        cnt = 0;
+        w = w_;
+        n = H_.columns();
+        k = n-H_.rows();
+        rows = n-k;
+        cols0 = n-k;
+        scratch0 = get_scratch(cols0, 64);
+        cols1 = k;
+        H_ptr = new mccl::matrix_t<data_t>(n-k, cols0+scratch0+cols1+1); // +1 to store S
+        for( size_t i = 0; i < rows; i++ ) {
+            for( size_t j = 0; j < cols0; j++ ) {
+                H_ptr->bitset(i,j+scratch0,H_(i,j));
+            }
+            for( size_t j = 0; j < cols1; j++ ) {
+                H_ptr->bitset(i, cols0+scratch0+j, H_(i, cols0+j));
+            }
+            H_ptr->bitset(i, cols0+scratch0+cols1, S[i]);
+        }
+
+        size_t scratch1 = get_scratch(cols1+1, 64);
+        H01_S_view = new mccl::matrix_ref_t<data_t>(H_ptr->submatrix(0, rows, cols0+scratch0, cols1+1, scratch1));
+
+        H01T = new mccl::matrix_t<data_t>(cols1+1, rows);
+        size_t scratch01T = get_scratch(rows, 64);
+        H01T_S_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1+1, 0, rows, scratch01T));
+    
+        permutator = new matrix_permute_t<uint64_t>(*H_ptr);
+    }
+    
+    // // preparation of loop invariant
+    // virtual void prepare_loop() = 0;
+    
+    // perform one loop iteration, return true if not finished
+    bool loop_next() {
+        cnt++;
+        permutator->random_permute(scratch0, scratch0+cols0, scratch0+n);
+        auto pivotend = echelonize(*H_ptr, scratch0, scratch0+cols0);
+        if(pivotend != cols0)
+            return true;
+
+        H01T_S_view->transpose(*H01_S_view);
+        auto S0 = (*H01T_S_view)[cols1];
+        if(hammingweight(S0) <= w) {
+            auto perm = permutator->get_permutation();
+            mccl::vector_t<uint64_t> sol(n);
+            for( size_t i = 0; i < n-k; i++ ) {
+                if (S0[i])
+                    sol.bitset(perm[scratch0+i]-scratch0);
+            }
+            std::cerr << "Found solution after " << cnt << " iterations." << std::endl;
+            std::cerr << S0 << std::endl;
+            std::cerr << sol << std::endl;
+            return false;
+        }
+        return true;
+    }
+    
+    // // run loop and pass all solutions through callback
+    // virtual void solve()
+    // {
+    //     prepare_loop();
+    //     while (loop_next())
+    //         ;
+    // }
+
+    void free() {
+        if( H01_S_view != nullptr ) delete H01_S_view;
+        if( H01T_S_view != nullptr ) delete H01T_S_view;
+        if( H_ptr != nullptr ) delete H_ptr;
+        if( H01T != nullptr ) delete H01T;
+        if( S_ptr != nullptr ) delete S_ptr;
+        if( permutator != nullptr ) delete permutator;
+    };
+};
 
 
 /*
