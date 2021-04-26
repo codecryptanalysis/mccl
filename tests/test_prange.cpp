@@ -83,7 +83,9 @@ int main(int, char**)
         cnt++;
 
         permutator.random_permute(scratch0, scratch0+cols0, scratch0+n);
-        echelonize(H, scratch0, scratch0+cols0);
+        auto pivotend = echelonize(H, scratch0, scratch0+cols0);
+        if(pivotend != cols0)
+            continue;
 
         H01T_S_view.transpose(H01_S_view);
         H11T_S_view.transpose(H11_S_view);
@@ -93,17 +95,26 @@ int main(int, char**)
 
         // for prange we only have to check the weight of S0 as S1 is empty
         if(hammingweight(S0) <= w) {
-	  auto perm = permutator.get_permutation();
-	  mccl::vector_t<uint64_t> sol(n);
-	  for( size_t i = 0; i < n-k; i++ ) {
-	    if (S0[i])
-	      sol.bitset(perm[scratch0+i]-scratch0);
-	  }
-	  
+            auto perm = permutator.get_permutation();
+            mccl::vector_t<uint64_t> sol(n);
+            for( size_t i = 0; i < n-k; i++ ) {
+                if (S0[i])
+                    sol.bitset(perm[scratch0+i]-scratch0);
+            }
             std::cerr << "Found solution after " << cnt << " iterations." << std::endl;
-	    std::cerr << S0 << std::endl;
-	    std::cerr << sol << std::endl;
-            status |= 0;
+            std::cerr << S0 << std::endl;
+    	    std::cerr << sol << std::endl;
+
+            // check solution
+            status |= not(hammingweight(sol) <= w);
+            std::cerr << hammingweight(sol) << std::endl;
+            vec_t eval_S(Hraw.rows());
+            for(size_t i = 0; i < Hraw.rows(); i++ ) {
+                bool x = hammingweight(Hraw[i].op_and(sol))%2;
+                if(x)
+                    eval_S.bitset(i);
+            }
+            status |= not(eval_S==S);
             break;
         }
     }

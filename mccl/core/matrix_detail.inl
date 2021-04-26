@@ -94,7 +94,7 @@ namespace detail
 		const size_t words = (m1.columns + m1.word_bits - 1) / m1.word_bits;
 		if ((m1.columns % m1.word_bits) == 0)
 		{
-			data_t* first1 = m1.data(0), first2 = m2.data(0), last1 = m1.data(0) + words;
+			const data_t* first1 = m1.data(0); const data_t* first2 = m2.data(0); const data_t* last1 = m1.data(0) + words;
 			for (; first1 != last1; ++first1, ++first2)
 				if (*first1 != *first2)
 					return false;
@@ -102,7 +102,7 @@ namespace detail
 		else
 		{
 			const data_t lastwordmask = m1.lastwordmask();
-			data_t* first1 = m1.data(0), first2 = m2.data(0), last1 = m1.data(0) + words - 1;
+			const data_t* first1 = m1.data(0); const data_t* first2 = m2.data(0); const data_t* last1 = m1.data(0) + words - 1;
 			for (; first1 != last1; ++first1, ++first2)
 				if (*first1 != *first2)
 					return false;
