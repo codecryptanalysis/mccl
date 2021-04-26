@@ -107,7 +107,7 @@ public:
     // assign & modify operators
     // reference semantics: (override) assign and modify&assign by acting on matrix content
     vector_ref_t& operator=(const vector_ref_t& m) { detail::vector_copy(base(), m.base()); return *this; }
-    vector_ref_t& operator=(vector_ref_t&&) = delete;
+    vector_ref_t& operator=(vector_ref_t&& m)      { return *this = m; }
 
     vector_ref_t& operator^=(const vector_ref_t& m2) { detail::vector_xor(base(), m2.base()); return *this; }
     vector_ref_t& operator|=(const vector_ref_t& m2) { detail::vector_or(base(), m2.base()); return *this; }
