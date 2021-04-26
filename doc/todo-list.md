@@ -75,9 +75,26 @@ Discussion:
 - expected size of the parameters?
 	- see [Hobach](https://hackingthe.net/downloads/isd.pdf) (pp. 70-71)
 	
-## 22/04/21
-- [ ] write Prange (and Lee-Brickell) following the ISD API
-- [ ] presentation of Hobach's experimental results
+## 26/04/21
+- [x] fix Prange test
+- [x] write Prange following the ISD API
+- [x] presentation of Hobach's experimental results
+
+Discussion
+- Prange works
+- fast enumeration of sums of columns: 
+	- add the 'origin' vector to all sums
+	- no callback: store the results
+	- same API can directly return a hashmap
+- Hobach's work
+	- most proposed optimizations use binary operations and do not take into account the fact that we have 64 bits integers 
+	- early abort on multiples of 64 bits
+	- full Gaussian elimination? no because we will not treat pivot columns differently from random columns in H2
+
+## 10/05/21
+- [ ] API single generic callback function
+- [ ] Fast enumeration of sums of columns
+- [ ] Lee-Brickell
 - [ ] python tool to compute the cost given the parameters (with the actual cost of each operation as a variable)
 - [ ] simplification of the `matrix` type
 - [ ] more flexible and optimized row-reduction
