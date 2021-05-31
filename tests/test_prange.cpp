@@ -42,7 +42,9 @@ int main(int, char**)
 
     // test subISD_prange
     subISD_prange<uint64_t> prange;
-    ISD_single_generic<uint64_t,subISD_prange<uint64_t>> ISD_single(prange); 
+    ISD_single_generic<uint64_t,subISD_prange<uint64_t>> ISD_single(prange);
+    ISD_single.initialize(Hraw, S, w);
+    ISD_single.solve();
 
     // test decoding API
     LB<uint64_t> decoder;

@@ -40,7 +40,7 @@ public:
     	}
     };
 
-  std::vector<uint32_t> get_permutation() {
+  std::vector<uint32_t>& get_permutation() {
     return permutation;
   }
   

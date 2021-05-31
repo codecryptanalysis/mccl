@@ -16,10 +16,10 @@ class ISD_API_single
 {
 public:
     // pass parameters to actual object
-    //virtual void configure(const parameters_t& params) = 0;
+    //virtual void configure(parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, unsigned int w) = 0;
+    virtual void initialize(matrix_ref_t<data_t>& H0, vector_ref_t<data_t>& s0, unsigned int w) = 0;
     
     // probabilistic preparation of loop invariant
     virtual void prepare_loop() = 0;
@@ -31,7 +31,7 @@ public:
     virtual void solve()
     {
         prepare_loop();
-        while (!loop_next())
+        while (loop_next())
             ;
     }
     
@@ -44,10 +44,10 @@ class ISD_API_exhaustive
 {
 public:
     // pass parameters to actual object
-    //virtual void configure(const parameters_t& params) = 0;
+    //virtual void configure(parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(const matrix_ref_t<data_t>& H0, const vector_ref_t<data_t>& s0, unsigned int w, callback_t& callback) = 0;
+    virtual void initialize(matrix_ref_t<data_t>& H0, vector_ref_t<data_t>& s0, unsigned int w, callback_t& callback) = 0;
     
     // preparation of loop invariant
     virtual void prepare_loop(){
@@ -84,7 +84,7 @@ private:
 
 public:    
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(const matrix_ref_t<data_t>& H_, const vector_ref_t<data_t>& S, unsigned int w_, callback_t& callback) {
+    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_, callback_t& callback) {
         cnt = 0;
         w = w_;
         n = H_.columns();
@@ -162,7 +162,7 @@ public:
 
 
 template<typename data_t>
-bool check_solution(const mccl::matrix_ref_t<data_t> &H01T_view, const vector_ref_t<data_t>& S0, const std::vector<uint32_t>& perm, size_t w, const std::vector<uint32_t>& E1_sparse, size_t w1) {
+bool check_solution(mccl::matrix_ref_t<data_t> &H01T_view, vector_ref_t<data_t>& S0, std::vector<uint32_t>& perm, size_t w, std::vector<uint32_t>& E1_sparse, size_t w1) {
     vector_t<data_t> tmp(S0.columns());
     tmp ^= S0;
     for( auto i : E1_sparse ) {
@@ -208,10 +208,10 @@ public:
     }
     
     // pass parameters to actual object
-    //virtual void configure(const parameters_t& params) = 0;
+    //virtual void configure(parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(const matrix_ref_t<data_t>& H_, const vector_ref_t<data_t>& S, unsigned int w_) {
+    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_) {
         cnt = 0;
         w = w_;
         n = H_.columns();
@@ -247,7 +247,7 @@ public:
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
-        std::function<bool(const std::vector<uint32_t>&, size_t)> callback = [this](const std::vector<uint32_t>& E1_sparse, size_t w1){
+        std::function<bool(std::vector<uint32_t>&, size_t)> callback = [this](std::vector<uint32_t>& E1_sparse, size_t w1){
             if(check_solution(*(this->H01T_view), *(this->S0_view), this->permutator->get_permutation(), this->w, E1_sparse, w1)) {
                 std::cerr << "SubISD solution" << std::endl;
                 return true;
@@ -273,7 +273,7 @@ public:
         H01T_S_view->transpose(*H01_S_view);
         subISD->solve();
 
-        if(cnt>10) {
+        if(cnt>10000) {
             return false;
         }
         return true;
@@ -283,25 +283,26 @@ public:
     void solve() final
     {
         prepare_loop();
-        while (!loop_next())
+        while (loop_next())
             ;
     }
     
     subISD_t* subISD;
 };
 
-template<typename data_t, typename callback_t = std::function<bool(const std::vector<uint32_t>&, size_t)>>
+template<typename data_t, typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
 class subISD_prange: public ISD_API_exhaustive<data_t, callback_t>
 {   
 private:
     callback_t callback;
 public:
-    void initialize(const matrix_ref_t<data_t>& H_, const vector_ref_t<data_t>& S, unsigned int w_, callback_t& _callback) {
+    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_, callback_t& _callback) {
         callback = _callback;
     }
 
     bool loop_next(){
-        callback({}, 0);
+        std::vector<uint32_t> E1_sparse = {};
+        callback(E1_sparse, 0);
         return false;
     }
 };
