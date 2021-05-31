@@ -40,7 +40,7 @@ public:
     	}
     };
 
-  std::vector<uint32_t> get_permutation() {
+  std::vector<uint32_t>& get_permutation() {
     return permutation;
   }
   
@@ -74,6 +74,8 @@ public:
 	// assume matrix_ref doesn't change, its content may be altered
 	void reset(unsigned rmax, unsigned rmin=1)
 	{
+		_rmax = rmax;
+		_rmin = rmin;
 		assert(_rmax > 0);
 		assert(_rmin > 0);
 		if (_rmax > _m.rows())
@@ -94,6 +96,8 @@ public:
 	{
 		if (origin.columns() != _m.columns())
 			throw std::runtime_error("matrix_enumeraterows_t:: origin does not have the correct number of columns");
+		_rmax = rmax;
+		_rmin = rmin;
 		assert(_rmax > 0);
 		assert(_rmin > 0);
 		if (_rmax > _m.rows())

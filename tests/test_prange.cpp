@@ -40,6 +40,44 @@ int main(int, char**)
         rowweights[r] = hammingweight(Hraw[r]);
     auto total_hw = hammingweight(Hraw);
 
+    // test subISD_prange
+    subISD_prange<uint64_t> prange;
+    ISD_single_generic<uint64_t,subISD_prange<uint64_t>> ISD_single_prange(prange);
+    ISD_single_prange.initialize(Hraw, S, w);
+    try {
+        ISD_single_prange.solve();
+    } catch(Solution<uint64_t>& sol) {
+        status |= not(hammingweight(sol.get_solution()) <= w);
+        std::cerr << hammingweight(sol.get_solution()) << std::endl;
+        vec_t eval_S(Hraw.rows());
+        vec_t r(Hraw.columns());
+        for(size_t i = 0; i < Hraw.rows(); i++ ) {
+            bool x = hammingweight(r.op_and(Hraw[i],sol.get_solution()))%2;
+            if(x)
+                eval_S.bitset(i);
+        }
+        status |= not(eval_S==S);
+    }
+
+    // test subISD_LB
+    subISD_LB<uint64_t> subLB;
+    ISD_single_generic<uint64_t,subISD_LB<uint64_t>> ISD_single_LB(subLB);
+    ISD_single_LB.initialize(Hraw, S, w);
+    try {
+        ISD_single_LB.solve();
+    } catch(Solution<uint64_t>& sol) {
+        status |= not(hammingweight(sol.get_solution()) <= w);
+        std::cerr << hammingweight(sol.get_solution()) << std::endl;
+        vec_t eval_S(Hraw.rows());
+        vec_t r(Hraw.columns());
+        for(size_t i = 0; i < Hraw.rows(); i++ ) {
+            bool x = hammingweight(r.op_and(Hraw[i],sol.get_solution()))%2;
+            if(x)
+                eval_S.bitset(i);
+        }
+        status |= not(eval_S==S);
+    }
+
     // test decoding API
     LB<uint64_t> decoder;
     std::function<bool(vector_ref_t<uint64_t>&)> callback = nullptr;
