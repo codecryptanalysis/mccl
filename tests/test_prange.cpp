@@ -40,6 +40,10 @@ int main(int, char**)
         rowweights[r] = hammingweight(Hraw[r]);
     auto total_hw = hammingweight(Hraw);
 
+    // test subISD_prange
+    subISD_prange<uint64_t> prange;
+    ISD_single_generic<uint64_t,subISD_prange<uint64_t>> ISD_single(prange); 
+
     // test decoding API
     LB<uint64_t> decoder;
     std::function<bool(vector_ref_t<uint64_t>&)> callback = nullptr;
