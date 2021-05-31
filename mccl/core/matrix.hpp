@@ -768,10 +768,10 @@ public:
     /* constructors */
     vector_t(size_t columns = 0): _allocptr(nullptr), _allocbytes(0) { _realloc(columns, true); }
     vector_t(const vector_t& m) : vector_t(m.columns()) { *this = m; }
-    vector_t(vector_t&& m) : vector_t(0) { swap(m); }
+    vector_t(vector_t&& m) : vector_t(0) { std::swap(*this,m); }
 
     vector_t& operator=(const vector_t& m) { _realloc(m.columns()); detail::vector_copy(base(), m.base()); return *this; }
-    vector_t& operator=(vector_t&& m) { swap(m); return *this; }
+    vector_t& operator=(vector_t&& m) { std::swap(*this,m); return *this; }
 
     vector_t(const vector_ref& m) : vector_t(m.columns()) { *this = m; }
     vector_t& operator=(const vector_ref& m) { _realloc(m.columns()); detail::vector_copy(base(), m.base()); return *this; }

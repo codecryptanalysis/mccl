@@ -160,20 +160,45 @@ public:
     };
 };
 
+template<typename data_t>
+class Solution : public std::exception {
+    vector_t<data_t> sol;
+    
+    public:
+        Solution(vector_t<data_t> sol_) : std::exception(),
+            sol(sol_)
+        {
+        }
+        
+        vector_t<data_t> get_solution() { return sol; }
+};
 
 template<typename data_t>
 bool check_solution(mccl::matrix_ref_t<data_t> &H01T_view, vector_ref_t<data_t>& S0, std::vector<uint32_t>& perm, size_t w, std::vector<uint32_t>& E1_sparse, size_t w1) {
-    vector_t<data_t> tmp(S0.columns());
-    tmp ^= S0;
+    vector_t<data_t> E0(S0.columns());
+    E0 ^= S0;
     for( auto i : E1_sparse ) {
-        tmp ^= H01T_view[i];
+        E0 ^= H01T_view[i];
     }
-    if(hammingweight(tmp)< w-w1-E1_sparse.size()) {
+    if(hammingweight(E0)< w-w1-E1_sparse.size()) {
         // recover and submit solution?
+        size_t k = H01T_view.rows();
+        size_t n = H01T_view.columns()+k;
+        size_t scratch0 = get_scratch(n-k, 64);
+        mccl::vector_t<data_t> sol(n);
+        for( size_t i = 0; i < n-k; i++ ) {
+            if (S0[i])
+                sol.bitset(perm[scratch0+i]-scratch0);
+        }
+        for( auto i : E1_sparse ) {
+            sol.bitset(perm[n-k+i+scratch0]-scratch0);
+        }
+        throw Solution<data_t>(sol);
         return true;
     }
     return false;
 }
+
 
 /*
 This is the generic algorithm solving target-ISD using a to-be-specified subISD algorithm
@@ -271,9 +296,13 @@ public:
             return true;
 
         H01T_S_view->transpose(*H01_S_view);
-        subISD->solve();
-
-        if(cnt>10000) {
+        try {
+            subISD->solve();
+        } catch(Solution<data_t>& sol) {
+            std::cerr << "ISD_single_generic found solution after " << cnt << " iterations" << std::endl;
+            std::cerr << sol.get_solution() << std::endl;
+            // todo: free memory
+            throw sol;
             return false;
         }
         return true;
