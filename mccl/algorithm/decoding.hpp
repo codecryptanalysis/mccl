@@ -181,13 +181,16 @@ bool check_solution(mccl::matrix_ref_t<data_t> &H01T_view, vector_ref_t<data_t>&
         E0 ^= H01T_view[i];
     }
     if(hammingweight(E0)< w-w1-E1_sparse.size()) {
+        std::cerr << "Found solution" << std::endl;
         // recover and submit solution?
+        std::cerr << "found solution " << hammingweight(E0) << " " << w << " " << w1 << " " << E1_sparse.size() << std::endl;
+        std::cerr << E0 << " " << std::endl;
         size_t k = H01T_view.rows();
         size_t n = H01T_view.columns()+k;
         size_t scratch0 = get_scratch(n-k, 64);
         mccl::vector_t<data_t> sol(n);
         for( size_t i = 0; i < n-k; i++ ) {
-            if (S0[i])
+            if (E0[i])
                 sol.bitset(perm[scratch0+i]-scratch0);
         }
         for( auto i : E1_sparse ) {
@@ -259,12 +262,14 @@ public:
         size_t scratch1 = get_scratch(cols1+1, 64);
         H01_S_view = new mccl::matrix_ref_t<data_t>(H_ptr->submatrix(0, rows, cols0+scratch0, cols1+1, scratch1));
 
-
         H01T = new mccl::matrix_t<data_t>(cols1+1, rows);
         size_t scratch01T = get_scratch(rows, 64);
         H01T_S_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1+1, 0, rows, scratch01T));
         H01T_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1, 0, rows, scratch01T));
         S0_view = new mccl::vector_ref_t<data_t>(H01T->subvector(cols1, 0, rows, scratch01T));
+
+        // todo: fix for l > 0
+        H11T_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1, 0, rows, scratch01T));
 
         permutator = new matrix_permute_t<uint64_t>(*H_ptr);
     }
@@ -333,6 +338,34 @@ public:
         std::vector<uint32_t> E1_sparse = {};
         callback(E1_sparse, 0);
         return false;
+    }
+};
+
+template<typename data_t, typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
+class subISD_LB: public ISD_API_exhaustive<data_t, callback_t>
+{   
+private:
+    callback_t callback;
+    matrix_enumeraterows_t<uint64_t>* rowenum = nullptr;
+    size_t p = 3;
+public:
+    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_, callback_t& _callback) {
+        callback = _callback;
+        rowenum = new matrix_enumeraterows_t<uint64_t>(H_, p, 1);
+    }
+
+    void prepare_loop() {
+        rowenum->reset(p, 1);
+    }
+
+    bool loop_next(){  
+        rowenum->compute();
+
+        // todo: optimize and pass computed error sum
+        std::vector<uint32_t> E1_sparse;
+        E1_sparse.assign(rowenum->selection(), rowenum->selection()+rowenum->selectionsize());
+        callback(E1_sparse, 0);
+        return rowenum->next();
     }
 };
 
