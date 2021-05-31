@@ -92,11 +92,19 @@ Discussion
 	- full Gaussian elimination? no because we will not treat pivot columns differently from random columns in H2
 
 ## 10/05/21
-- [ ] API single generic callback function
-- [ ] Fast enumeration of sums of columns
-- [ ] Lee-Brickell
-- [ ] python tool to compute the cost given the parameters (with the actual cost of each operation as a variable)
+- [x] Fast enumeration of sums of columns
+- [x] Lee-Brickell (not in API)
+
+## 31/05/21
+- [x] API single generic callback function
+- [x] Prange and Lee-Brickell following the API
+
+## 10/06/21
 - [ ] simplification of the `matrix` type
+- [ ] command line utility
+- [ ] cleaning/commenting existing code for Prange/LB
+- [ ] initialization for l>0
+- [ ] python tool to compute the cost given the parameters (with the actual cost of each operation as a variable)
 - [ ] more flexible and optimized row-reduction
 - [ ] optimized (block) permutation
 
