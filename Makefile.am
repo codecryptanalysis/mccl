@@ -2,6 +2,7 @@ EXTRA_DIST = README.md LICENSE
 ACLOCAL_AMFLAGS = -I m4
 
 lib_LTLIBRARIES = libmccl.la
+bin_PROGRAMS = bin/isdsolver
 
 libmccl_la_LDFLAGS= -version-info 1:0:1 -no-undefined
 libmccl_la_SOURCES=\
@@ -20,6 +21,9 @@ libmccl_la_SOURCES=\
 	mccl/core/matrix_m4ri.hpp \
 	mccl/core/matrix_m4ri.cpp \
 	mccl/core/matrix_permute.hpp
+
+bin_isdsolver_SOURCES= src/isdsolver.cpp
+bin_isdsolver_LDADD  = libmccl.la
 
 TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange
 
