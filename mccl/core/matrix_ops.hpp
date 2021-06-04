@@ -9,6 +9,8 @@
 
 MCCL_BEGIN_NAMESPACE
 
+namespace detail {
+
 inline       uint64_t& m_getword(const  m_ptr& m, size_t r, size_t c) { return m.ptr[m.stride*r + (c/64)]; }
 inline const uint64_t& m_getword(const cm_ptr& m, size_t r, size_t c) { return m.ptr[m.stride*r + (c/64)]; }
 inline       uint64_t& v_getword(const  v_ptr& v, size_t c) { return v.ptr[(c/64)]; }
@@ -83,6 +85,10 @@ size_t m_hw(const cm_ptr& m);
 size_t v_hw(const cv_ptr& v);
 
 void m_transpose(const m_ptr& dst, const cm_ptr& src);
+
+}
+
+using namespace detail;
 
 MCCL_END_NAMESPACE
 

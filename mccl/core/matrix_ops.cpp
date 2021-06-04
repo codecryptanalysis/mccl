@@ -6,6 +6,7 @@
 
 MCCL_BEGIN_NAMESPACE
 
+namespace detail {
 
 inline size_t hammingweight(uint64_t n)
 {
@@ -316,7 +317,10 @@ template<void f(uint64_t*, uint64_t*, const uint64_t*, uint64_t)>
 void v_2op_f(const v_ptr& dst, const cv_ptr& src)
 {
 	if (dst.columns != src.columns)
+	{
+		std::cout << dst.columns << " " << src.columns << std::endl;
 		throw std::out_of_range("v_2op_f: vectors do not have equal dimensions");
+	}
 	if (src.columns == 0)
 		return;
 	const size_t words = (src.columns - 1) / 64;
@@ -790,7 +794,6 @@ void m_transpose(const m_ptr& dst, const cm_ptr& src)
 	}
 }
 
-
-
+}
 
 MCCL_END_NAMESPACE
