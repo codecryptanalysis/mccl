@@ -33,5 +33,8 @@ int main(int, char**)
     
     m[2] = v_and(vv,vv2);
 
+    vec v;
+    v = v_copy(m[3]);
+    std::cout << v.columns() << std::endl;
     return 0;
 }

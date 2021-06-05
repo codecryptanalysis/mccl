@@ -22,6 +22,7 @@ class cmat_view;
 class vec;
 class mat;
 
+// common class members for: cvec_view, vec_view, vec_view_it, cvec_view_it, vec
 #define CONST_VECTOR_CLASS_MEMBERS \
     const uint64_t* data() const { return ptr.ptr; } \
     size_t columns() const { return ptr.columns; } \
@@ -31,6 +32,10 @@ class mat;
     bool operator()(size_t c) const { return v_getbit(ptr,c); } \
     bool isequal(const cvec_view& v2) const { return v_isequal(ptr,v2.ptr); }
 
+// common class members for: vec_view, vec_view_it, vec
+// cnst = '' / 'const' to allow for const and non-const versions
+// vec_view & vec_view have both const and non-const versions
+// vec only has non-const versions
 #define VECTOR_CLASS_MEMBERS(vectype,cnst) \
     cnst vectype& clearbit(size_t c)         cnst { v_clearbit(ptr, c); return *this; } \
     cnst vectype& flipbit(size_t c)          cnst { v_flipbit(ptr, c); return *this; } \
@@ -52,6 +57,7 @@ class mat;
     cnst vectype& clearcolumns(size_t c_off, size_t c_cnt)        cnst { v_clearcolumns(ptr, c_off, c_cnt); return *this; } \
     cnst vectype& flipcolumns(size_t c_off, size_t c_cnt)         cnst { v_flipcolumns(ptr, c_off, c_cnt); return *this; }
 
+// common class members for: cvec_view_it, vec_view_it
 #define CONST_VECTOR_ITERATOR_CLASS_MEMBERS(vectype) \
     vectype& operator++() { ++ptr; return *this; } \
     vectype& operator--() { --ptr; return *this; } \
@@ -63,6 +69,7 @@ class mat;
     vectype operator-(size_t n) const { return vectype(ptr-n); } \
     ptrdiff_t operator-(cvec_view_it& v2) const { return ptr - v2.ptr; }
 
+// common class members for: cmat_view, mat_view, mat
 #define CONST_MATRIX_CLASS_MEMBERS \
     const uint64_t* data() const { return ptr.ptr; } \
     size_t columns() const { return ptr.columns; } \
@@ -73,6 +80,10 @@ class mat;
     bool operator()(size_t r, size_t c) const { return m_getbit(ptr,r,c); } \
     bool isequal(const cmat_view& m2) const { return m_isequal(ptr,m2.ptr); }
 
+// common class members for: mat_view, mat
+// cnst = '' / 'const' to allow for const and non-const versions
+// mat_view has both const and non-const versions
+// mat only has non-const versions
 #define MATRIX_CLASS_MEMBERS(mattype,cnst) \
     cnst mattype& clearbit(size_t r, size_t c)       cnst { m_clearbit(ptr, r, c); return *this; } \
     cnst mattype& flipbit(size_t r, size_t c)        cnst { m_flipbit(ptr, r, c); return *this; } \
@@ -95,7 +106,11 @@ class mat;
     cnst mattype& clearcolumns(size_t c_off, size_t c_cnt)       cnst { m_clearcolumns(ptr, c_off, c_cnt); return *this; } \
     cnst mattype& flipcolumns(size_t c_off, size_t c_cnt)        cnst { m_flipcolumns(ptr, c_off, c_cnt); return *this; }
 
-
+// meta-programming construct to convert 'v.vand(v1,v2)' to 'v = v_and(v1,v2)';
+// v_and(v1,v2) returns a vector_result<R> such that 'r' (of type R) contains the pointers to v1 & v2 
+// and the expression 'r(v)' calls the respective function 'v.vand(v1,v2)'
+// note: to allow vec & mat to automatically resize to the correct result dimensions
+// r should have a member 'resize_me(cols)' / 'resize_me(rows,cols)'
 template<typename v_ptr_op_result>
 struct vector_result
 {
@@ -107,6 +122,18 @@ struct vector_result
     vector_result& operator=(vector_result&&) = default;
     template<typename... Args>
     vector_result(Args... args...): r(std::forward<Args>(args)...) {}
+};
+template<typename m_ptr_op_result>
+struct matrix_result
+{
+    m_ptr_op_result r;
+    matrix_result(): r() {}
+    matrix_result(const matrix_result&) = default;
+    matrix_result(matrix_result&&) = default;
+    matrix_result& operator=(const matrix_result&) = default;
+    matrix_result& operator=(matrix_result&&) = default;
+    template<typename... Args>
+    matrix_result(Args... args...): r(std::forward<Args>(args)...) {}
 };
 
 
@@ -287,6 +314,10 @@ public:
     CONST_MATRIX_CLASS_MEMBERS
     MATRIX_CLASS_MEMBERS(mat_view,const)
     MATRIX_CLASS_MEMBERS(mat_view,)
+
+    // matrix result
+    template<typename F> const mat_view& operator=(matrix_result<F>&& mr) const { mr.r(ptr); return *this; }
+    template<typename F>       mat_view& operator=(matrix_result<F>&& mr)       { mr.r(ptr); return *this; }
 };
 
 
@@ -349,7 +380,7 @@ public:
     VECTOR_CLASS_MEMBERS(vec,)
 
     // vector result
-    template<typename F>       vec& operator=(vector_result<F>&& vr)       { resize(vr.r.v2->columns); vr.r(ptr); return *this; }
+    template<typename F>       vec& operator=(vector_result<F>&& vr)       { vr.r.resize_me(*this); vr.r(ptr); return *this; }
 };
 
 class mat
@@ -416,6 +447,9 @@ public:
     // common matrix API class members
     CONST_MATRIX_CLASS_MEMBERS
     MATRIX_CLASS_MEMBERS(mat,)
+
+    // vector result
+    template<typename F>       mat& operator=(matrix_result<F>&& mr)       { mr.r.resize_me(*this); mr.r(ptr); return *this; }
 };
 
 bool operator==(const cvec_view& v1, const cvec_view& v2) { return v1.ptr == v2.ptr; }
@@ -426,6 +460,7 @@ bool operator==(const  vec_view& v1, const cvec_view& v2) { return v1.ptr == v2.
 bool operator!=(const  vec_view& v1, const cvec_view& v2) { return v1.ptr != v2.ptr; }
 bool operator==(const  vec_view& v1, const  vec_view& v2) { return v1.ptr == v2.ptr; }
 bool operator!=(const  vec_view& v1, const  vec_view& v2) { return v1.ptr != v2.ptr; }
+
 bool operator==(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr == v2.ptr; }
 bool operator!=(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
 bool operator==(const cvec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
@@ -434,6 +469,7 @@ bool operator==(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr 
 bool operator!=(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
 bool operator==(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
 bool operator!=(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
+
 bool operator==(const cmat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
 bool operator!=(const cmat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
 bool operator==(const cmat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
@@ -470,6 +506,7 @@ struct v_ptr_op2_result
     v_ptr_op2_result& operator=(v_ptr_op2_result&&) = default;
     
     void operator()(const v_ptr& v1) {  f(v1,*v2); }
+    void resize_me(vec& v) { v.resize(v2->columns); }
 };
 template<void f(const v_ptr&, const cv_ptr&, const cv_ptr&)>
 struct v_ptr_op3_result
@@ -484,6 +521,50 @@ struct v_ptr_op3_result
     v_ptr_op3_result& operator=(v_ptr_op3_result&&) = default;
     
     void operator()(const v_ptr& v1) {  f(v1,*v2,*v3); }
+    void resize_me(vec& v) { v.resize(v2->columns); }
+};
+
+template<void f(const m_ptr&, const cm_ptr&)>
+struct m_ptr_op2_result
+{
+    const cm_ptr* m2;
+    m_ptr_op2_result(): m2(nullptr) {}
+    m_ptr_op2_result(const cm_ptr* _m2) { m2 = _m2; }
+    m_ptr_op2_result(const m_ptr_op2_result&) = default;
+    m_ptr_op2_result(m_ptr_op2_result&&) = default;
+    m_ptr_op2_result& operator=(const m_ptr_op2_result&) = default;
+    m_ptr_op2_result& operator=(m_ptr_op2_result&&) = default;
+    
+    void operator()(const m_ptr& m1) {  f(m1,*m2); }
+    void resize_me(mat& m) { m.resize(m2->rows, m2->columns); }
+};
+template<void f(const m_ptr&, const cm_ptr&, const cm_ptr&)>
+struct m_ptr_op3_result
+{
+    const cm_ptr* m2;
+    const cm_ptr* m3;
+    m_ptr_op3_result(): m2(nullptr), m3(nullptr) {}
+    m_ptr_op3_result(const cm_ptr* _m2, const cm_ptr* _m3) { m2 = _m2; m3 = _m3; }
+    m_ptr_op3_result(const m_ptr_op3_result&) = default;
+    m_ptr_op3_result(m_ptr_op3_result&&) = default;
+    m_ptr_op3_result& operator=(const m_ptr_op3_result&) = default;
+    m_ptr_op3_result& operator=(m_ptr_op3_result&&) = default;
+    
+    void operator()(const m_ptr& m1) {  f(m1,*m2,*m3); }
+    void resize_me(mat& m) { m.resize(m2->rows, m2->columns); }
+};
+struct m_ptr_transpose_result
+{
+    const cm_ptr* m2;
+    m_ptr_transpose_result(): m2(nullptr) {}
+    m_ptr_transpose_result(const cm_ptr* _m2) { m2 = _m2; }
+    m_ptr_transpose_result(const m_ptr_transpose_result&) = default;
+    m_ptr_transpose_result(m_ptr_transpose_result&&) = default;
+    m_ptr_transpose_result& operator=(const m_ptr_transpose_result&) = default;
+    m_ptr_transpose_result& operator=(m_ptr_transpose_result&&) = default;
+    
+    void operator()(const m_ptr& m1) {  m_transpose(m1,*m2); }
+    void resize_me(mat& m) { m.resize(m2->columns, m2->rows); }
 };
 
 vector_result<v_ptr_op2_result<detail::v_copy   >> v_copy   (const cvec_view& v2) { return vector_result<v_ptr_op2_result<detail::v_copy>>(&v2.ptr); }
@@ -492,6 +573,15 @@ vector_result<v_ptr_op2_result<detail::v_copynot>> v_copynot(const cvec_view& v2
 vector_result<v_ptr_op3_result<detail::v_and>> v_and(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_and>>(&v2.ptr, &v3.ptr); }
 vector_result<v_ptr_op3_result<detail::v_or >> v_or (const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_or >>(&v2.ptr, &v3.ptr); }
 vector_result<v_ptr_op3_result<detail::v_xor>> v_xor(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_xor>>(&v2.ptr, &v3.ptr); }
+
+
+matrix_result<m_ptr_op2_result<detail::m_copy   >> m_copy     (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copy>>(&m2.ptr); }
+matrix_result<m_ptr_op2_result<detail::m_copynot>> m_copynot  (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copynot>>(&m2.ptr); }
+matrix_result<m_ptr_transpose_result>              m_transpose(const cmat_view& m2) { return matrix_result<m_ptr_transpose_result>(&m2.ptr); }
+
+matrix_result<m_ptr_op3_result<detail::m_and>> m_and(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
+matrix_result<m_ptr_op3_result<detail::m_or >> m_or (const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
+matrix_result<m_ptr_op3_result<detail::m_xor>> m_xor(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
 
 MCCL_END_NAMESPACE
 

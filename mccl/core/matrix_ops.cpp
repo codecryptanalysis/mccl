@@ -753,6 +753,8 @@ void m_transpose(const m_ptr& dst, const cm_ptr& src)
 	static const size_t bits = 64;
 	if (dst.columns != src.rows || dst.rows != src.columns)
 		throw std::out_of_range("m_transpose: matrix dimensions do not match");
+	if (dst.ptr == src.ptr)
+		throw std::runtime_error("m_transpose: src and dst are equal! cannot transpose inplace");
 	// process batch of bits rows
 	size_t r = 0;
 	for (; r+bits <= src.rows; r += bits)
