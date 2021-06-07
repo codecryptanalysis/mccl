@@ -184,8 +184,9 @@ public:
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
     cvec_view(const cvec_view& v) = default;
     cvec_view(cvec_view&& v) = default;
-    cvec_view& operator=(const cvec_view& v) = default;
-    cvec_view& operator=(cvec_view&& v) = default;
+    // deleted for safety, to avoid confusion
+    cvec_view& operator=(const cvec_view& v) = delete;
+    cvec_view& operator=(cvec_view&& v) = delete;
     
     // view management
     void reset(const cv_ptr& p) { ptr = p; }
@@ -208,8 +209,9 @@ public:
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
     vec_view(const vec_view& v) = default;
     vec_view(vec_view&& v) = default;
-    vec_view& operator=(const vec_view& v) = default;
-    vec_view& operator=(vec_view&& v) = default;
+// deleted for safety, to avoid confusion
+    vec_view& operator=(const vec_view& v) = delete;
+    vec_view& operator=(vec_view&& v) = delete;
 
     // view management
     void reset(const v_ptr& p) { ptr = p; }
@@ -240,8 +242,9 @@ public:
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
     cvec_view_it(const cvec_view_it& v) = default;
     cvec_view_it(cvec_view_it&& v) = default;
-    cvec_view_it& operator=(const cvec_view_it& v) = default;
-    cvec_view_it& operator=(cvec_view_it&& v) = default;
+// deleted for safety, to avoid confusion
+    cvec_view_it& operator=(const cvec_view_it& v) = delete;
+    cvec_view_it& operator=(cvec_view_it&& v) = delete;
 
     // view management
     void reset(const cvi_ptr& p) { ptr = p; }
@@ -270,8 +273,9 @@ public:
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
     vec_view_it(const vec_view_it& v) = default;
     vec_view_it(vec_view_it&& v) = default;
-    vec_view_it& operator=(const vec_view_it& v) = default;
-    vec_view_it& operator=(vec_view_it&& v) = default;
+// deleted for safety, to avoid confusion
+    vec_view_it& operator=(const vec_view_it& v) = delete;
+    vec_view_it& operator=(vec_view_it&& v) = delete;
 
     // view management
     void reset(const vi_ptr& p) { ptr = p; }
