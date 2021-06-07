@@ -65,7 +65,9 @@ struct cv_ptr {
 	}
 	cv_ptr subvector(size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return cv_ptr(ptr + (coloffset/64), cols);
 	}
 };
@@ -95,7 +97,9 @@ struct v_ptr {
 	}
 	v_ptr subvector(size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return v_ptr(ptr + (coloffset/64), cols);
 	}
 };
@@ -128,12 +132,16 @@ struct cvi_ptr {
 	}
 	cv_ptr subvector(size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return cv_ptr(ptr + (coloffset/64), cols);
 	}
 	cvi_ptr subvectorit(size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvectorit: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvectorit: columns out of range");
+#endif
 		return cvi_ptr(ptr + (coloffset/64), cols, stride);
 	}
 
@@ -180,12 +188,16 @@ struct vi_ptr {
 	}
 	v_ptr subvector(size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return v_ptr(ptr + (coloffset/64), cols);
 	}
 	vi_ptr subvectorit(size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvectorit: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("subvectorit: columns out of range");
+#endif
 		return vi_ptr(ptr + (coloffset/64), cols, stride);
 	}
 
@@ -228,27 +240,37 @@ struct cm_ptr {
 	}
 	cv_ptr subvector(size_t rowoffset = 0) const
 	{
-//		if (rowoffset >= rows) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if (rowoffset >= rows) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return cv_ptr(ptr + (rowoffset*stride), columns);
 	}
 	cv_ptr subvector(size_t rowoffset, size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return cv_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols);
 	}
 	cvi_ptr subvectorit(size_t rowoffset = 0) const
 	{
-//		if (rowoffset >= rows) throw std::out_of_range("subvectorit: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if (rowoffset >= rows) throw std::out_of_range("subvectorit: columns out of range");
+#endif
 		return cvi_ptr(ptr + (rowoffset*stride), columns, stride);
 	}
 	cvi_ptr subvectorit(size_t rowoffset, size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvectorit: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvectorit: columns out of range");
+#endif
 		return cvi_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols, stride);
 	}
 	cm_ptr submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset+_rows>rows)) throw std::out_of_range("submatrix: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset+_rows>rows)) throw std::out_of_range("submatrix: columns out of range");
+#endif
 		return cm_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols, stride, _rows);
 	}
 };
@@ -281,57 +303,67 @@ struct m_ptr {
 	}
 	v_ptr subvector(size_t rowoffset = 0) const
 	{
-//		if (rowoffset >= rows) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if (rowoffset >= rows) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return v_ptr(ptr + (rowoffset*stride), columns);
 	}
 	v_ptr subvector(size_t rowoffset, size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvector: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvector: columns out of range");
+#endif
 		return v_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols);
 	}
 	vi_ptr subvectorit(size_t rowoffset = 0) const
 	{
-//		if (rowoffset >= rows) throw std::out_of_range("subvectorit: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if (rowoffset >= rows) throw std::out_of_range("subvectorit: columns out of range");
+#endif
 		return vi_ptr(ptr + (rowoffset*stride), columns, stride);
 	}
 	vi_ptr subvectorit(size_t rowoffset, size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvectorit: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset >= rows)) throw std::out_of_range("subvectorit: columns out of range");
+#endif
 		return vi_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols, stride);
 	}
 	m_ptr submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const
 	{
-//		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset+_rows>rows)) throw std::out_of_range("submatrix: columns out of range");
+#ifndef MCCL_VECTOR_NO_SANITY_CHECKS
+		if ((coloffset % 64 != 0) || (coloffset+cols>columns) || (rowoffset+_rows>rows)) throw std::out_of_range("submatrix: columns out of range");
+#endif
 		return m_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols, stride, _rows);
 	}
 };
 
-bool operator==(const cv_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-bool operator!=(const cv_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
-bool operator==(const cv_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-bool operator!=(const cv_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
-bool operator==(const v_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-bool operator!=(const v_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
-bool operator==(const v_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-bool operator!=(const v_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const cv_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+static inline bool operator!=(const cv_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const cv_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+static inline bool operator!=(const cv_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const v_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+static inline bool operator!=(const v_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const v_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+static inline bool operator!=(const v_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
 
-bool operator==(const cvi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-bool operator!=(const cvi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
-bool operator==(const cvi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-bool operator!=(const cvi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
-bool operator==(const vi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-bool operator!=(const vi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
-bool operator==(const vi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-bool operator!=(const vi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const cvi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+static inline bool operator!=(const cvi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const cvi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+static inline bool operator!=(const cvi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const vi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+static inline bool operator!=(const vi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
+static inline bool operator==(const vi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+static inline bool operator!=(const vi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
 
-bool operator==(const cm_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-bool operator!=(const cm_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
-bool operator==(const cm_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-bool operator!=(const cm_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
-bool operator==(const m_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-bool operator!=(const m_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
-bool operator==(const m_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-bool operator!=(const m_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
+static inline bool operator==(const cm_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+static inline bool operator!=(const cm_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
+static inline bool operator==(const cm_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+static inline bool operator!=(const cm_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
+static inline bool operator==(const m_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+static inline bool operator!=(const m_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
+static inline bool operator==(const m_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+static inline bool operator!=(const m_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
 
 
 MCCL_END_NAMESPACE

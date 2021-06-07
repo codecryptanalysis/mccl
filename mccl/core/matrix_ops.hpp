@@ -6,10 +6,35 @@
 #include <mccl/core/matrix_base.hpp>
 
 #include <iostream>
+#include <array>
 
 MCCL_BEGIN_NAMESPACE
 
 namespace detail {
+
+template<size_t bits>
+struct alignas(bits/8) block_t {
+    static const size_t size = bits/64;
+    std::array<uint64_t,size> v;
+    block_t& operator&=(const block_t& v2) { for (size_t i = 0; i < size; ++i) v[i] &= v2.v[i]; return *this; }
+    block_t& operator^=(const block_t& v2) { for (size_t i = 0; i < size; ++i) v[i] ^= v2.v[i]; return *this; }
+    block_t& operator|=(const block_t& v2) { for (size_t i = 0; i < size; ++i) v[i] |= v2.v[i]; return *this; }
+    block_t operator&(const block_t& v2) const { block_t tmp(*this); return tmp &= v2; }
+    block_t operator^(const block_t& v2) const { block_t tmp(*this); return tmp ^= v2; } 
+    block_t operator|(const block_t& v2) const { block_t tmp(*this); return tmp |= v2; }
+    block_t operator~() const { block_t tmp; for (size_t i = 0; i < size; ++i) tmp.v[i] = ~v[i]; return tmp; }
+    bool operator==(const block_t& v2) const { for (size_t i = 0; i < size; ++i) if (v[i] != v2.v[i]) return false; return true; }
+};
+typedef block_t<256> block256_t;
+typedef block_t<512> block512_t;
+
+template<size_t bits>
+struct aligned_tag {};
+
+typedef aligned_tag<256> aligned256_tag; // for avx2
+typedef aligned_tag<512> aligned512_tag; // cacheline, 2x avx2
+typedef aligned_tag<64>  fullword_tag;
+
 
 inline       uint64_t& m_getword(const  m_ptr& m, size_t r, size_t c) { return m.ptr[m.stride*r + (c/64)]; }
 inline const uint64_t& m_getword(const cm_ptr& m, size_t r, size_t c) { return m.ptr[m.stride*r + (c/64)]; }

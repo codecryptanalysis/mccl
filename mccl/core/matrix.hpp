@@ -1,7 +1,8 @@
 #ifndef MCCL_CORE_MATRIX_HPP
 #define MCCL_CORE_MATRIX_HPP
 
-#include <mccl/core/matrix_detail.hpp>
+#include <mccl/core/matrix_base.hpp>
+#include <mccl/core/matrix_ops.hpp>
 
 #include <iostream>
 #include <functional>
@@ -9,945 +10,874 @@
 
 MCCL_BEGIN_NAMESPACE
 
-template<typename data_t>
-class vector_ptr_t;
-template<typename data_t>
-class vector_ref_t;
-template<typename data_t>
-class matrix_ptr_t;
-template<typename data_t>
-class matrix_ref_t;
+// = vector view classes =
+// These only point to a preallocated vector in memory
+// Copy/move constructor/assignment only alter the view, not the vector contents
+//   use vec_view.copy(src) etc. to modify view's contents
+// cvec_view points to const vector contents, vec_view points to non-const vector contents
+// Note that 'const vec_view' like a 'const pointer_t' still allows to modify the vector contents
+// Allows assigning a vector_result:
+//   however it must match the result vector dimension
+class vec_view;
+class cvec_view;
 
-/* allocation bitalignment is based on cacheline of 64 bytes = 512 bits */
-template<typename data_t, size_t bitalignment = 512>
-class vector_t;
-template<typename data_t, size_t bitalignment = 512>
-class matrix_t;
+// Extension of vec_view / cvec_view with rowstride
+// and pointer operators ++,--,+=,-=,+,- that change the view by # rows forward/backward
+class vec_view_it;
+class cvec_view_it;
 
-/* default type to use is with largest machine unsigned integer: uint64_t */
-typedef vector_ref_t<uint64_t> vector64_ref_t;
-typedef vector_ptr_t<uint64_t> vector64_ptr_t;
-typedef matrix_ref_t<uint64_t> matrix64_ref_t;
-typedef matrix_ptr_t<uint64_t> matrix64_ptr_t;
+// = matrix view classes =
+// These only point to a preallocated matrix in memory
+// Copy/move constructor/assignment only alter the view, not the matrix contents
+//   use mat_view.copy(src) etc. to modify view's contents
+// cmat_view points to const matrix contents, mat_view points to non-const matrix contents
+// Note that 'const mat_view' like a 'const pointer_t' still allows to modify the matrix contents
+// Allows assigning a matrix_result:
+//   however it must match the result matrix dimensions
+class mat_view;
+class cmat_view;
 
-/*
-    1) matrix_base_ref_t: struct containing pointer to submatrix (ptr, rows, stride, columns, scratchcolumns)
-    (note: scratchcolumns are 'extra' columns that potentially may be altered, but are ignored as content)
+// = matrix & vector classes =
+// maintains memory for a matrix/vector of specified dimensions
+// behaves as vec_view/mat_view when non-const
+// behaves as cvec_view/cmat_view when const
+// except:
+// 1) copy/move constructor/assignment from cvec_view/cmat_view
+//    automatically resizes and copies content
+// 2) when assigning a vector_result/matrix_result:
+//    then it will automatically resize to the result vector/matrix
+class vec;
+class mat;
 
-    2) vector_ptr_t, vector_ref_t, matrix_ptr_t, matrix_ref_t are all simple wrappers around matrix_base_ref_t
-    which itself is a pointer struct, but with different semantics:
-    - matrix_ref_t, vector_ref_t have reference semantics: constructor creates reference, all operations act on the content
-    - matrix_ptr_t, vector_ptr_t have pointer semantics: dereference just recasts *_ptr_t object as *_ref_t&
-    - vector_ref_t, vector_ptr_t are almost equal to matrix_*_t, but have forced rows=1 and index operators are different as expected
 
-    3) Reusing the same matrix_base_ref_t when dereferencing *_ptr_t is for efficiency, avoiding unnecessary copyies.
-    The main operations on *_ref_t do not change the underlying matrix_base_ref_t and are safe to use.
+// some functions have specializations that can be used by adding a tag
+// e.g. v.hw(fullword_tag()), v.copy(v2, aligned256_tag()), v.vnot(v2, aligned512_tag())
+// fullword_tag: 
+//   only for vectors/matrices with # columns a multiple of 64
+//   benefit: simpler loop and no special last word overhead
+// aligned256_tag/aligned512_tag: 
+//   only for vectors/matrices with # columns a multiple of 256/512
+//   also requires column offset with respect to original vector/matrix to be a multiple of 256/512
+//   benefit: automatic SIMD processing for 256=1 x avx2 register, 512=2 x avx2 register
+//   benefit2: aligned512_tag corresponds to cachelines!
 
-    4)
-    *** THE USE OF THESE ADDITIONAL MEMBER FUNCTIONS OF matrix_ref_t/vector_ref_t MAY CAUSE CONSTNESS VIOLATIONS AND SHOULD BE USE WITH CARE:
-    ***    reset_*, as_ptr(), to_ref()
-    *** This is due the fact that dereferencing a const pointer returns a non-const reference,
-    *** hence for `const matrix_ref_t m`, the expression `*m.as_ptr()` returns a non-const `matrix_ref_t&` to m
-    *** similarly for `const matrix_ptr_t p`, the expression `p->reset(base)` changes p
-    
-    5) matrix_t, vector_t: class derived from matrix_ref_t/vector_ref_t
-    - adds memory allocation
-    - does not allow to change the underlying *_ref_t: hides reset_*(), as_ptr(), base() functions
 
-*/
+// common class members for: cvec_view, vec_view, vec_view_it, cvec_view_it, vec
+#define CONST_VECTOR_CLASS_MEMBERS \
+    const uint64_t* data() const { return ptr.ptr; } \
+    size_t columns() const { return ptr.columns; } \
+    size_t rowwords() const { return (ptr.columns+63)/64; } \
+    size_t hw() const { return v_hw(ptr); } \
+    bool operator[](size_t c) const { return v_getbit(ptr,c); } \
+    bool operator()(size_t c) const { return v_getbit(ptr,c); } \
+    bool isequal(const cvec_view& v2) const { return v_isequal(ptr,v2.ptr); } \
+    template<size_t bits> size_t hw(aligned_tag<bits>) const { return v_hw(ptr, aligned_tag<bits>()); } \
+    template<size_t bits> bool isequal(const cvec_view& v2, aligned_tag<bits>) const { return v_isequal(ptr,v2.ptr,aligned_tag<bits>()); }
 
-// reference semantics: 
-// constructors initialize the reference, other member functions/operators change the referenced object
-template<typename data_t>
-class vector_ref_t
+// common class members for: vec_view, vec_view_it, vec
+// cnst = '' / 'const' to allow for const and non-const versions
+// vec_view & vec_view have both const and non-const versions
+// vec only has non-const versions
+#define VECTOR_CLASS_MEMBERS(vectype,cnst) \
+    cnst vectype& clearbit(size_t c)              cnst { v_clearbit(ptr, c); return *this; } \
+    cnst vectype& flipbit(size_t c)               cnst { v_flipbit(ptr, c); return *this; } \
+    cnst vectype& setbit(size_t c)                cnst { v_setbit(ptr, c); return *this; } \
+    cnst vectype& setbit(size_t c, bool b)        cnst { v_setbit(ptr, c, b); return *this; } \
+    cnst vectype& clear ()                        cnst { v_clear(ptr); return *this; } \
+    cnst vectype& set   ()                        cnst { v_set  (ptr); return *this; } \
+    cnst vectype& set   (bool b)                  cnst { v_set  (ptr, b); return *this; } \
+    cnst vectype& swap  (const  vec_view& v2)     cnst { v_swap(ptr, v2.ptr); return *this; } \
+    cnst vectype& copy  (const cvec_view& src)    cnst { v_copy (ptr, src.ptr); return *this; } \
+    cnst vectype& vnot  ()                        cnst { v_not  (ptr); return *this; } \
+    cnst vectype& vnot  (const cvec_view& src)    cnst { v_copynot(ptr, src.ptr); return *this; } \
+    cnst vectype& vxor  (const cvec_view& v2)     cnst { v_xor  (ptr, v2.ptr); return *this; } \
+    cnst vectype& vand  (const cvec_view& v2)     cnst { v_and  (ptr, v2.ptr); return *this; } \
+    cnst vectype& vor   (const cvec_view& v2)     cnst { v_or   (ptr, v2.ptr); return *this; } \
+    cnst vectype& vnxor (const cvec_view& v2)     cnst { v_nxor (ptr, v2.ptr); return *this; } \
+    cnst vectype& vnand (const cvec_view& v2)     cnst { v_nand (ptr, v2.ptr); return *this; } \
+    cnst vectype& vnor  (const cvec_view& v2)     cnst { v_nor  (ptr, v2.ptr); return *this; } \
+    cnst vectype& vandin(const cvec_view& v2)     cnst { v_andin(ptr, v2.ptr); return *this; } \
+    cnst vectype& vandni(const cvec_view& v2)     cnst { v_andni(ptr, v2.ptr); return *this; } \
+    cnst vectype& vorin (const cvec_view& v2)     cnst { v_orin (ptr, v2.ptr); return *this; } \
+    cnst vectype& vorni (const cvec_view& v2)     cnst { v_orni (ptr, v2.ptr); return *this; } \
+    cnst vectype& operator&=(const cvec_view& v2) cnst { v_and  (ptr, v2.ptr); return *this; } \
+    cnst vectype& operator^=(const cvec_view& v2) cnst { v_xor  (ptr, v2.ptr); return *this; } \
+    cnst vectype& operator|=(const cvec_view& v2) cnst { v_or   (ptr, v2.ptr); return *this; } \
+    cnst vectype& vxor  (const cvec_view& v1, const cvec_view& v2)  cnst { v_xor  (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vand  (const cvec_view& v1, const cvec_view& v2)  cnst { v_and  (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vor   (const cvec_view& v1, const cvec_view& v2)  cnst { v_or   (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vnxor (const cvec_view& v1, const cvec_view& v2)  cnst { v_nxor (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vnand (const cvec_view& v1, const cvec_view& v2)  cnst { v_nand (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vnor  (const cvec_view& v1, const cvec_view& v2)  cnst { v_nor  (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vandin(const cvec_view& v1, const cvec_view& v2)  cnst { v_andin(ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vandni(const cvec_view& v1, const cvec_view& v2)  cnst { v_andni(ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vorin (const cvec_view& v1, const cvec_view& v2)  cnst { v_orin (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& vorni (const cvec_view& v1, const cvec_view& v2)  cnst { v_orni (ptr, v1.ptr, v2.ptr); return *this; } \
+    cnst vectype& setcolumns(size_t c_off, size_t c_cnt, bool b)    cnst { v_setcolumns(ptr, c_off, c_cnt, b); return *this; } \
+    cnst vectype& setcolumns(size_t c_off, size_t c_cnt)            cnst { v_setcolumns(ptr, c_off, c_cnt); return *this; } \
+    cnst vectype& clearcolumns(size_t c_off, size_t c_cnt)          cnst { v_clearcolumns(ptr, c_off, c_cnt); return *this; } \
+    cnst vectype& flipcolumns(size_t c_off, size_t c_cnt)           cnst { v_flipcolumns(ptr, c_off, c_cnt); return *this; } \
+    template<size_t bits> cnst vectype& clear (aligned_tag<bits>)                       cnst { v_clear  (ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& set   (aligned_tag<bits>)                       cnst { v_set    (ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& set   (bool b, aligned_tag<bits>)               cnst { v_set    (ptr, b, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& swap  (const  vec_view& v2, aligned_tag<bits>)  cnst { v_swap   (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& copy  (const cvec_view& src, aligned_tag<bits>) cnst { v_copy   (ptr, src.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnot  (aligned_tag<bits>)                       cnst { v_not    (ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnot  (const cvec_view& src, aligned_tag<bits>) cnst { v_copynot(ptr, src.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vxor  (const cvec_view& v2, aligned_tag<bits>)  cnst { v_xor    (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vand  (const cvec_view& v2, aligned_tag<bits>)  cnst { v_and    (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vor   (const cvec_view& v2, aligned_tag<bits>)  cnst { v_or     (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnxor (const cvec_view& v2, aligned_tag<bits>)  cnst { v_nxor   (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnand (const cvec_view& v2, aligned_tag<bits>)  cnst { v_nand   (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnor  (const cvec_view& v2, aligned_tag<bits>)  cnst { v_nor    (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vandin(const cvec_view& v2, aligned_tag<bits>)  cnst { v_andin  (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vandni(const cvec_view& v2, aligned_tag<bits>)  cnst { v_andni  (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vorin (const cvec_view& v2, aligned_tag<bits>)  cnst { v_orin   (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vorni (const cvec_view& v2, aligned_tag<bits>)  cnst { v_orni   (ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vxor  (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_xor  (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vand  (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_and  (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vor   (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_or   (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnxor (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_nxor (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnand (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_nand (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vnor  (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_nor  (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vandin(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_andin(ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vandni(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_andni(ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vorin (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_orin (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; } \
+    template<size_t bits> cnst vectype& vorni (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>)  cnst { v_orni (ptr, v1.ptr, v2.ptr, aligned_tag<bits>()); return *this; }
+
+// common class members for: cvec_view_it, vec_view_it
+#define CONST_VECTOR_ITERATOR_CLASS_MEMBERS(vectype) \
+    vectype& operator++() { ++ptr; return *this; } \
+    vectype& operator--() { --ptr; return *this; } \
+    vectype& operator+=(size_t n) { ptr+=n; return *this; } \
+    vectype& operator-=(size_t n) { ptr-=n; return *this; } \
+    vectype operator++(int) { return vectype(ptr++); } \
+    vectype operator--(int) { return vectype(ptr--); } \
+    vectype operator+(size_t n) const { return vectype(ptr+n); } \
+    vectype operator-(size_t n) const { return vectype(ptr-n); } \
+    ptrdiff_t operator-(cvec_view_it& v2) const { return ptr - v2.ptr; }
+
+// common class members for: cmat_view, mat_view, mat
+#define CONST_MATRIX_CLASS_MEMBERS \
+    const uint64_t* data() const { return ptr.ptr; } \
+    size_t columns() const { return ptr.columns; } \
+    size_t rowwords() const { return (ptr.columns+63)/64; } \
+    size_t rows() const { return ptr.rows; } \
+    size_t stride() const { return ptr.stride; } \
+    size_t hw() const { return m_hw(ptr); } \
+    bool operator()(size_t r, size_t c) const { return m_getbit(ptr,r,c); } \
+    bool isequal(const cmat_view& m2) const { return m_isequal(ptr,m2.ptr); }
+
+// common class members for: mat_view, mat
+// cnst = '' / 'const' to allow for const and non-const versions
+// mat_view has both const and non-const versions
+// mat only has non-const versions
+#define MATRIX_CLASS_MEMBERS(mattype,cnst) \
+    cnst mattype& clearbit(size_t r, size_t c)       cnst { m_clearbit(ptr, r, c); return *this; } \
+    cnst mattype& flipbit(size_t r, size_t c)        cnst { m_flipbit(ptr, r, c); return *this; } \
+    cnst mattype& setbit(size_t r, size_t c)         cnst { m_setbit(ptr, r, c); return *this; } \
+    cnst mattype& setbit(size_t r, size_t c, bool b) cnst { m_setbit(ptr, r, c, b); return *this; } \
+    cnst mattype& clear()                            cnst { m_set(ptr, 0); return *this; } \
+    cnst mattype& set(bool b = true)                 cnst { m_set(ptr, b); return *this; } \
+    cnst mattype& copy(const cmat_view& src)         cnst { m_copy(ptr, src.ptr); return *this; } \
+    cnst mattype& transpose(const cmat_view& src)    cnst { m_transpose(ptr, src.ptr); return *this; } \
+    cnst mattype& mnot()                             cnst { m_not(ptr); return *this; } \
+    cnst mattype& mnot(const cmat_view& src)         cnst { m_copynot(ptr, src.ptr); return *this; } \
+    cnst mattype& mxor(const cmat_view& m2)          cnst { m_xor(ptr, m2.ptr); return *this; } \
+    cnst mattype& mand(const cmat_view& m2)          cnst { m_and(ptr, m2.ptr); return *this; } \
+    cnst mattype& mor (const cmat_view& m2)          cnst { m_or (ptr, m2.ptr); return *this; } \
+    cnst mattype& operator&=(const cmat_view& m2)    cnst { m_and(ptr, m2.ptr); return *this; } \
+    cnst mattype& operator^=(const cmat_view& m2)    cnst { m_xor(ptr, m2.ptr); return *this; } \
+    cnst mattype& operator|=(const cmat_view& m2)    cnst { m_or (ptr, m2.ptr); return *this; } \
+    cnst mattype& mxor(const cmat_view& m1, const cmat_view& m2) cnst { m_xor(ptr, m1.ptr, m2.ptr); return *this; } \
+    cnst mattype& mand(const cmat_view& m1, const cmat_view& m2) cnst { m_and(ptr, m1.ptr, m2.ptr); return *this; } \
+    cnst mattype& mor (const cmat_view& m1, const cmat_view& m2) cnst { m_or (ptr, m1.ptr, m2.ptr); return *this; } \
+    cnst mattype& setcolumns(size_t c_off, size_t c_cnt, bool b) cnst { m_setcolumns(ptr, c_off, c_cnt, b); return *this; } \
+    cnst mattype& setcolumns(size_t c_off, size_t c_cnt)         cnst { m_setcolumns(ptr, c_off, c_cnt); return *this; } \
+    cnst mattype& clearcolumns(size_t c_off, size_t c_cnt)       cnst { m_clearcolumns(ptr, c_off, c_cnt); return *this; } \
+    cnst mattype& flipcolumns(size_t c_off, size_t c_cnt)        cnst { m_flipcolumns(ptr, c_off, c_cnt); return *this; }
+
+// meta-programming construct to convert 'v.vand(v1,v2)' to 'v = v_and(v1,v2)';
+// v_and(v1,v2) returns a vector_result<R> such that 'r' (of type R) contains the pointers to v1 & v2 
+// and the expression 'r(v)' calls the respective function 'v.vand(v1,v2)'
+// note: to allow vec & mat to automatically resize to the correct result dimensions
+// r should have a member 'resize_me(cols)' / 'resize_me(rows,cols)'
+template<typename v_ptr_op_result>
+struct vector_result
+{
+    v_ptr_op_result r;
+    vector_result(): r() {}
+    vector_result(const vector_result&) = default;
+    vector_result(vector_result&&) = default;
+    vector_result& operator=(const vector_result&) = default;
+    vector_result& operator=(vector_result&&) = default;
+    template<typename... Args>
+    vector_result(Args... args...): r(std::forward<Args>(args)...) {}
+};
+template<typename m_ptr_op_result>
+struct matrix_result
+{
+    m_ptr_op_result r;
+    matrix_result(): r() {}
+    matrix_result(const matrix_result&) = default;
+    matrix_result(matrix_result&&) = default;
+    matrix_result& operator=(const matrix_result&) = default;
+    matrix_result& operator=(matrix_result&&) = default;
+    template<typename... Args>
+    matrix_result(Args... args...): r(std::forward<Args>(args)...) {}
+};
+
+
+class cvec_view
 {
 public:
-    typedef detail::matrix_base_ref_t<      data_t> base_ref_t;
-    typedef detail::matrix_base_ref_t<const data_t> cbase_ref_t;
-    typedef vector_ptr_t<data_t> vector_ptr;
-    typedef vector_ref_t<data_t> vector_ref;
-    typedef matrix_ptr_t<data_t> matrix_ptr;
-    typedef matrix_ref_t<data_t> matrix_ref;
-
-    /* constructors: initialize the reference */
-    // default constructor & move constructor
-    vector_ref_t() = default;
-    vector_ref_t(vector_ref_t&& m) : _base(m._base) {}
-    // do not allow const copy constructor, but allow non-const copy constructor
-    vector_ref_t(const vector_ref_t& m) = delete;
-    vector_ref_t(vector_ref_t& m) : _base(m._base) {}
-    // construct from base_ref_t
-    explicit vector_ref_t(const base_ref_t& m)
-        : _base(m)
-    {
-        MCCL_MATRIX_BASE_ASSERT(_base.rows == 1);
-    }
-    explicit vector_ref_t(base_ref_t&& m)
-        : _base(std::move(m))
-    {
-        MCCL_MATRIX_BASE_ASSERT(_base.rows == 1);
-    }
-    vector_ref_t(data_t* ptr, size_t columns, size_t scratchcolumns = 0, size_t stride = 0)
-        : _base(ptr, 1, columns, scratchcolumns, stride)
-    {
-    }
-
-    size_t rows()           const { return 1; }
-    size_t columns()        const { return base().columns; }
-    size_t scratchcolumns() const { return base().scratchcolumns; }
-    size_t allcolumns()     const { return base().columns + base().scratchcolumns; }
-    size_t stride()         const { return base().stride; }
-    size_t word_bits()      const { return base().word_bits; }
-          data_t* data(size_t c = 0)       { return base().data(c); }
-    const data_t* data(size_t c = 0) const { return base().data(c); }
+    cv_ptr ptr;
     
-    size_t hammingweight()  const { return detail::vector_hammingweight(base()); }
-    size_t hw()  const { return detail::vector_hammingweight(base()); }
-
-    // assign & modify operators
-    // reference semantics: (override) assign and modify&assign by acting on matrix content
-    vector_ref_t& operator=(const vector_ref_t& m) { detail::vector_copy(base(), m.base()); return *this; }
-    vector_ref_t& operator=(vector_ref_t&& m)      { return *this = m; }
-
-    vector_ref_t& operator^=(const vector_ref_t& m2) { detail::vector_xor(base(), m2.base()); return *this; }
-    vector_ref_t& operator|=(const vector_ref_t& m2) { detail::vector_or(base(), m2.base()); return *this; }
-    vector_ref_t& operator&=(const vector_ref_t& m2) { detail::vector_and(base(), m2.base()); return *this; }
-
-    // *this = ~(*this)
-    vector_ref_t& op_not()                       { detail::vector_not(base()); return *this; }
-    // *this = ~m2
-    vector_ref_t& op_not(const vector_ref_t& m2) { detail::vector_copynot(base()); return *this; }
-    // perform binary operation: *this = op(*this, m2)
-    vector_ref_t& op_and  (const vector_ref_t& m2) { detail::vector_and  (base(), m2.base()); return *this; } // a & b
-    vector_ref_t& op_xor  (const vector_ref_t& m2) { detail::vector_xor  (base(), m2.base()); return *this; } // a ^ b
-    vector_ref_t& op_or   (const vector_ref_t& m2) { detail::vector_or   (base(), m2.base()); return *this; } // a | b
-    vector_ref_t& op_nand (const vector_ref_t& m2) { detail::vector_nand (base(), m2.base()); return *this; } // ~(a&b)
-    vector_ref_t& op_nxor (const vector_ref_t& m2) { detail::vector_nxor (base(), m2.base()); return *this; } // ~(a^b)
-    vector_ref_t& op_nor  (const vector_ref_t& m2) { detail::vector_nor  (base(), m2.base()); return *this; } // ~(a|b)
-    vector_ref_t& op_andin(const vector_ref_t& m2) { detail::vector_andin(base(), m2.base()); return *this; } // a&~b
-    vector_ref_t& op_andni(const vector_ref_t& m2) { detail::vector_andni(base(), m2.base()); return *this; } // ~a&b
-    vector_ref_t& op_orin (const vector_ref_t& m2) { detail::vector_orin (base(), m2.base()); return *this; } // a|~b
-    vector_ref_t& op_orni (const vector_ref_t& m2) { detail::vector_orni (base(), m2.base()); return *this; } // ~a|b
-    // perform binary operation: *this = op(m1, m2)
-    vector_ref_t& op_and  (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_and  (base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_xor  (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_xor  (base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_or   (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_or   (base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_nand (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_nand (base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_nxor (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_nxor (base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_nor  (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_nor  (base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_andin(const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_andin(base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_andni(const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_andni(base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_orin (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_orin (base(), m1.base(), m2.base()); return *this; }
-    vector_ref_t& op_orni (const vector_ref_t& m1, const vector_ref_t& m2) { detail::vector_orni (base(), m1.base(), m2.base()); return *this; }
-
-    // comparison operators
-    bool operator==(const vector_ref_t& m) const { return vector_compare(base(), m.base()); }
-    bool operator!=(const vector_ref_t& m) const { return !vector_compare(base(), m.base()); }
-
-    // indexing
-    bool operator[](size_t c) const { return base()(0, c); }
-    bool operator()(size_t c) const { return base()(0, c); }
-
-    void bitset  (size_t c) { base().bitset(0,c); }
-    void bitreset(size_t c) { base().bitreset(0,c); }
-    void bitflip (size_t c) { base().bitflip(0,c); }
-    void bitset  (size_t c, bool b) { base().bitset(0,c,b); }
+    cvec_view(): ptr() {}
+    cvec_view(const cv_ptr& p): ptr(p) {}
     
-    void setcolumns(size_t column_offset, size_t columns, bool b)
-    {
-        detail::vector_setcolumns(base(), column_offset, columns, b);
-    }
-    void flipcolumns(size_t column_offset, size_t columns)
-    {
-        detail::vector_flipcolumns(base(), column_offset, columns);
-    }
-    void setscratch(bool b = false)
-    {
-        detail::vector_setcolumns(base(), columns(), scratchcolumns(), b);
-    }
-    void flipscratch()
-    {
-        detail::vector_flipcolumns(base(), columns(), scratchcolumns());
-    }
-    void set(bool b = true)
-    {
-        detail::vector_set(base(), b);
-    }
-    void setzero()
-    {
-        detail::vector_set(base(), false);
-    }
-    void setone()
-    {
-        detail::vector_set(base(), true);
-    }
+    // copy/move constructors & assignment copy/move the view parameters, not the view contents
+    cvec_view(const cvec_view& v) = default;
+    cvec_view(cvec_view&& v) = default;
+    // deleted for safety, to avoid confusion
+    cvec_view& operator=(const cvec_view& v) = delete;
+    cvec_view& operator=(cvec_view&& v) = delete;
+    
+    // view management
+    void reset(const cv_ptr& p) { ptr = p; }
+    cvec_view subvector(size_t coloffset, size_t cols) const { return cvec_view(ptr.subvector(coloffset, cols)); }
 
-    /* reset the reference */
-    void reset(const base_ref_t& m)
-    {
-        base() = m;
-        MCCL_MATRIX_BASE_ASSERT(base().rows == 1);
-    }
-    void reset(data_t* ptr, size_t columns, size_t scratchcolumns = 0, size_t stride = 0)
-    {
-        base().reset(ptr, 1, columns, scratchcolumns, stride);
-    }
-    void reset_subvector(size_t column_offset, size_t columns, size_t scratchcolumns = 0)
-    {
-        base().reset_subvector(0, column_offset, columns, scratchcolumns);
-    }
-    vector_ref_t subvector(size_t column_offset, size_t columns, size_t scratchcolumns = 0)
-    {
-        return vector_ref_t(base().subvector(0, column_offset, columns, scratchcolumns));
-    }
+    // automatic conversion
 
-    /* clear scratch columns with value */
-    void clear_scratchcolumns(bool value = false)
-    {
-        detail::vector_setscratch(base(), value);
-    }
+    // common vector API class members
+    CONST_VECTOR_CLASS_MEMBERS
+};
 
-    // automatic conversions
-    // a vector is a matrix, so allow automatic conversion to matrix_ref_t
-    operator matrix_ref& () { return *reinterpret_cast<matrix_ref*>(this); }
-    operator const matrix_ref& () const { return *reinterpret_cast<const matrix_ref*>(this); }
+class vec_view
+{
+public:
+    v_ptr ptr;
 
-    // explicit conversion
-          vector_ptr& as_ptr()       { return *reinterpret_cast<vector_ptr*>(this); }
-    const vector_ptr& as_ptr() const { return *reinterpret_cast<vector_ptr*>(this); }
-    vector_ptr ptr() { return vector_ptr(base()); }
+    vec_view(): ptr() {}
+    vec_view(const v_ptr& p): ptr(p) {}
+    
+    // copy/move constructors & assignment copy/move the view parameters, not the view contents
+    vec_view(const vec_view& v) = default;
+    vec_view(vec_view&& v) = default;
+// deleted for safety, to avoid confusion
+    vec_view& operator=(const vec_view& v) = delete;
+    vec_view& operator=(vec_view&& v) = delete;
 
-    base_ref_t& base() { return _base; }
-    const cbase_ref_t& base() const { return _base.as_const(); }
+    // view management
+    void reset(const v_ptr& p) { ptr = p; }
+    vec_view subvector(size_t coloffset, size_t cols) const { return vec_view(ptr.subvector(coloffset, cols)); }
 
-    friend std::ostream& operator<<(std::ostream& os, const vector_ref& m) {
-        detail::vector_print(os, m.base());
-        return os;
-    }
-private:
-    // do not access _base directly, use `base()` to maintain reference semantics
-    base_ref_t _base;
+    // automatic conversion
+    operator       cvec_view&()       { return *reinterpret_cast<cvec_view*>(this); }
+    operator const cvec_view&() const { return *reinterpret_cast<const cvec_view*>(this); }
+
+    // common vector API class members
+    CONST_VECTOR_CLASS_MEMBERS
+    VECTOR_CLASS_MEMBERS(vec_view,const)
+    VECTOR_CLASS_MEMBERS(vec_view,)
+
+    // vector result
+    template<typename F> const vec_view& operator=(vector_result<F>&& vr) const { vr.r(ptr); return *this; }
+    template<typename F>       vec_view& operator=(vector_result<F>&& vr)       { vr.r(ptr); return *this; }
+};
+
+class cvec_view_it
+{
+public:
+    cvi_ptr ptr;
+    
+    cvec_view_it(): ptr() {}
+    cvec_view_it(const cvi_ptr& p): ptr(p) {}
+    
+    // copy/move constructors & assignment copy/move the view parameters, not the view contents
+    cvec_view_it(const cvec_view_it& v) = default;
+    cvec_view_it(cvec_view_it&& v) = default;
+// deleted for safety, to avoid confusion
+    cvec_view_it& operator=(const cvec_view_it& v) = delete;
+    cvec_view_it& operator=(cvec_view_it&& v) = delete;
+
+    // view management
+    void reset(const cvi_ptr& p) { ptr = p; }
+    cvec_view_it subvector(size_t coloffset, size_t cols) const { return cvec_view_it(ptr.subvectorit(coloffset, cols)); }
+
+    // automatic conversion
+    operator const cvec_view&() const { return *reinterpret_cast<const cvec_view*>(this); }
+          cvec_view_it& operator*()       { return *this; }
+    const cvec_view_it& operator*() const { return *this; }
+          cvec_view_it* operator->()       { return this; }
+    const cvec_view_it* operator->() const { return this; }
+
+    // common vector API class members
+    CONST_VECTOR_ITERATOR_CLASS_MEMBERS(cvec_view_it)
+    CONST_VECTOR_CLASS_MEMBERS
+};
+
+class vec_view_it
+{
+public:
+    vi_ptr ptr;
+
+    vec_view_it(): ptr() {}
+    vec_view_it(const vi_ptr& p): ptr(p) {}
+    
+    // copy/move constructors & assignment copy/move the view parameters, not the view contents
+    vec_view_it(const vec_view_it& v) = default;
+    vec_view_it(vec_view_it&& v) = default;
+// deleted for safety, to avoid confusion
+    vec_view_it& operator=(const vec_view_it& v) = delete;
+    vec_view_it& operator=(vec_view_it&& v) = delete;
+
+    // view management
+    void reset(const vi_ptr& p) { ptr = p; }
+    vec_view_it subvector(size_t coloffset, size_t cols) const { return vec_view_it(ptr.subvectorit(coloffset, cols)); }
+
+    // automatic conversion
+    operator const cvec_view&() const { return *reinterpret_cast<const cvec_view*>(this); }
+    operator const vec_view&() const { return *reinterpret_cast<const vec_view*>(this); }
+    operator       cvec_view_it&()       { return *reinterpret_cast<cvec_view_it*>(this); }
+    operator const cvec_view_it&() const { return *reinterpret_cast<const cvec_view_it*>(this); }
+          vec_view_it& operator*()       { return *this; }
+    const vec_view_it& operator*() const { return *this; }
+          vec_view_it* operator->()       { return this; }
+    const vec_view_it* operator->() const { return this; }
+
+    // common vector API class members
+    CONST_VECTOR_ITERATOR_CLASS_MEMBERS(vec_view_it)
+    CONST_VECTOR_CLASS_MEMBERS
+    VECTOR_CLASS_MEMBERS(vec_view_it,const)
+    VECTOR_CLASS_MEMBERS(vec_view_it,)
+
+    // vector result
+    template<typename F> const vec_view_it& operator=(vector_result<F>&& vr) const { vr.r(ptr); return *this; }
+    template<typename F>       vec_view_it& operator=(vector_result<F>&& vr)       { vr.r(ptr); return *this; }
 };
 
 
 
-// pointer semantics
-template<typename data_t>
-class vector_ptr_t
+class cmat_view
 {
 public:
-    typedef detail::matrix_base_ref_t<      data_t> base_ref_t;
-    typedef detail::matrix_base_ref_t<const data_t> cbase_ref_t;
-    typedef vector_ptr_t<data_t> vector_ptr;
-    typedef vector_ref_t<data_t> vector_ref;
-    typedef matrix_ptr_t<data_t> matrix_ptr;
-    typedef matrix_ref_t<data_t> matrix_ref;
+    cm_ptr ptr;
+    
+    cmat_view(): ptr() {}
+    cmat_view(const cm_ptr& p): ptr(p) {}
+    
+    // copy/move constructors & assignment copy/move the view parameters, not the view contents
+    cmat_view(const cmat_view& m) = default;
+    cmat_view(cmat_view&& m) = default;
+    cmat_view& operator=(const cmat_view& m) = default;
+    cmat_view& operator=(cmat_view&& m) = default;
 
-    /* constructors: initialize the pointer */
-    // default constructor & move constructor
-    vector_ptr_t() = default;
-    vector_ptr_t(const vector_ptr_t&) = default;
-    vector_ptr_t(vector_ptr_t&&) = default;
-    // construct from base_ref_t
-    explicit vector_ptr_t(const base_ref_t& m)
-        : _base(m)
-    {
-        MCCL_MATRIX_BASE_ASSERT(_base.rows == 1);
-    }
-    explicit vector_ptr_t(base_ref_t&& m)
-        : _base(std::move(m))
-    {
-        MCCL_MATRIX_BASE_ASSERT(_base.rows == 1);
-    }
-    vector_ptr_t(data_t* ptr, size_t columns, size_t scratchcolumns = 0, size_t stride = 0)
-        : _base(ptr, 1, columns, scratchcolumns, stride)
-    {
-    }
+    // view management
+    void reset(const cm_ptr& p) { ptr = p; }
+    cvec_view_it subvector(size_t row, size_t coloffset, size_t cols) const { return cvec_view_it(ptr.subvectorit(row, coloffset, cols)); }
+    cmat_view submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return cmat_view(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
 
-    // assign & modify operators
-    vector_ptr_t& operator=(const vector_ptr_t& m) = default;
-    vector_ptr_t& operator=(vector_ptr_t&&) = default;
+    cvec_view_it operator[](size_t r) const { return cvec_view_it(ptr.subvectorit(r)); }
+    cvec_view_it operator()(size_t r) const { return cvec_view_it(ptr.subvectorit(r)); }
+    cvec_view_it begin() const { return cvec_view_it(ptr.subvectorit(0)); }
+    cvec_view_it end()   const { return cvec_view_it(ptr.subvectorit(rows())); }
 
-    // comparison operators
-    bool operator==(const vector_ptr_t& m) const { return _base == m._base; }
-    bool operator!=(const vector_ptr_t& m) const { return _base != m._base; }
+    // automatic conversion
 
-    // iterator steps
-    vector_ptr_t& operator++() { _base.ptr += _base.stride; return *this; }
-    vector_ptr_t& operator--() { _base.ptr -= _base.stride; return *this; }
-    vector_ptr_t& operator+=(ptrdiff_t a) { _base.ptr += a * ptrdiff_t(_base.stride); return *this; }
-    vector_ptr_t& operator-=(ptrdiff_t a) { _base.ptr -= a * ptrdiff_t(_base.stride); return *this; }
-    vector_ptr_t operator++(int) const { vector_ptr_t tmp(*this); ++tmp; return tmp; }
-    vector_ptr_t operator--(int) const { vector_ptr_t tmp(*this); --tmp; return tmp; }
-    vector_ptr_t operator+(ptrdiff_t a) const { vector_ptr_t tmp(*this); tmp += a; return tmp; }
-    vector_ptr_t operator-(ptrdiff_t a) const { vector_ptr_t tmp(*this); tmp -= a; return tmp; }
-    vector_ptr_t operator-(const vector_ptr_t& r) const { return (_base.ptr - r._base.ptr) / _base.stride; }
+    // common matrix API class members
+    CONST_MATRIX_CLASS_MEMBERS
+};
 
-    // dereference operators
-    vector_ref& operator*() const { return to_ref(); }
-    vector_ref* operator->() const { return &to_ref(); }
+class mat_view
+{
+public:
+    m_ptr ptr;
+    
+    mat_view(): ptr() {}
+    mat_view(const m_ptr& p): ptr(p) {}
+    
+    // copy/move constructors & assignment copy/move the view parameters, not the view contents
+    mat_view(const mat_view& m) = default;
+    mat_view(mat_view&& m) = default;
+    mat_view& operator=(const mat_view& m) = default;
+    mat_view& operator=(mat_view&& m) = default;
 
-    /* reset the reference */
-    void reset(const base_ref_t& m)
-    {
-        _base = m;
-        MCCL_MATRIX_BASE_ASSERT(_base.rows == 1);
-    }
-    void reset(data_t* ptr, size_t columns, size_t scratchcolumns = 0, size_t stride = 0)
-    {
-        _base.reset(ptr, 1, columns, scratchcolumns, stride);
-    }
-    void reset_subvector(size_t column_offset, size_t columns, size_t scratchcolumns = 0)
-    {
-        _base.reset_subvector(0, column_offset, columns, scratchcolumns);
-    }
-    vector_ptr_t subvector_ptr(size_t column_offset, size_t columns, size_t scratchcolumns = 0) const
-    {
-        return vector_ptr_t(_base.subvector(0, column_offset, columns, scratchcolumns));
-    }
-    vector_ref subvector_ref(size_t column_offset, size_t columns, size_t scratchcolumns = 0) const
-    {
-        return vector_ref(_base.subvector(0, column_offset, columns, scratchcolumns));
-    }
+    // view management
+    void reset(const m_ptr& p) { ptr = p; }
+    vec_view_it subvector(size_t row, size_t coloffset, size_t cols) const { return vec_view_it(ptr.subvectorit(row, coloffset, cols)); }
+    mat_view submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return mat_view(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
 
-    // automatic conversions
-    // a vector is a matrix, so allow automatic conversion to matrix_ptr_t
-    operator matrix_ptr& () { return *reinterpret_cast<matrix_ptr*>(this); }
-    operator const matrix_ptr& () const { return *reinterpret_cast<const matrix_ptr*>(this); }
+    vec_view_it operator[](size_t r) const { return vec_view_it(ptr.subvectorit(r)); }
+    vec_view_it operator()(size_t r) const { return vec_view_it(ptr.subvectorit(r)); }
+    vec_view_it begin() const { return vec_view_it(ptr.subvectorit(0)); }
+    vec_view_it end()   const { return vec_view_it(ptr.subvectorit(rows())); }
 
-    // explicit conversion to vector_ref
-    // - as_ref returns *this as vector_ref& and maintains constness
-    // - to_ref returns *this as vector_ref&, but removes constness, as a pointer usually does
-    // - ref returns a new vector_ref object
-          vector_ref& as_ref()       { return *reinterpret_cast<vector_ref*>(this); }
-    const vector_ref& as_ref() const { return *reinterpret_cast<vector_ref*>(this); }
-    vector_ref& to_ref() const { return *reinterpret_cast<vector_ref*>(const_cast<vector_ptr*>(this)); }
-    vector_ref ref() const { return vector_ref(_base); }
+    // automatic conversion
+    operator       cmat_view&()       { return *reinterpret_cast<cmat_view*>(this); }
+    operator const cmat_view&() const { return *reinterpret_cast<const cmat_view*>(this); }
 
-private:
-    base_ref_t _base;
+    // common matrix API class members
+    CONST_MATRIX_CLASS_MEMBERS
+    MATRIX_CLASS_MEMBERS(mat_view,const)
+    MATRIX_CLASS_MEMBERS(mat_view,)
+
+    // matrix result
+    template<typename F> const mat_view& operator=(matrix_result<F>&& mr) const { mr.r(ptr); return *this; }
+    template<typename F>       mat_view& operator=(matrix_result<F>&& mr)       { mr.r(ptr); return *this; }
 };
 
 
-
-
-// reference semantics: 
-// constructors initialize the reference, other member functions/operators change the referenced object
-template<typename data_t>
-class matrix_ref_t
+class vec
 {
+private:
+    v_ptr ptr;
+    std::vector<uint64_t> mem;
 public:
-    typedef detail::matrix_base_ref_t<      data_t> base_ref_t;
-    typedef detail::matrix_base_ref_t<const data_t> cbase_ref_t;
-    typedef vector_ptr_t<data_t> vector_ptr;
-    typedef vector_ref_t<data_t> vector_ref;
-    typedef matrix_ptr_t<data_t> matrix_ptr;
-    typedef matrix_ref_t<data_t> matrix_ref;
-
-    /* constructors: initialize the reference */
-    // default constructor & move constructor
-    matrix_ref_t() = default;
-    matrix_ref_t(matrix_ref_t&& m) : _base(m._base) {}
-    // do not allow const copy constructor, but allow non-const copy constructor
-    matrix_ref_t(const matrix_ref_t& m) = delete;
-    matrix_ref_t(matrix_ref_t& m) : _base(m._base) {}
-    // construct from base_ref_t
-    explicit matrix_ref_t(const base_ref_t& m) : _base(m) {}
-    explicit matrix_ref_t(base_ref_t&& m) : _base(std::move(m)) {}
-    matrix_ref_t(data_t* ptr, size_t rows, size_t columns, size_t scratchcolumns = 0, size_t stride = 0)
-        : _base(ptr, rows, columns, scratchcolumns, stride)
+    static const size_t bit_alignment = 512;
+    static const size_t byte_alignment = bit_alignment/8;
+    static const size_t word_alignment = bit_alignment/64;
+    void assign(const cvec_view& v)
     {
+        resize(v.columns());
+        copy(v);
     }
-
-    size_t rows()           const { return base().rows; }
-    size_t columns()        const { return base().columns; }
-    size_t scratchcolumns() const { return base().scratchcolumns; }
-    size_t allcolumns()     const { return base().columns + base().scratchcolumns; }
-    size_t stride()         const { return base().stride; }
-    size_t word_bits()      const { return base().word_bits; }
-
-          data_t* data(size_t r = 0, size_t c = 0)       { return base().data(r, c); }
-    const data_t* data(size_t r = 0, size_t c = 0) const { return base().data(r, c); }
-
-    size_t hammingweight()  const { return detail::matrix_hammingweight(base()); }
-    size_t hw()  const { return detail::matrix_hammingweight(base()); }
-
-    // assign & modify operators
-    // reference semantics: (override) assign and modify&assign by acting on matrix content
-    matrix_ref_t& operator=(const matrix_ref_t& m) { detail::matrix_copy(base(), m.base()); return *this; }
-    matrix_ref_t& operator=(matrix_ref_t&&) = delete;
-
-    matrix_ref_t& operator^=(const matrix_ref_t& m) { detail::matrix_xor(base(), m.base()); return *this; }
-    matrix_ref_t& operator|=(const matrix_ref_t& m) { detail::matrix_or(base(), m.base()); return *this; }
-    matrix_ref_t& operator&=(const matrix_ref_t& m) { detail::matrix_and(base(), m.base()); return *this; }
-
-    // *this = ~(*this)
-    matrix_ref_t & op_not() { detail::matrix_not(base()); return *this; }
-    // *this = ~m2
-    matrix_ref_t & op_not(const matrix_ref_t& m2) { detail::matrix_copynot(base()); return *this; }
-    // perform binary operation: *this = op(*this, m2)
-    matrix_ref_t& op_and  (const matrix_ref_t& m2) { detail::matrix_and  (base(), m2.base()); return *this; } // a & b
-    matrix_ref_t& op_xor  (const matrix_ref_t& m2) { detail::matrix_xor  (base(), m2.base()); return *this; } // a ^ b
-    matrix_ref_t& op_or   (const matrix_ref_t& m2) { detail::matrix_or   (base(), m2.base()); return *this; } // a | b
-    matrix_ref_t& op_nand (const matrix_ref_t& m2) { detail::matrix_nand (base(), m2.base()); return *this; } // ~(a&b)
-    matrix_ref_t& op_nxor (const matrix_ref_t& m2) { detail::matrix_nxor (base(), m2.base()); return *this; } // ~(a^b)
-    matrix_ref_t& op_nor  (const matrix_ref_t& m2) { detail::matrix_nor  (base(), m2.base()); return *this; } // ~(a|b)
-    matrix_ref_t& op_andin(const matrix_ref_t& m2) { detail::matrix_andin(base(), m2.base()); return *this; } // a&~b
-    matrix_ref_t& op_andni(const matrix_ref_t& m2) { detail::matrix_andni(base(), m2.base()); return *this; } // ~a&b
-    matrix_ref_t& op_orin (const matrix_ref_t& m2) { detail::matrix_orin (base(), m2.base()); return *this; } // a|~b
-    matrix_ref_t& op_orni (const matrix_ref_t& m2) { detail::matrix_orni (base(), m2.base()); return *this; } // ~a|b
-    // perform binary operation: *this = op(m1, m2)
-    matrix_ref_t& op_and  (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_and  (base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_xor  (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_xor  (base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_or   (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_or   (base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_nand (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_nand (base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_nxor (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_nxor (base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_nor  (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_nor  (base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_andin(const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_andin(base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_andni(const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_andni(base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_orin (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_orin (base(), m1.base(), m2.base()); return *this; }
-    matrix_ref_t& op_orni (const matrix_ref_t& m1, const matrix_ref_t& m2) { detail::matrix_orni (base(), m1.base(), m2.base()); return *this; }
-
-    matrix_ref_t& transpose(const matrix_ref_t& src) { detail::matrix_transpose(base(), src.base()); return *this; }
     
-    // comparison operators
-    bool operator==(const matrix_ref_t& m) const { return matrix_compare(base(), m.base()); }
-    bool operator!=(const matrix_ref_t& m) const { return !matrix_compare(base(), m.base()); }
-
-    // indexing
-          vector_ref operator[](size_t r)       { return vector_ref(base().subvector(r, 0, columns(), scratchcolumns())); }
-    const vector_ref operator[](size_t r) const { return vector_ref(base().subvector(r, 0, columns(), scratchcolumns())); }
-    bool operator()(size_t r, size_t c) const { return base()(r, c); }
-
-    void bitset  (size_t r, size_t c) { base().bitset(r,c); }
-    void bitreset(size_t r, size_t c) { base().bitreset(r,c); }
-    void bitflip (size_t r, size_t c) { base().bitflip(r,c); }
-    void bitset  (size_t r, size_t c, bool b) { base().bitset(r,c,b); }
-
-    void setcolumns(size_t column_offset, size_t columns, bool b)
+    void resize(size_t _columns, bool value = false)
     {
-        detail::matrix_setcolumns(base(), column_offset, columns, b);
-    }
-    void flipcolumns(size_t column_offset, size_t columns)
-    {
-        detail::matrix_flipcolumns(base(), column_offset, columns);
-    }
-    void setscratch(bool b = false)
-    {
-        detail::matrix_setcolumns(base(), columns(), scratchcolumns(), b);
-    }
-    void flipscratch()
-    {
-        detail::matrix_flipcolumns(base(), columns(), scratchcolumns());
-    }
-    void set(bool b = true)
-    {
-        detail::matrix_set(base(), b);
-    }
-    void setzero()
-    {
-        detail::matrix_set(base(), false);
-    }
-    void setone()
-    {
-        detail::matrix_set(base(), true);
-    }
-    void setidentity()
-    {
-        setzero();
-        size_t l = std::min(rows(), columns());
-        for (size_t i = 0; i < l; ++i)
-            bitset(i,i);
-    }
-    void swap_rows(size_t i, size_t j)
-    {
-        size_t words = (columns() + word_bits() - 1) / word_bits();
-        detail::vector_swap(data(i), data(i) + words, data(j));
-    }
-
-
-    /* reset the reference */
-    void reset(const base_ref_t& m)
-    {
-        base() = m;
-    }
-    void reset(data_t* ptr, size_t rows, size_t columns, size_t scratchcolumns, size_t stride)
-    {
-        base().reset(ptr, rows, columns, scratchcolumns, stride);
-    }
-    void reset_submatrix(size_t row_offset, size_t rows, size_t column_offset, size_t columns, size_t scratchcolumns = 0)
-    {
-        base().reset_submatrix(row_offset, rows, column_offset, columns, scratchcolumns);
-    }
-    matrix_ref_t submatrix(size_t row_offset, size_t rows, size_t column_offset, size_t columns, size_t scratchcolumns = 0)
-    {
-        return matrix_ref_t(base().submatrix(row_offset, rows, column_offset, columns, scratchcolumns));
-    }
-    vector_ref subvector(size_t row_offset, size_t column_offset, size_t columns, size_t scratchcolumns = 0)
-    {
-        return vector_ref(base().subvector(row_offset, column_offset, columns, scratchcolumns));
-    }
-
-    /* clear scratch columns with value */
-    void clear_scratchcolumns(bool value = false)
-    {
-        detail::matrix_setscratch(base(), value);
-    }
-
-    /* iterators */
-    template<typename T>
-    class iterator_t: public std::iterator<std::random_access_iterator_tag, T>
-    {
-    public:
-        typedef iterator_t<const T> const_iterator_t;
-
-        iterator_t(const base_ref_t& m)
-            : _vecptr(m)
-        {}
-        iterator_t(const iterator_t& it) = default;
-        iterator_t(iterator_t&& it) = default;
-        iterator_t& operator=(const iterator_t& it) = default;
-        iterator_t& operator=(iterator_t&& it) = default;
-
-        T& operator*() const { return _vecptr.operator*(); }
-        T* operator->() const { return _vecptr.operator->(); }
-
-        bool operator==(const const_iterator_t& it) const { return _vecptr == it._vecptr; }
-        bool operator!=(const const_iterator_t& it) const { return _vecptr != it._vecptr; }
-
-        iterator_t& operator++()            { ++_vecptr; return *this; }
-        iterator_t& operator--()            { --_vecptr; return *this; }
-        iterator_t& operator+=(ptrdiff_t a) { _vecptr += a; return *this; }
-        iterator_t& operator-=(ptrdiff_t a) { _vecptr -= a; return *this; }
-        iterator_t  operator++(int)         const { iterator_t tmp(*this); ++tmp; return tmp; }
-        iterator_t  operator--(int)         const { iterator_t tmp(*this); --tmp; return tmp; }
-        iterator_t  operator+ (ptrdiff_t a) const { iterator_t tmp(*this); tmp += a; return tmp; }
-        iterator_t  operator- (ptrdiff_t a) const { iterator_t tmp(*this); tmp -= a; return tmp; }
-        iterator_t  operator- (const const_iterator_t& r) const { return _vecptr - r._vecptr; }
-
-        operator const_iterator_t& ()       { return *reinterpret_cast<      const_iterator_t*>(this); }
-        operator const_iterator_t& () const { return *reinterpret_cast<const const_iterator_t*>(this); }
-    private:
-        vector_ptr _vecptr;
-    };
-    typedef iterator_t<vector_ref> iterator;
-    typedef iterator_t<const vector_ref> const_iterator;
-
-          iterator  begin()       { return       iterator(_base.subvector(0,      0, columns(), scratchcolumns())); }
-          iterator  end()         { return       iterator(_base.subvector(rows(), 0, columns(), scratchcolumns())); }
-    const_iterator  begin() const { return const_iterator(_base.subvector(0,      0, columns(), scratchcolumns())); }
-    const_iterator  end()   const { return const_iterator(_base.subvector(rows(), 0, columns(), scratchcolumns())); }
-    const_iterator cbegin() const { return const_iterator(_base.subvector(0,      0, columns(), scratchcolumns())); }
-    const_iterator cend()   const { return const_iterator(_base.subvector(rows(), 0, columns(), scratchcolumns())); }
-
-    base_ref_t& base() { return _base; }
-    const cbase_ref_t& base() const { return _base.as_const(); }
-
-    friend std::ostream& operator<<(std::ostream& os, const matrix_ref& m) {
-        detail::matrix_print(os, m.base());
-        return os;
-    }
-
-    // explicit conversion
-    matrix_ptr& as_ptr()       { return *reinterpret_cast<matrix_ptr*>(this); }
-    const matrix_ptr& as_ptr() const { return *reinterpret_cast<matrix_ptr*>(this); }
-    matrix_ptr ptr() { return matrix_ptr(base()); }
-
-private:
-    // do not access _ref directly, use `ref()` to maintain reference semantics
-    // exception is for iterators, they maintain reference semantics themselves
-    base_ref_t _base;
-};
-
-
-// pointer semantics
-template<typename data_t>
-class matrix_ptr_t
-{
-public:
-    typedef detail::matrix_base_ref_t<      data_t> base_ref_t;
-    typedef detail::matrix_base_ref_t<const data_t> cbase_ref_t;
-    typedef vector_ptr_t<data_t> vector_ptr;
-    typedef vector_ref_t<data_t> vector_ref;
-    typedef matrix_ptr_t<data_t> matrix_ptr;
-    typedef matrix_ref_t<data_t> matrix_ref;
-
-    /* constructors: initialize the pointer */
-    // default constructor & move constructor
-    matrix_ptr_t() = default;
-    matrix_ptr_t(const matrix_ptr_t&) = default;
-    matrix_ptr_t(matrix_ptr_t&&) = default;
-    // construct from base_ref_t
-    explicit matrix_ptr_t(const base_ref_t& m) : _base(m) {}
-    explicit matrix_ptr_t(base_ref_t&& m) : _base(std::move(m)) {}
-    matrix_ptr_t(data_t* ptr, size_t rows, size_t columns, size_t scratchcolumns = 0, size_t stride = 0)
-        : _base(ptr, rows, columns, scratchcolumns, stride)
-    {
-    }
-
-    // assign & modify operators
-    matrix_ptr_t& operator=(const matrix_ptr_t& m) = default;
-    matrix_ptr_t& operator=(matrix_ptr_t&&) = default;
-
-    // comparison operators
-    bool operator==(const matrix_ptr_t& m) const { return _base == m._base; }
-    bool operator!=(const matrix_ptr_t& m) const { return _base != m._base; }
-
-    // iterator steps
-    matrix_ptr_t& operator++()            { _base.ptr += _base.stride * _base.rows; return *this; }
-    matrix_ptr_t& operator--()            { _base.ptr -= _base.stride * _base.rows; return *this; }
-    matrix_ptr_t& operator+=(ptrdiff_t a) { _base.ptr += a * ptrdiff_t(_base.stride * _base.rows); return *this; }
-    matrix_ptr_t& operator-=(ptrdiff_t a) { _base.ptr -= a * ptrdiff_t(_base.stride * _base.rows); return *this; }
-    matrix_ptr_t  operator++(int)        const { matrix_ptr_t tmp(*this); ++tmp; return tmp; }
-    matrix_ptr_t  operator--(int)        const { matrix_ptr_t tmp(*this); --tmp; return tmp; }
-    matrix_ptr_t  operator+(ptrdiff_t a) const { matrix_ptr_t tmp(*this); tmp += a; return tmp; }
-    matrix_ptr_t  operator-(ptrdiff_t a) const { matrix_ptr_t tmp(*this); tmp -= a; return tmp; }
-    matrix_ptr_t  operator-(const matrix_ptr_t& r) const { return (_base.ptr - r._base.ptr) / (_base.stride * _base.rows); }
-
-    // dereference operators
-    matrix_ref& operator*() const { return to_ref(); }
-    matrix_ref* operator->() const { return &to_ref(); }
-
-    /* reset the reference */
-    void reset(const base_ref_t& m)
-    {
-        _base = m;
-    }
-    void reset(data_t* ptr, size_t rows, size_t columns, size_t scratchcolumns, size_t stride)
-    {
-        _base.reset(ptr, rows, columns, scratchcolumns, stride);
-    }
-    void reset_submatrix(size_t row_offset, size_t rows, size_t column_offset, size_t columns, size_t scratchcolumns = 0)
-    {
-        _base.reset_submatrix(row_offset, rows, column_offset, columns, scratchcolumns);
-    }
-    matrix_ptr_t subvector_ptr(size_t column_offset, size_t columns, size_t scratchcolumns = 0) const
-    {
-        return matrix_ptr_t(_base.subvector(0, column_offset, columns, scratchcolumns));
-    }
-    vector_ref subvector_ref(size_t column_offset, size_t columns, size_t scratchcolumns = 0) const
-    {
-        return vector_ref(_base.subvector(0, column_offset, columns, scratchcolumns));
-    }
-
-    // explicit conversion to matrix_ref
-    // - as_ref returns *this as matrix_ref& and maintains constness
-    // - to_ref returns *this as matrix_ref&, but removes constness, as a pointer usually does
-    // - ref returns a new matrix_ref object
-    matrix_ref& as_ref() { return *reinterpret_cast<matrix_ref*>(this); }
-    const matrix_ref& as_ref() const { return *reinterpret_cast<matrix_ref*>(this); }
-    matrix_ref& to_ref() const { return *reinterpret_cast<matrix_ref*>(this); }
-    matrix_ref ref() const { return matrix_ref(_base); }
-
-private:
-    base_ref_t _base;
-};
-
-
-
-template<typename data_t, size_t _bitalignment>
-class matrix_t : public matrix_ref_t<data_t>
-{
-public:
-    typedef vector_ptr_t<data_t> vector_ptr;
-    typedef vector_ref_t<data_t> vector_ref;
-    typedef matrix_ptr_t<data_t> matrix_ptr;
-    typedef matrix_ref_t<data_t> matrix_ref;
-    using matrix_ref::iterator;
-    using matrix_ref::const_iterator;
-    using matrix_ref::base;
-    using matrix_ref::rows;
-    using matrix_ref::columns;
-    using matrix_ref::scratchcolumns;
-    using matrix_ref::stride;
-    using matrix_ref::begin;
-    using matrix_ref::cbegin;
-    using matrix_ref::end;
-    using matrix_ref::cend;
-private:
-    using matrix_ref::reset;
-    using matrix_ref::reset_submatrix;
-public:
-    static const size_t bitalignment = _bitalignment;
-    static const size_t bytealignment = bitalignment / 8;
-
-    ~matrix_t() { _free(); }
-    /* constructors */
-    matrix_t(size_t rows = 0, size_t columns = 0): matrix_ref_t<data_t>(), _allocptr(nullptr), _allocbytes(0) { _realloc(rows, columns, true); }
-    matrix_t(const matrix_t& m) : matrix_t(m.rows(), m.columns()) { *this = m; }
-    matrix_t(matrix_t&& m) : matrix_t(0, 0) { swap(m); }
-
-    matrix_t& operator=(const matrix_t& m) { _realloc(m.rows(), m.columns()); detail::matrix_copy(base(), m.base()); return *this; }
-    matrix_t& operator=(matrix_t&& m) { swap(m); return *this; }
-
-    matrix_t(const matrix_ref& m) : matrix_t(m.rows(), m.columns()) { *this = m; }
-    matrix_t& operator=(const matrix_ref& m) { _realloc(m.rows(), m.columns()); detail::matrix_copy(base(), m.base()); return *this; }
-
-    matrix_t& operator^=(const matrix_ref& m) { detail::matrix_xor(base(), m.base()); return *this; }
-    matrix_t& operator|=(const matrix_ref& m) { detail::matrix_or(base(), m.base()); return *this; }
-    matrix_t& operator&=(const matrix_ref& m) { detail::matrix_and(base(), m.base()); return *this; }
-
-    // override write-only operations (e.g. dst = f(src), dst = f(src1,src2))
-    // to resize as needed
-    matrix_t& transpose(const matrix_ref& src) { _realloc(src.columns(),src.rows()); detail::matrix_transpose(base(), src.base()); return *this; }
-    
-    matrix_t& op_not(const matrix_ref& m2) { _realloc(m2.rows(), m2.columns()); detail::matrix_copynot(base()); return *this; }
-    
-    matrix_t& op_and  (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_and  (base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_xor  (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_xor  (base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_or   (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_or   (base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_nand (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_nand (base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_nxor (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_nxor (base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_nor  (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_nor  (base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_andin(const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_andin(base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_andni(const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_andni(base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_orin (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_orin (base(), m1.base(), m2.base()); return *this; }
-    matrix_t& op_orni (const matrix_ref& m1, const matrix_ref& m2) { _realloc(m1.rows(), m1.columns()); detail::matrix_orni (base(), m1.base(), m2.base()); return *this; }
-
-    // comparison operators
-    bool operator==(const matrix_ref& m) const { return matrix_compare(base(), m.base()); }
-    bool operator!=(const matrix_ref& m) const { return !matrix_compare(base(), m.base()); }
-
-    // indexing
-    vector_ref operator[](size_t r) { return vector_ref(base().subvector(r, 0, columns(), scratchcolumns())); }
-    const vector_ref operator[](size_t r) const { return vector_ref(base().subvector(r, 0, columns(), scratchcolumns())); }
-    bool operator()(size_t r, size_t c) const { return base()(r, c); }
-
-private:
-    void _realloc(size_t _rows, size_t _columns, bool zero = false)
-    {
-        size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
-        size_t totalbytes = (_rows * totalcol) / 8;
-        size_t newallocbytes = totalbytes + bytealignment;
-        if (newallocbytes > _allocbytes)
-        {
-            if (_allocptr != nullptr)
-                free(_allocptr);
-            _allocptr = (data_t*)malloc(newallocbytes);
-            _allocbytes = newallocbytes;
-        }
-        uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
-        matrix_ref::reset((data_t*)alignedptr, _rows, _columns, totalcol - _columns, totalcol / base().word_bits);
-        if (zero)
-            memset(this->data(), 0, totalbytes);
-    }
-    void _free()
-    {
-        if (_allocptr != nullptr)
-            free(_allocptr);
-    }
-
-    data_t* _allocptr;
-    size_t _allocbytes;
-};
-
-
-
-template<typename data_t, size_t _bitalignment>
-class vector_t : public vector_ref_t<data_t>
-{
-public:
-    typedef vector_ptr_t<data_t> vector_ptr;
-    typedef vector_ref_t<data_t> vector_ref;
-    typedef matrix_ptr_t<data_t> matrix_ptr;
-    typedef matrix_ref_t<data_t> matrix_ref;
-    using vector_ref::base;
-    using vector_ref::rows;
-    using vector_ref::columns;
-    using vector_ref::scratchcolumns;
-    using vector_ref::stride;
-private:
-    using vector_ref::reset;
-    using vector_ref::reset_subvector;
-public:
-    static const size_t bitalignment = _bitalignment;
-    static const size_t bytealignment = bitalignment / 8;
-
-
-    ~vector_t() { _free(); }
-    /* constructors */
-    vector_t(size_t columns = 0): _allocptr(nullptr), _allocbytes(0) { _realloc(columns, true); }
-    vector_t(const vector_t& m) : vector_t(m.columns()) { *this = m; }
-    vector_t(vector_t&& m) : vector_t(0) { std::swap(*this,m); }
-
-    vector_t& operator=(const vector_t& m) { _realloc(m.columns()); detail::vector_copy(base(), m.base()); return *this; }
-    vector_t& operator=(vector_t&& m) { std::swap(*this,m); return *this; }
-
-    vector_t(const vector_ref& m) : vector_t(m.columns()) { *this = m; }
-    vector_t& operator=(const vector_ref& m) { _realloc(m.columns()); detail::vector_copy(base(), m.base()); return *this; }
-
-    vector_t& operator^=(const vector_ref& m) { detail::vector_xor(base(), m.base()); return *this; }
-    vector_t& operator|=(const vector_ref& m) { detail::vector_or(base(), m.base()); return *this; }
-    vector_t& operator&=(const vector_ref& m) { detail::vector_and(base(), m.base()); return *this; }
-
-    vector_t& op_not(const vector_ref& m2) { _realloc(m2.columns()); detail::matrix_copynot(base()); return *this; }
-    
-    vector_t& op_and  (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_and  (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_xor  (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_xor  (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_or   (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_or   (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_nand (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_nand (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_nxor (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_nxor (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_nor  (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_nor  (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_andin(const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_andin(base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_andni(const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_andni(base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_orin (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_orin (base(), m1.base(), m2.base()); return *this; }
-    vector_t& op_orni (const vector_ref& m1, const vector_ref& m2) { _realloc(m1.columns()); detail::vector_orni (base(), m1.base(), m2.base()); return *this; }
-
-    // comparison operators
-    bool operator==(const vector_ref& m) const { return vector_compare(base(), m.base()); }
-    bool operator!=(const vector_ref& m) const { return !vector_compare(base(), m.base()); }
-
-    // indexing
-    bool operator[](size_t c) const { return base()(0, c); }
-    bool operator()(size_t c) const { return base()(0, c); }
-
-    // automatic conversions
-    // a vector is a matrix, so allow automatic conversion to matrix_ref_t
-    operator matrix_ref& () { return *reinterpret_cast<matrix_ref*>( static_cast<vector_ref*>(this) ); }
-    operator const matrix_ref& () const { return *reinterpret_cast<const matrix_ref*>( static_cast<const vector_ref*>(this) ); }
-
-private:
-    void _realloc(size_t _columns, bool zero = false)
-    {
-        const size_t _rows = 1;
-        if (rows() == _rows && columns() == _columns)
+        if (_columns == columns())
             return;
-        size_t totalcol = ((_columns + bitalignment - 1) / bitalignment) * bitalignment;
-        size_t totalbytes = (_rows * totalcol) / 8;
-        size_t newallocbytes = totalbytes + bytealignment;
-        if (newallocbytes > _allocbytes)
+        if (mem.empty())
         {
-            if (_allocptr != nullptr)
-               free(_allocptr);
-            _allocptr = (data_t*)malloc(newallocbytes);
-            _allocbytes = newallocbytes;
+            size_t rowwords = (_columns+63)/64;
+            rowwords = (rowwords + word_alignment - 1) & ~(word_alignment-1);
+            mem.resize(rowwords + word_alignment, value ? ~uint64_t(0) : uint64_t(0));
+            auto p = (uintptr_t(&mem[0]) + byte_alignment-1) & ~uintptr_t(byte_alignment-1);
+            ptr.reset(reinterpret_cast<uint64_t*>(p), _columns);
+            return;
         }
-        if (zero)
-            memset(_allocptr, 0, _allocbytes);
-        uintptr_t alignedptr = ((uintptr_t(_allocptr) + bytealignment - 1) / bytealignment) * bytealignment;
-        vector_ref::reset((data_t*)alignedptr, _columns, totalcol - _columns, totalcol / base().word_bits);
+        vec tmp(_columns, value);
+        size_t mincols = std::min(_columns, columns());
+        tmp.subvector(0, mincols).copy(subvector(0, mincols));
+        tmp.swap(*this);
     }
-    void _free()
+    
+    void swap(vec& v)
     {
-        if (_allocptr != nullptr)
-            free(_allocptr);
+        std::swap(mem, v.mem);
+        std::swap(ptr, v.ptr);
     }
 
-    data_t* _allocptr;
-    size_t _allocbytes;
+    vec(): ptr(), mem() {}
+    vec(size_t _columns, bool value = false): ptr(), mem() { resize(_columns,value); }
+    
+    // copy/move constructors & assignment copy/move the view parameters, not the view contents
+    vec(const vec& v): ptr(), mem() { assign(v); }
+    vec(const cvec_view& v): ptr(), mem() { assign(v); }
+    vec(vec&& v): ptr(), mem() { swap(v); }
+    vec& operator=(const vec& v) { assign(v); return *this; }
+    vec& operator=(const cvec_view& v) { assign(v); return *this; }
+    vec& operator=(vec&& v) { swap(v); return *this; }
+
+    // view management
+    cvec_view subvector(size_t coloffset, size_t cols) const { return cvec_view(ptr.subvector(coloffset, cols)); }
+     vec_view subvector(size_t coloffset, size_t cols)       { return vec_view(ptr.subvector(coloffset, cols)); }
+    
+    // automatic conversion
+    operator const cvec_view&() const { return *reinterpret_cast<const cvec_view*>(this); }
+    operator const  vec_view&()       { return *reinterpret_cast<const vec_view*>(this); }
+
+    // common matrix API class members
+    CONST_VECTOR_CLASS_MEMBERS
+    VECTOR_CLASS_MEMBERS(vec,)
+
+    // vector result
+    template<typename F>       vec& operator=(vector_result<F>&& vr)       { vr.r.resize_me(*this); vr.r(ptr); return *this; }
 };
 
-template<typename data_t> inline size_t hammingweight(const matrix_ref_t<data_t>& m) { return detail::matrix_hammingweight(m.base()); }
-template<typename data_t> inline size_t hammingweight(const vector_ref_t<data_t>& m) { return detail::vector_hammingweight(m.base()); }
-template<typename data_t> inline size_t hammingweight_and(const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_and(m1.base(),m2.base()); }
-template<typename data_t> inline size_t hammingweight_xor(const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_xor(m1.base(),m2.base()); }
-template<typename data_t> inline size_t hammingweight_or (const vector_ref_t<data_t>& m1, const vector_ref_t<data_t>& m2) { return detail::vector_hammingweight_or(m1.base(),m2.base()); }
+class mat
+{
+private:
+    m_ptr ptr;
+    std::vector<uint64_t> mem;
+public:
+    static const size_t bit_alignment = 512;
+    static const size_t byte_alignment = bit_alignment/8;
+    static const size_t word_alignment = bit_alignment/64;
+    
+    void assign(const cmat_view& m)
+    {
+        resize(m.rows(), m.columns());
+        this->copy(m);
+    }
+    
+    void resize(size_t _rows, size_t _columns, bool value = false)
+    {
+        if (_rows == rows() && _columns == columns())
+            return;
+        if (mem.empty())
+        {
+            size_t rowwords = (_columns+63)/64;
+            rowwords = (rowwords + word_alignment - 1) & ~(word_alignment-1);
+            mem.resize(_rows * rowwords + word_alignment, value ? ~uint64_t(0) : uint64_t(0));
+            auto p = (uintptr_t(&mem[0]) + byte_alignment-1) & ~uintptr_t(byte_alignment-1);
+            ptr.reset(reinterpret_cast<uint64_t*>(p), _columns, rowwords, _rows);
+            return;
+        }
+        mat tmp(_rows, _columns, value);
+        size_t minrows = std::min(_rows, rows()), mincols = std::min(_columns, columns());
+        tmp.submatrix(0, minrows, 0, mincols).copy(this->submatrix(0, minrows, 0, mincols));
+        tmp.swap(*this);
+    }
+    
+    void swap(mat& m)
+    {
+        std::swap(mem, m.mem);
+        std::swap(ptr, m.ptr);
+    }
 
-template<typename data_t, typename Func = std::function<bool(size_t,size_t)>>
-void fill(matrix_ref_t<data_t>& m, Func& f)
+    mat(): ptr(), mem() {}
+    mat(const size_t rows, const size_t columns, bool value = false): ptr(), mem() { resize(rows, columns, value); }
+    
+    // copy/move constructors & assignment copy/move the contents
+    mat(const mat& m): ptr(), mem() { assign(m); }
+    mat(const cmat_view& m): ptr(), mem() { assign(m); }
+    mat(mat&& m): ptr(), mem() { swap(m); }
+    mat& operator=(const mat& m) { assign(m); return *this; }
+    mat& operator=(const cmat_view& m) { assign(m); return *this; }
+    mat& operator=(mat&& m) { assign(m); return *this; }
+    template<typename F>
+    mat(matrix_result<F>&& mr) { mr.r.resize_me(*this); mr.r(ptr); }
+
+    // view management
+    cvec_view_it subvector(size_t row, size_t coloffset, size_t cols) const { return cvec_view_it(ptr.subvectorit(row, coloffset, cols)); }
+     vec_view_it subvector(size_t row, size_t coloffset, size_t cols)       { return  vec_view_it(ptr.subvectorit(row, coloffset, cols)); }
+    cmat_view submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return cmat_view(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+     mat_view submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols)       { return  mat_view(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+
+    cvec_view_it operator[](size_t r) const { return cvec_view_it(ptr.subvectorit(r)); }
+    cvec_view_it operator()(size_t r) const { return cvec_view_it(ptr.subvectorit(r)); }
+     vec_view_it operator[](size_t r)       { return  vec_view_it(ptr.subvectorit(r)); }
+     vec_view_it operator()(size_t r)       { return  vec_view_it(ptr.subvectorit(r)); }
+    cvec_view_it begin() const { return cvec_view_it(ptr.subvectorit(0)); }
+    cvec_view_it end()   const { return cvec_view_it(ptr.subvectorit(rows())); }
+     vec_view_it begin()       { return vec_view_it(ptr.subvectorit(0)); }
+     vec_view_it end()         { return vec_view_it(ptr.subvectorit(rows())); }
+
+    // automatic conversion
+    operator const cmat_view&() const { return *reinterpret_cast<const cmat_view*>(this); }
+    operator const  mat_view&()       { return *reinterpret_cast<const  mat_view*>(this); }
+
+    // common matrix API class members
+    CONST_MATRIX_CLASS_MEMBERS
+    MATRIX_CLASS_MEMBERS(mat,)
+
+    // vector result
+    template<typename F>       mat& operator=(matrix_result<F>&& mr)       { mr.r.resize_me(*this); mr.r(ptr); return *this; }
+};
+
+bool operator==(const cvec_view& v1, const cvec_view& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const cvec_view& v1, const cvec_view& v2) { return v1.ptr != v2.ptr; }
+bool operator==(const cvec_view& v1, const  vec_view& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const cvec_view& v1, const  vec_view& v2) { return v1.ptr != v2.ptr; }
+bool operator==(const  vec_view& v1, const cvec_view& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const  vec_view& v1, const cvec_view& v2) { return v1.ptr != v2.ptr; }
+bool operator==(const  vec_view& v1, const  vec_view& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const  vec_view& v1, const  vec_view& v2) { return v1.ptr != v2.ptr; }
+
+bool operator==(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
+bool operator==(const cvec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const cvec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
+bool operator==(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
+bool operator==(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
+bool operator!=(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
+
+bool operator==(const cmat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
+bool operator!=(const cmat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
+bool operator==(const cmat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
+bool operator!=(const cmat_view& m1, const  mat_view& m2) { return m1.ptr != m2.ptr; }
+bool operator==(const  mat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
+bool operator!=(const  mat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
+bool operator==(const  mat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
+bool operator!=(const  mat_view& m1, const  mat_view& m2) { return m1.ptr != m2.ptr; }
+
+bool operator==(const mat& m1, const mat& m2)       { return m1.isequal(m2); }
+bool operator!=(const mat& m1, const mat& m2)       { return !m1.isequal(m2); }
+bool operator==(const cmat_view& m1, const mat& m2) { return m1.isequal(m2); }
+bool operator!=(const cmat_view& m1, const mat& m2) { return !m1.isequal(m2); }
+bool operator==(const mat& m1, const cmat_view& m2) { return m1.isequal(m2); }
+bool operator!=(const mat& m1, const cmat_view& m2) { return !m1.isequal(m2); }
+
+std::ostream& operator<<(std::ostream& o, const cvec_view& v) { v_print(o, v.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const  vec_view& v) { v_print(o, v.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const cvec_view_it& v) { v_print(o, v.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const  vec_view_it& v) { v_print(o, v.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const  vec& v) { return o << static_cast<const cvec_view&>(v); }
+std::ostream& operator<<(std::ostream& o, const cmat_view& m) { m_print(o, m.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const  mat_view& m) { m_print(o, m.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const  mat& m) { return o << static_cast<const cmat_view&>(m); }
+
+
+template<void f(const v_ptr&, const cv_ptr&)>
+struct v_ptr_op2_result
+{
+    const cv_ptr* v2;
+    v_ptr_op2_result(): v2(nullptr) {}
+    v_ptr_op2_result(const cv_ptr* _v2) { v2 = _v2; }
+    v_ptr_op2_result(const v_ptr_op2_result&) = default;
+    v_ptr_op2_result(v_ptr_op2_result&&) = default;
+    v_ptr_op2_result& operator=(const v_ptr_op2_result&) = default;
+    v_ptr_op2_result& operator=(v_ptr_op2_result&&) = default;
+    
+    void operator()(const v_ptr& v1) {  f(v1,*v2); }
+    void resize_me(vec& v) { v.resize(v2->columns); }
+};
+template<void f(const v_ptr&, const cv_ptr&, const cv_ptr&)>
+struct v_ptr_op3_result
+{
+    const cv_ptr* v2;
+    const cv_ptr* v3;
+    v_ptr_op3_result(): v2(nullptr), v3(nullptr) {}
+    v_ptr_op3_result(const cv_ptr* _v2, const cv_ptr* _v3) { v2 = _v2; v3 = _v3; }
+    v_ptr_op3_result(const v_ptr_op3_result&) = default;
+    v_ptr_op3_result(v_ptr_op3_result&&) = default;
+    v_ptr_op3_result& operator=(const v_ptr_op3_result&) = default;
+    v_ptr_op3_result& operator=(v_ptr_op3_result&&) = default;
+    
+    void operator()(const v_ptr& v1) {  f(v1,*v2,*v3); }
+    void resize_me(vec& v) { v.resize(v2->columns); }
+};
+template<size_t bits, void f(const v_ptr&, const cv_ptr&, aligned_tag<bits>)>
+struct v_ptr_op2a_result
+{
+    const cv_ptr* v2;
+    v_ptr_op2a_result(): v2(nullptr) {}
+    v_ptr_op2a_result(const cv_ptr* _v2) { v2 = _v2; }
+    v_ptr_op2a_result(const v_ptr_op2a_result&) = default;
+    v_ptr_op2a_result(v_ptr_op2a_result&&) = default;
+    v_ptr_op2a_result& operator=(const v_ptr_op2a_result&) = default;
+    v_ptr_op2a_result& operator=(v_ptr_op2a_result&&) = default;
+    
+    void operator()(const v_ptr& v1) {  f(v1,*v2, aligned_tag<bits>()); }
+    void resize_me(vec& v) { v.resize(v2->columns); }
+};
+template<size_t bits, void f(const v_ptr&, const cv_ptr&, const cv_ptr&, aligned_tag<bits>)>
+struct v_ptr_op3a_result
+{
+    const cv_ptr* v2;
+    const cv_ptr* v3;
+    v_ptr_op3a_result(): v2(nullptr), v3(nullptr) {}
+    v_ptr_op3a_result(const cv_ptr* _v2, const cv_ptr* _v3) { v2 = _v2; v3 = _v3; }
+    v_ptr_op3a_result(const v_ptr_op3a_result&) = default;
+    v_ptr_op3a_result(v_ptr_op3a_result&&) = default;
+    v_ptr_op3a_result& operator=(const v_ptr_op3a_result&) = default;
+    v_ptr_op3a_result& operator=(v_ptr_op3a_result&&) = default;
+    
+    void operator()(const v_ptr& v1) {  f(v1,*v2,*v3,aligned_tag<bits>()); }
+    void resize_me(vec& v) { v.resize(v2->columns); }
+};
+
+template<void f(const m_ptr&, const cm_ptr&)>
+struct m_ptr_op2_result
+{
+    const cm_ptr* m2;
+    m_ptr_op2_result(): m2(nullptr) {}
+    m_ptr_op2_result(const cm_ptr* _m2) { m2 = _m2; }
+    m_ptr_op2_result(const m_ptr_op2_result&) = default;
+    m_ptr_op2_result(m_ptr_op2_result&&) = default;
+    m_ptr_op2_result& operator=(const m_ptr_op2_result&) = default;
+    m_ptr_op2_result& operator=(m_ptr_op2_result&&) = default;
+    
+    void operator()(const m_ptr& m1) {  f(m1,*m2); }
+    void resize_me(mat& m) { m.resize(m2->rows, m2->columns); }
+};
+template<void f(const m_ptr&, const cm_ptr&, const cm_ptr&)>
+struct m_ptr_op3_result
+{
+    const cm_ptr* m2;
+    const cm_ptr* m3;
+    m_ptr_op3_result(): m2(nullptr), m3(nullptr) {}
+    m_ptr_op3_result(const cm_ptr* _m2, const cm_ptr* _m3) { m2 = _m2; m3 = _m3; }
+    m_ptr_op3_result(const m_ptr_op3_result&) = default;
+    m_ptr_op3_result(m_ptr_op3_result&&) = default;
+    m_ptr_op3_result& operator=(const m_ptr_op3_result&) = default;
+    m_ptr_op3_result& operator=(m_ptr_op3_result&&) = default;
+    
+    void operator()(const m_ptr& m1) {  f(m1,*m2,*m3); }
+    void resize_me(mat& m) { m.resize(m2->rows, m2->columns); }
+};
+struct m_ptr_transpose_result
+{
+    const cm_ptr* m2;
+    m_ptr_transpose_result(): m2(nullptr) {}
+    m_ptr_transpose_result(const cm_ptr* _m2) { m2 = _m2; }
+    m_ptr_transpose_result(const m_ptr_transpose_result&) = default;
+    m_ptr_transpose_result(m_ptr_transpose_result&&) = default;
+    m_ptr_transpose_result& operator=(const m_ptr_transpose_result&) = default;
+    m_ptr_transpose_result& operator=(m_ptr_transpose_result&&) = default;
+    
+    void operator()(const m_ptr& m1) {  m_transpose(m1,*m2); }
+    void resize_me(mat& m) { m.resize(m2->columns, m2->rows); }
+};
+
+#define MCCL_VECTOR_RESULT_FUNCTION_OP2(func) \
+   static inline vector_result<v_ptr_op2_result<detail:: func >> func (const cvec_view& v2) \
+   { \
+       return vector_result<v_ptr_op2_result<detail:: func>>(&v2.ptr); \
+   } \
+   template<size_t bits> \
+   static inline vector_result<v_ptr_op2a_result<bits, detail:: func >> func (const cvec_view& v2, aligned_tag<bits>) \
+   { \
+       return vector_result<v_ptr_op2a_result<bits, detail:: func>>(&v2.ptr, aligned_tag<bits>()); \
+   }
+#define MCCL_VECTOR_RESULT_FUNCTION_OP3(func) \
+   static inline vector_result<v_ptr_op3_result<detail:: func >> func (const cvec_view& v2, const cvec_view& v3) \
+   { \
+       return vector_result<v_ptr_op3_result<detail:: func>>(&v2.ptr, &v3.ptr); \
+   } \
+   template<size_t bits> \
+   static inline vector_result<v_ptr_op3a_result<bits,detail:: func >> func (const cvec_view& v2, const cvec_view& v3, aligned_tag<bits>) \
+   { \
+       return vector_result<v_ptr_op3a_result<bits, detail:: func>>(&v2.ptr, &v3.ptr, aligned_tag<bits>()); \
+   }
+
+MCCL_VECTOR_RESULT_FUNCTION_OP2(v_copy)
+MCCL_VECTOR_RESULT_FUNCTION_OP2(v_copynot)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_and)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_or)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_xor)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_nand)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_nor)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_nxor)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_andin)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_andni)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_orin)
+MCCL_VECTOR_RESULT_FUNCTION_OP3(v_orni)
+
+static inline vector_result<v_ptr_op3_result<detail::v_and>> operator&(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_and>>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_or >> operator|(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_or >>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_xor>> operator^(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_xor>>(&v2.ptr, &v3.ptr); }
+
+static inline matrix_result<m_ptr_op2_result<detail::m_copy   >> m_copy     (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copy>>(&m2.ptr); }
+static inline matrix_result<m_ptr_op2_result<detail::m_copynot>> m_copynot  (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copynot>>(&m2.ptr); }
+static inline matrix_result<m_ptr_transpose_result>              m_transpose(const cmat_view& m2) { return matrix_result<m_ptr_transpose_result>(&m2.ptr); }
+
+static inline matrix_result<m_ptr_op3_result<detail::m_and>> m_and(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_or >> m_or (const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_xor>> m_xor(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_and>> operator&(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_or >> operator|(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_xor>> operator^(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
+
+
+static inline size_t hammingweight(const cmat_view& m) { return m.hw(); }
+
+static inline size_t hammingweight(const cvec_view& v) { return v_hw(v.ptr); }
+static inline size_t hammingweight_and(const cvec_view& v1, const cvec_view& v2) { return v_hw_and(v1.ptr, v2.ptr); }
+static inline size_t hammingweight_xor(const cvec_view& v1, const cvec_view& v2) { return v_hw_xor(v1.ptr, v2.ptr); }
+static inline size_t hammingweight_or (const cvec_view& v1, const cvec_view& v2) { return v_hw_or(v1.ptr, v2.ptr); }
+
+template<size_t bits> static inline size_t hammingweight(const cvec_view& v, aligned_tag<bits>) { return v_hw(v.ptr, aligned_tag<bits>()); }
+template<size_t bits> static inline size_t hammingweight_and(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_and(v1.ptr, v2.ptr, aligned_tag<bits>()); }
+template<size_t bits> static inline size_t hammingweight_xor(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_xor(v1.ptr, v2.ptr, aligned_tag<bits>()); }
+template<size_t bits> static inline size_t hammingweight_or (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_or(v1.ptr, v2.ptr, aligned_tag<bits>()); }
+
+
+
+
+template<typename Func = std::function<bool(size_t,size_t)>>
+void fill(const mat_view& m, Func& f)
 {
     for (size_t r = 0; r < m.rows(); ++r)
         for (size_t c = 0; c < m.columns(); ++c)
-            m.bitset(r,c, f(r,c));
+            m.setbit(r,c, f(r,c));
 }
 
-template<typename data_t, typename Func = std::function<bool(size_t)>>
-void fill(vector_ref_t<data_t>& m, Func& f)
+template<typename Func = std::function<bool(size_t)>>
+void fill(const vec_view& m, Func& f)
 {
     for (size_t c = 0; c < m.columns(); ++c)
-        m.bitset(c, f(c));
+        m.setbit(c, f(c));
 }
 
-template<typename data_t, typename Func = std::function<data_t(size_t,size_t)>>
-void fillword(matrix_ref_t<data_t>& m, Func& f)
+template<typename Func = std::function<uint64_t(size_t,size_t)>>
+void fillword(const mat_view& m, Func& f)
 {
-    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
+    const size_t words = m.rowwords();
     for (size_t r = 0; r < m.rows(); ++r)
     {
-        data_t* first = m.base().data(r);
-        data_t* last = first + words;
+        uint64_t* first = m.ptr.data(r);
+        uint64_t* last = first + words;
         for (size_t w = 0; first != last; ++first,++w)
             *first = f(r,w);
     }
 }
 
-template<typename data_t, typename Func = std::function<data_t(size_t)>>
-void fillword(vector_ref_t<data_t>& m, Func& f)
+template<typename Func = std::function<uint64_t(size_t)>>
+void fillword(const vec_view& m, Func& f)
 {
-    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
-    data_t* first = m.base().data(0);
-    data_t* last = first + words;
+    const size_t words = m.rowwords();
+    uint64_t* first = m.ptr.data(0);
+    uint64_t* last = first + words;
     for (size_t w = 0; first != last; ++first,++w)
         *first = f(w);
 }
 
 
-template<typename data_t, typename Generator>
-void fillgenerator(matrix_ref_t<data_t>& m, Generator& g)
+template<typename Generator>
+void fillgenerator(const mat_view& m, Generator& g)
 {
-    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
+    const size_t words = m.rowwords();
     for (size_t r = 0; r < m.rows(); ++r)
     {
-        data_t* first = m.base().data(r);
-        data_t* last = first + words;
+        uint64_t* first = m.ptr.data(r);
+        uint64_t* last = first + words;
         for (; first != last; ++first)
             g(*first);
     }
 }
 
-template<typename data_t, typename Generator>
-void fillgenerator(vector_ref_t<data_t>& m, Generator& g)
+template<typename Generator>
+void fillgenerator(const vec_view& m, Generator& g)
 {
-    const size_t words = (m.columns() + m.base().word_bits - 1) / m.base().word_bits;
-    data_t* first = m.base().data(0);
-    data_t* last = first + words;
+    const size_t words = m.rowwords();
+    uint64_t* first = m.ptr.data(0);
+    uint64_t* last = first + words;
     for (; first != last; ++first)
         g(*first);
 }
 
-template<typename data_t>
 struct mccl_base_random_generator
 {
-    static const unsigned int count = (sizeof(data_t)+sizeof(uint64_t)-1)/sizeof(uint64_t);
-
     mccl_base_random_generator()
         : rnd(std::random_device()())
     {
     }
-
-    void operator()(data_t& word)
+    void operator()(uint64_t& word)
     {
-        for (unsigned int i = 0; i < count; ++i)
-            data.u64[i] = rnd();
-        word = data.data;
+        word = rnd();
     }
-
-    union {
-        uint64_t u64[count];
-        data_t data;
-    } data;
     std::mt19937_64 rnd;
 };
 
-template<typename data_t>
-void fillrandom(matrix_ref_t<data_t>& m)
+void fillrandom(const mat_view& m)
 {
-    mccl_base_random_generator<data_t> gen;
+    mccl_base_random_generator gen;
     fillgenerator(m, gen);
 }
 
-template<typename data_t>
-void fillrandom(vector_ref_t<data_t>& m)
+void fillrandom(const vec_view& m)
 {
-    mccl_base_random_generator<data_t> gen;
+    mccl_base_random_generator gen;
     fillgenerator(m, gen);
 }
 
 // full row reduction of matrix m over columns [column_start,column_end)
 // pivots may be selected from rows [pivot_start,rows())
 // returns pivotend = pivot_start + nrnewrowpivots
-template<typename data_t>
-size_t echelonize(matrix_ref_t<data_t>& m, size_t column_start = 0, size_t column_end = ~size_t(0), size_t pivot_start = 0)
+size_t echelonize(const mat_view& m, size_t column_start = 0, size_t column_end = ~size_t(0), size_t pivot_start = 0)
 {
     if (column_end > m.columns())
         column_end = m.columns();
@@ -962,19 +892,19 @@ size_t echelonize(matrix_ref_t<data_t>& m, size_t column_start = 0, size_t colum
             continue;
         // swap row if necessary
         if (p != pivot_start)
-            m.swap_rows(pivot_start, p);
+            m[p].swap(m[pivot_start]);
         // reduce column c
-        const auto& pivotrow = m[pivot_start];
-        auto mrowit = m.begin();
+        auto pivotrow = m[pivot_start];
+        auto mrowit = m[0];
         //std::cerr << (mrowit) << std::endl;
         for (size_t r = 0; r < pivot_start; ++r,++mrowit)
             if (m(r,c))
-                *mrowit ^= pivotrow;
+                mrowit.vxor(pivotrow);
         // skip pivotrow itself
         ++mrowit;
         for (size_t r = pivot_start+1; r < m.rows(); ++r,++mrowit)
             if (m(r,c))
-                *mrowit ^= pivotrow;
+                mrowit.vxor(pivotrow);
         // increase pivot_start for next column
         ++pivot_start;
     }

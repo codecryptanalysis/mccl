@@ -80,6 +80,9 @@ int test_matrixref(size_t r = 512, size_t c = 512)
 int main(int, char**)
 {
     int status = 0;
+    mat m(512,512);
+    std::cout << m[0].hw(aligned512_tag());
+    return 0;
 
     for (size_t i = 4; i <= 512; ++i)
         status |= test_matrixref(i,i);
