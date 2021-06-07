@@ -2,7 +2,6 @@
 #include <mccl/config/config.hpp>
 
 // core header files
-#include <mccl/core/matrix_detail.hpp>
 #include <mccl/core/matrix.hpp>
 #include <mccl/core/matrix_m4ri.hpp>
 
