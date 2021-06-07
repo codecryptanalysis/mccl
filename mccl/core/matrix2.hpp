@@ -10,17 +10,46 @@
 
 MCCL_BEGIN_NAMESPACE
 
+// = vector view classes =
+// These only point to a preallocated vector in memory
+// Copy/move constructor/assignment only alter the view, not the vector contents
+//   use vec_view.copy(src) etc. to modify view's contents
+// cvec_view points to const vector contents, vec_view points to non-const vector contents
+// Note that 'const vec_view' like a 'const pointer_t' still allows to modify the vector contents
+// Allows assigning a vector_result:
+//   however it must match the result vector dimension
 class vec_view;
 class cvec_view;
 
+// Extension of vec_view / cvec_view with rowstride
+// and pointer operators ++,--,+=,-=,+,- that change the view by # rows forward/backward
 class vec_view_it;
 class cvec_view_it;
 
+// = matrix view classes =
+// These only point to a preallocated matrix in memory
+// Copy/move constructor/assignment only alter the view, not the matrix contents
+//   use mat_view.copy(src) etc. to modify view's contents
+// cmat_view points to const matrix contents, mat_view points to non-const matrix contents
+// Note that 'const mat_view' like a 'const pointer_t' still allows to modify the matrix contents
+// Allows assigning a matrix_result:
+//   however it must match the result matrix dimensions
 class mat_view;
 class cmat_view;
 
+// = matrix & vector classes =
+// maintains memory for a matrix/vector of specified dimensions
+// behaves as vec_view/mat_view when non-const
+// behaves as cvec_view/cmat_view when const
+// except:
+// 1) copy/move constructor/assignment from cvec_view/cmat_view
+//    automatically resizes and copies content
+// 2) when assigning a vector_result/matrix_result:
+//    then it will automatically resize to the result vector/matrix
 class vec;
 class mat;
+
+
 
 // common class members for: cvec_view, vec_view, vec_view_it, cvec_view_it, vec
 #define CONST_VECTOR_CLASS_MEMBERS \
@@ -49,13 +78,17 @@ class mat;
     cnst vectype& vxor(const cvec_view& v2)  cnst { v_xor(ptr, v2.ptr); return *this; } \
     cnst vectype& vand(const cvec_view& v2)  cnst { v_and(ptr, v2.ptr); return *this; } \
     cnst vectype& vor (const cvec_view& v2)  cnst { v_or (ptr, v2.ptr); return *this; } \
+    cnst vectype& operator&=(const cvec_view& v2) cnst { v_and(ptr, v2.ptr); return *this; } \
+    cnst vectype& operator^=(const cvec_view& v2) cnst { v_xor(ptr, v2.ptr); return *this; } \
+    cnst vectype& operator|=(const cvec_view& v2) cnst { v_or (ptr, v2.ptr); return *this; } \
     cnst vectype& vxor(const cvec_view& v1, const cvec_view& v2)  cnst { v_xor(ptr, v1.ptr, v2.ptr); return *this; } \
     cnst vectype& vand(const cvec_view& v1, const cvec_view& v2)  cnst { v_and(ptr, v1.ptr, v2.ptr); return *this; } \
     cnst vectype& vor (const cvec_view& v1, const cvec_view& v2)  cnst { v_or (ptr, v1.ptr, v2.ptr); return *this; } \
     cnst vectype& setcolumns(size_t c_off, size_t c_cnt, bool b)  cnst { v_setcolumns(ptr, c_off, c_cnt, b); return *this; } \
     cnst vectype& setcolumns(size_t c_off, size_t c_cnt)          cnst { v_setcolumns(ptr, c_off, c_cnt); return *this; } \
     cnst vectype& clearcolumns(size_t c_off, size_t c_cnt)        cnst { v_clearcolumns(ptr, c_off, c_cnt); return *this; } \
-    cnst vectype& flipcolumns(size_t c_off, size_t c_cnt)         cnst { v_flipcolumns(ptr, c_off, c_cnt); return *this; }
+    cnst vectype& flipcolumns(size_t c_off, size_t c_cnt)         cnst { v_flipcolumns(ptr, c_off, c_cnt); return *this; } \
+    cnst vectype& swap(const  vec_view& v2)  cnst { v_swap(ptr, v2.ptr); return *this; }
 
 // common class members for: cvec_view_it, vec_view_it
 #define CONST_VECTOR_ITERATOR_CLASS_MEMBERS(vectype) \
@@ -98,6 +131,9 @@ class mat;
     cnst mattype& mxor(const cmat_view& m2)          cnst { m_xor(ptr, m2.ptr); return *this; } \
     cnst mattype& mand(const cmat_view& m2)          cnst { m_and(ptr, m2.ptr); return *this; } \
     cnst mattype& mor (const cmat_view& m2)          cnst { m_or (ptr, m2.ptr); return *this; } \
+    cnst mattype& operator&=(const cmat_view& m2)    cnst { m_and(ptr, m2.ptr); return *this; } \
+    cnst mattype& operator^=(const cmat_view& m2)    cnst { m_xor(ptr, m2.ptr); return *this; } \
+    cnst mattype& operator|=(const cmat_view& m2)    cnst { m_or (ptr, m2.ptr); return *this; } \
     cnst mattype& mxor(const cmat_view& m1, const cmat_view& m2) cnst { m_xor(ptr, m1.ptr, m2.ptr); return *this; } \
     cnst mattype& mand(const cmat_view& m1, const cmat_view& m2) cnst { m_and(ptr, m1.ptr, m2.ptr); return *this; } \
     cnst mattype& mor (const cmat_view& m1, const cmat_view& m2) cnst { m_or (ptr, m1.ptr, m2.ptr); return *this; } \
@@ -213,6 +249,10 @@ public:
 
     // automatic conversion
     operator const cvec_view&() const { return *reinterpret_cast<const cvec_view*>(this); }
+          cvec_view_it& operator*()       { return *this; }
+    const cvec_view_it& operator*() const { return *this; }
+          cvec_view_it* operator->()       { return this; }
+    const cvec_view_it* operator->() const { return this; }
 
     // common vector API class members
     CONST_VECTOR_ITERATOR_CLASS_MEMBERS(cvec_view_it)
@@ -242,6 +282,10 @@ public:
     operator const vec_view&() const { return *reinterpret_cast<const vec_view*>(this); }
     operator       cvec_view_it&()       { return *reinterpret_cast<cvec_view_it*>(this); }
     operator const cvec_view_it&() const { return *reinterpret_cast<const cvec_view_it*>(this); }
+          vec_view_it& operator*()       { return *this; }
+    const vec_view_it& operator*() const { return *this; }
+          vec_view_it* operator->()       { return this; }
+    const vec_view_it* operator->() const { return this; }
 
     // common vector API class members
     CONST_VECTOR_ITERATOR_CLASS_MEMBERS(vec_view_it)
@@ -277,6 +321,8 @@ public:
 
     cvec_view_it operator[](size_t r) const { return cvec_view_it(ptr.subvectorit(r)); }
     cvec_view_it operator()(size_t r) const { return cvec_view_it(ptr.subvectorit(r)); }
+    cvec_view_it begin() const { return cvec_view_it(ptr.subvectorit(0)); }
+    cvec_view_it end()   const { return cvec_view_it(ptr.subvectorit(rows())); }
 
     // automatic conversion
 
@@ -305,6 +351,8 @@ public:
 
     vec_view_it operator[](size_t r) const { return vec_view_it(ptr.subvectorit(r)); }
     vec_view_it operator()(size_t r) const { return vec_view_it(ptr.subvectorit(r)); }
+    vec_view_it begin() const { return vec_view_it(ptr.subvectorit(0)); }
+    vec_view_it end()   const { return vec_view_it(ptr.subvectorit(rows())); }
 
     // automatic conversion
     operator       cmat_view&()       { return *reinterpret_cast<cmat_view*>(this); }
@@ -428,6 +476,8 @@ public:
     mat& operator=(const mat& m) { assign(m); return *this; }
     mat& operator=(const cmat_view& m) { assign(m); return *this; }
     mat& operator=(mat&& m) { assign(m); return *this; }
+    template<typename F>
+    mat(matrix_result<F>&& mr) { mr.r.resize_me(*this); mr.r(ptr); }
 
     // view management
     cvec_view_it subvector(size_t row, size_t coloffset, size_t cols) const { return cvec_view_it(ptr.subvectorit(row, coloffset, cols)); }
@@ -439,6 +489,10 @@ public:
     cvec_view_it operator()(size_t r) const { return cvec_view_it(ptr.subvectorit(r)); }
      vec_view_it operator[](size_t r)       { return  vec_view_it(ptr.subvectorit(r)); }
      vec_view_it operator()(size_t r)       { return  vec_view_it(ptr.subvectorit(r)); }
+    cvec_view_it begin() const { return cvec_view_it(ptr.subvectorit(0)); }
+    cvec_view_it end()   const { return cvec_view_it(ptr.subvectorit(rows())); }
+     vec_view_it begin()       { return vec_view_it(ptr.subvectorit(0)); }
+     vec_view_it end()         { return vec_view_it(ptr.subvectorit(rows())); }
 
     // automatic conversion
     operator const cmat_view&() const { return *reinterpret_cast<const cmat_view*>(this); }
@@ -490,8 +544,9 @@ std::ostream& operator<<(std::ostream& o, const cvec_view& v) { v_print(o, v.ptr
 std::ostream& operator<<(std::ostream& o, const  vec_view& v) { v_print(o, v.ptr); return o; }
 std::ostream& operator<<(std::ostream& o, const cvec_view_it& v) { v_print(o, v.ptr); return o; }
 std::ostream& operator<<(std::ostream& o, const  vec_view_it& v) { v_print(o, v.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const cmat_view& m) { v_print(o, m.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const  mat_view& m) { v_print(o, m.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const cmat_view& m) { m_print(o, m.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const  mat_view& m) { m_print(o, m.ptr); return o; }
+std::ostream& operator<<(std::ostream& o, const  mat& m) { return o << static_cast<const cmat_view&>(m); }
 
 
 template<void f(const v_ptr&, const cv_ptr&)>
@@ -567,21 +622,159 @@ struct m_ptr_transpose_result
     void resize_me(mat& m) { m.resize(m2->columns, m2->rows); }
 };
 
-vector_result<v_ptr_op2_result<detail::v_copy   >> v_copy   (const cvec_view& v2) { return vector_result<v_ptr_op2_result<detail::v_copy>>(&v2.ptr); }
-vector_result<v_ptr_op2_result<detail::v_copynot>> v_copynot(const cvec_view& v2) { return vector_result<v_ptr_op2_result<detail::v_copynot>>(&v2.ptr); }
+static inline vector_result<v_ptr_op2_result<detail::v_copy   >> v_copy   (const cvec_view& v2) { return vector_result<v_ptr_op2_result<detail::v_copy>>(&v2.ptr); }
+static inline vector_result<v_ptr_op2_result<detail::v_copynot>> v_copynot(const cvec_view& v2) { return vector_result<v_ptr_op2_result<detail::v_copynot>>(&v2.ptr); }
 
-vector_result<v_ptr_op3_result<detail::v_and>> v_and(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_and>>(&v2.ptr, &v3.ptr); }
-vector_result<v_ptr_op3_result<detail::v_or >> v_or (const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_or >>(&v2.ptr, &v3.ptr); }
-vector_result<v_ptr_op3_result<detail::v_xor>> v_xor(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_xor>>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_and>> v_and(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_and>>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_or >> v_or (const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_or >>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_xor>> v_xor(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_xor>>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_and>> operator&(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_and>>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_or >> operator|(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_or >>(&v2.ptr, &v3.ptr); }
+static inline vector_result<v_ptr_op3_result<detail::v_xor>> operator^(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_xor>>(&v2.ptr, &v3.ptr); }
 
 
-matrix_result<m_ptr_op2_result<detail::m_copy   >> m_copy     (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copy>>(&m2.ptr); }
-matrix_result<m_ptr_op2_result<detail::m_copynot>> m_copynot  (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copynot>>(&m2.ptr); }
-matrix_result<m_ptr_transpose_result>              m_transpose(const cmat_view& m2) { return matrix_result<m_ptr_transpose_result>(&m2.ptr); }
+static inline matrix_result<m_ptr_op2_result<detail::m_copy   >> m_copy     (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copy>>(&m2.ptr); }
+static inline matrix_result<m_ptr_op2_result<detail::m_copynot>> m_copynot  (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copynot>>(&m2.ptr); }
+static inline matrix_result<m_ptr_transpose_result>              m_transpose(const cmat_view& m2) { return matrix_result<m_ptr_transpose_result>(&m2.ptr); }
 
-matrix_result<m_ptr_op3_result<detail::m_and>> m_and(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
-matrix_result<m_ptr_op3_result<detail::m_or >> m_or (const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
-matrix_result<m_ptr_op3_result<detail::m_xor>> m_xor(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_and>> m_and(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_or >> m_or (const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_xor>> m_xor(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_and>> operator&(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_or >> operator|(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
+static inline matrix_result<m_ptr_op3_result<detail::m_xor>> operator^(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
+
+
+static inline size_t hammingweight(const cmat_view& m) { return m.hw(); }
+static inline size_t hammingweight(const cvec_view& v) { return v.hw(); }
+static inline size_t hammingweight_and(const cvec_view& v1, const cvec_view& v2) { return v_hw_and(v1.ptr, v2.ptr); }
+static inline size_t hammingweight_xor(const cvec_view& v1, const cvec_view& v2) { return v_hw_xor(v1.ptr, v2.ptr); }
+static inline size_t hammingweight_or (const cvec_view& v1, const cvec_view& v2) { return v_hw_or(v1.ptr, v2.ptr); }
+
+template<typename Func = std::function<bool(size_t,size_t)>>
+void fill(const mat_view& m, Func& f)
+{
+    for (size_t r = 0; r < m.rows(); ++r)
+        for (size_t c = 0; c < m.columns(); ++c)
+            m.setbit(r,c, f(r,c));
+}
+
+template<typename Func = std::function<bool(size_t)>>
+void fill(const vec_view& m, Func& f)
+{
+    for (size_t c = 0; c < m.columns(); ++c)
+        m.setbit(c, f(c));
+}
+
+template<typename Func = std::function<uint64_t(size_t,size_t)>>
+void fillword(const mat_view& m, Func& f)
+{
+    const size_t words = m.rowwords();
+    for (size_t r = 0; r < m.rows(); ++r)
+    {
+        uint64_t* first = m.ptr.data(r);
+        uint64_t* last = first + words;
+        for (size_t w = 0; first != last; ++first,++w)
+            *first = f(r,w);
+    }
+}
+
+template<typename Func = std::function<uint64_t(size_t)>>
+void fillword(const vec_view& m, Func& f)
+{
+    const size_t words = m.rowwords();
+    uint64_t* first = m.ptr.data(0);
+    uint64_t* last = first + words;
+    for (size_t w = 0; first != last; ++first,++w)
+        *first = f(w);
+}
+
+
+template<typename Generator>
+void fillgenerator(const mat_view& m, Generator& g)
+{
+    const size_t words = m.rowwords();
+    for (size_t r = 0; r < m.rows(); ++r)
+    {
+        uint64_t* first = m.ptr.data(r);
+        uint64_t* last = first + words;
+        for (; first != last; ++first)
+            g(*first);
+    }
+}
+
+template<typename Generator>
+void fillgenerator(const vec_view& m, Generator& g)
+{
+    const size_t words = m.rowwords();
+    uint64_t* first = m.ptr.data(0);
+    uint64_t* last = first + words;
+    for (; first != last; ++first)
+        g(*first);
+}
+
+struct mccl_base_random_generator
+{
+    mccl_base_random_generator()
+        : rnd(std::random_device()())
+    {
+    }
+    void operator()(uint64_t& word)
+    {
+        word = rnd();
+    }
+    std::mt19937_64 rnd;
+};
+
+void fillrandom(const mat_view& m)
+{
+    mccl_base_random_generator gen;
+    fillgenerator(m, gen);
+}
+
+void fillrandom(const vec_view& m)
+{
+    mccl_base_random_generator gen;
+    fillgenerator(m, gen);
+}
+
+// full row reduction of matrix m over columns [column_start,column_end)
+// pivots may be selected from rows [pivot_start,rows())
+// returns pivotend = pivot_start + nrnewrowpivots
+size_t echelonize(const mat_view& m, size_t column_start = 0, size_t column_end = ~size_t(0), size_t pivot_start = 0)
+{
+    if (column_end > m.columns())
+        column_end = m.columns();
+    for (size_t c = column_start; c < column_end; ++c)
+    {
+        // find pivot for column c
+        size_t p = pivot_start;
+        for (; p < m.rows() && m(p,c) == false; ++p)
+            ;
+        // if no pivot found the continue with next column
+        if (p >= m.rows())
+            continue;
+        // swap row if necessary
+        if (p != pivot_start)
+            m[p].swap(m[pivot_start]);
+        // reduce column c
+        auto pivotrow = m[pivot_start];
+        auto mrowit = m[0];
+        //std::cerr << (mrowit) << std::endl;
+        for (size_t r = 0; r < pivot_start; ++r,++mrowit)
+            if (m(r,c))
+                mrowit.vxor(pivotrow);
+        // skip pivotrow itself
+        ++mrowit;
+        for (size_t r = pivot_start+1; r < m.rows(); ++r,++mrowit)
+            if (m(r,c))
+                mrowit.vxor(pivotrow);
+        // increase pivot_start for next column
+        ++pivot_start;
+    }
+    return pivot_start;
+}
+
 
 MCCL_END_NAMESPACE
 

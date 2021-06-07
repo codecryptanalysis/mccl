@@ -48,7 +48,7 @@ tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
 
 tests_test_matrix_SOURCES= tests/test_matrix.cpp
-tests_test_matrix_LDADD  = libmccl.la
+tests_test_matrix_LDADD  = libmccl2.la
 
 tests_test_m4ri_SOURCES= tests/test_m4ri.cpp
 tests_test_m4ri_LDADD  = libmccl.la

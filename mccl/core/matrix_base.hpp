@@ -31,8 +31,7 @@ struct m_ptr;
 	
 matrix          m_ptr       -->   cm_ptr
 
-                  |                 |
-                  v                 v
+
                   
 vector iter     vi_ptr      -->   cvi_ptr
 
@@ -208,7 +207,7 @@ struct cm_ptr {
 	size_t columns, stride, rows;
 	
 	cm_ptr(): ptr(nullptr), columns(0), stride(0), rows(0) {}
-	cm_ptr(const uint64_t* _ptr, size_t _rows, size_t _columns, size_t _stride)
+	cm_ptr(const uint64_t* _ptr, size_t _columns, size_t _stride, size_t _rows)
 		: ptr(_ptr), columns(_columns), stride(_stride), rows(_rows)
 	{}
 	cm_ptr(const cm_ptr& m) = default;
@@ -216,11 +215,6 @@ struct cm_ptr {
 	cm_ptr& operator=(const cm_ptr& m) = default;
 	cm_ptr& operator=(cm_ptr&& m) = default;
 	
-	operator cv_ptr&() { return *reinterpret_cast<cv_ptr*>(this); }
-	operator const cv_ptr&() const { return *reinterpret_cast<const cv_ptr*>(this); }
-	operator cvi_ptr&() { return *reinterpret_cast<cvi_ptr*>(this); }
-	operator const cvi_ptr&() const { return *reinterpret_cast<const cvi_ptr*>(this); }
-
 	const uint64_t* data() const { return ptr; }
 	const uint64_t* data(size_t r) const { return ptr+r*stride; }
 	const uint64_t* data(size_t r, size_t c) const { return ptr + r*stride + (c/64); }
@@ -263,7 +257,7 @@ struct m_ptr {
 	size_t columns, stride, rows;
 	
 	m_ptr(): ptr(nullptr), columns(0), stride(0), rows(0) {}
-	m_ptr(uint64_t* _ptr, size_t _rows, size_t _columns, size_t _stride)
+	m_ptr(uint64_t* _ptr, size_t _columns, size_t _stride, size_t _rows)
 		: ptr(_ptr), columns(_columns), stride(_stride), rows(_rows)
 	{}
 	m_ptr(const m_ptr& m) = default;
@@ -271,14 +265,6 @@ struct m_ptr {
 	m_ptr& operator=(const m_ptr& m) = default;
 	m_ptr& operator=(m_ptr&& m) = default;
 	
-	operator       v_ptr&()        { return *reinterpret_cast<      v_ptr*>(this); }
-	operator const v_ptr&() const  { return *reinterpret_cast<const v_ptr*>(this); }
-	operator       cv_ptr&()       { return *reinterpret_cast<      cv_ptr*>(this); }
-	operator const cv_ptr&() const { return *reinterpret_cast<const cv_ptr*>(this); }
-	operator       vi_ptr&()        { return *reinterpret_cast<      vi_ptr*>(this); }
-	operator const vi_ptr&() const  { return *reinterpret_cast<const vi_ptr*>(this); }
-	operator       cvi_ptr&()       { return *reinterpret_cast<      cvi_ptr*>(this); }
-	operator const cvi_ptr&() const { return *reinterpret_cast<const cvi_ptr*>(this); }
 	operator       cm_ptr&()       { return *reinterpret_cast<      cm_ptr*>(this); }
 	operator const cm_ptr&() const { return *reinterpret_cast<const cm_ptr*>(this); }
 
