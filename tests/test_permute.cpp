@@ -29,13 +29,13 @@ std::size_t binomial(std::size_t k, std::size_t N)
 int test_enum(unsigned totalrows, unsigned minsumsize, unsigned maxsumsize)
 {
 //    std::cout << totalrows << " " << minsumsize << " " << maxsumsize << std::endl;
-    matrix_t<uint64_t> m(totalrows, totalrows);
+    mat m(totalrows, totalrows);
     for (unsigned i = 0; i < totalrows; ++i)
-        m.bitset(i,i);
+        m.setbit(i,i);
         
     std::vector<std::size_t> counts(maxsumsize+1, 0);
     
-    matrix_enumeraterows_t<uint64_t> rowenum(m, maxsumsize, minsumsize);
+    matrix_enumeraterows_t rowenum(m, maxsumsize, minsumsize);
     do {
         rowenum.compute();
 //        std::cout << rowenum.result() << std::endl;
@@ -73,7 +73,7 @@ int main(int, char**)
 {
     int status = 0;
 
-    Parser<uint64_t> parse;
+    Parser parse;
     status |= !parse.load_file("./tests/data/Goppa_197.txt");
 
     auto H = parse.get_H();
@@ -87,8 +87,8 @@ int main(int, char**)
         rowweights[r] = hammingweight(H[r]);
     auto total_hw = hammingweight(H);
 
-    matrix_permute_t<uint64_t> permutator(H);
-    permutator.random_permute(0,n,n);
+    matrix_permute_t permutator(H);
+    permutator.random_permute(0,n,0,n);
 
     status |= (total_hw != hammingweight(H));
     for( size_t r = 0; r < n-k; r++)

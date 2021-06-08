@@ -11,7 +11,6 @@
 MCCL_BEGIN_NAMESPACE
 
 // virtual base class: interface to find a single solution for ISD for a given syndrome target
-template<typename data_t>
 class ISD_API_single
 {
 public:
@@ -19,7 +18,7 @@ public:
     //virtual void configure(parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(matrix_ref_t<data_t>& H0, vector_ref_t<data_t>& s0, unsigned int w) = 0;
+    virtual void initialize(const mat_view& H0, const vec_view& s0, unsigned int w) = 0;
     
     // probabilistic preparation of loop invariant
     virtual void prepare_loop() = 0;
@@ -34,12 +33,10 @@ public:
         while (loop_next())
             ;
     }
-    
-    vector_t<data_t> e;
 };
 
 // virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
-template<typename data_t, typename callback_t = std::function<bool(vector_ref_t<data_t>&)>>
+template<typename callback_t = std::function<bool(const cvec_view)>>
 class ISD_API_exhaustive
 {
 public:
@@ -47,15 +44,14 @@ public:
     //virtual void configure(parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(matrix_ref_t<data_t>& H0, vector_ref_t<data_t>& s0, unsigned int w, callback_t& callback) = 0;
+    virtual void initialize(const mat_view& H0, const vec_view& s0, unsigned int w, callback_t& callback) = 0;
     
     // preparation of loop invariant
     virtual void prepare_loop(){
     };
     
     // perform one loop iteration, return true if not finished
-    virtual bool loop_next(){
-    };
+    virtual bool loop_next() = 0;
     
     // run loop and pass all solutions through callback
     virtual void solve()
@@ -66,25 +62,30 @@ public:
     }
 };
 
-size_t get_scratch(size_t k, size_t sz) {
+static inline size_t get_scratch(size_t k, size_t sz) 
+{
     return ((k+sz-1)/sz) * sz - k;
 }
 
-template<typename data_t, typename callback_t = std::function<bool(vector_ref_t<data_t>&)>>
-class LB: public ISD_API_exhaustive<data_t, callback_t>
+template<typename callback_t = std::function<bool(const cvec_view)>>
+class LB: public ISD_API_exhaustive<callback_t>
 {
 private:
-    mccl::matrix_t<data_t>* H_ptr = nullptr;
-    mccl::matrix_t<data_t>* H01T = nullptr;
-    mccl::vector_t<data_t>* S_ptr = nullptr;
-    mccl::matrix_ref_t<data_t>* H01_S_view = nullptr;
-    mccl::matrix_ref_t<data_t>* H01T_S_view = nullptr;
-    matrix_permute_t<uint64_t>* permutator = nullptr;
+    mat H;
+    mat H01T;
+    vec S;
+    
+    mat_view H01_S;
+    mat_view H01T_S;
+    matrix_permute_t permutator;
+    
     size_t n,k,w,rows,cols0,cols1,scratch0,cnt;
+    vec sol;
 
 public:    
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_, callback_t& callback) {
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& callback) final 
+    {
         cnt = 0;
         w = w_;
         n = H_.columns();
@@ -93,46 +94,52 @@ public:
         cols0 = n-k;
         scratch0 = get_scratch(cols0, 64);
         cols1 = k;
-        H_ptr = new mccl::matrix_t<data_t>(n-k, cols0+scratch0+cols1+1); // +1 to store S
-        for( size_t i = 0; i < rows; i++ ) {
-            for( size_t j = 0; j < cols0; j++ ) {
-                H_ptr->bitset(i,j+scratch0,H_(i,j));
+        H.resize(n-k, scratch0+cols0+cols1+1); // scratchcols || H0 || H1 || S
+        for( size_t i = 0; i < rows; ++i ) 
+        {
+            for( size_t j = 0; j < cols0; ++j ) 
+            {
+                H.setbit(i, scratch0+j, H_(i,j));
             }
-            for( size_t j = 0; j < cols1; j++ ) {
-                H_ptr->bitset(i, cols0+scratch0+j, H_(i, cols0+j));
+            for( size_t j = 0; j < cols1; ++j ) 
+            {
+                H.setbit(i, scratch0+cols0+j, H_(i, cols0+j));
             }
-            H_ptr->bitset(i, cols0+scratch0+cols1, S[i]);
+            H.setbit(i, cols0+scratch0+cols1, S[i]);
         }
 
         size_t scratch1 = get_scratch(cols1+1, 64);
-        H01_S_view = new mccl::matrix_ref_t<data_t>(H_ptr->submatrix(0, rows, cols0+scratch0, cols1+1, scratch1));
+        H01_S.reset(H.submatrix(0, rows, scratch0+cols0, cols1+1));
 
-        H01T = new mccl::matrix_t<data_t>(cols1+1, rows);
-        size_t scratch01T = get_scratch(rows, 64);
-        H01T_S_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1+1, 0, rows, scratch01T));
-    
-        permutator = new matrix_permute_t<uint64_t>(*H_ptr);
+        H01T.resize(cols1+1, rows);
+        H01T_S.reset(H01T.submatrix(0, cols1+1, 0, rows));
+
+        permutator.reset(H);
+        sol.resize(n);
     }
     
     // // preparation of loop invariant
-    // virtual void prepare_loop() = 0;
+    void prepare_loop() final
+    {
+    }
     
     // perform one loop iteration, return true if not finished
-    bool loop_next() {
-        cnt++;
-        permutator->random_permute(scratch0, scratch0+cols0, scratch0+n);
-        auto pivotend = echelonize(*H_ptr, scratch0, scratch0+cols0);
+    bool loop_next() final
+    {
+        ++cnt;
+        permutator.random_permute(scratch0, scratch0+cols0, scratch0, scratch0+n);
+        auto pivotend = echelonize(H, scratch0, scratch0+cols0);
         if(pivotend != cols0)
             return true;
 
-        H01T_S_view->transpose(*H01_S_view);
-        auto S0 = (*H01T_S_view)[cols1];
-        if(hammingweight(S0) <= w) {
-            auto perm = permutator->get_permutation();
-            mccl::vector_t<uint64_t> sol(n);
-            for( size_t i = 0; i < n-k; i++ ) {
+        H01T_S.transpose(H01_S);
+        auto S0 = H01T_S[cols1];
+        if (hammingweight(S0) <= w) {
+            auto perm = permutator.get_permutation();
+            for( size_t i = 0; i < n-k; i++ )
+            {
                 if (S0[i])
-                    sol.bitset(perm[scratch0+i]-scratch0);
+                    sol.setbit(perm[scratch0+i]-scratch0);
             }
             std::cerr << "Found solution after " << cnt << " iterations." << std::endl;
             std::cerr << S0 << std::endl;
@@ -143,44 +150,34 @@ public:
     }
     
     // // run loop and pass all solutions through callback
-    // virtual void solve()
-    // {
-    //     prepare_loop();
-    //     while (loop_next())
-    //         ;
-    // }
-
-    void free() {
-        if( H01_S_view != nullptr ) delete H01_S_view;
-        if( H01T_S_view != nullptr ) delete H01T_S_view;
-        if( H_ptr != nullptr ) delete H_ptr;
-        if( H01T != nullptr ) delete H01T;
-        if( S_ptr != nullptr ) delete S_ptr;
-        if( permutator != nullptr ) delete permutator;
-    };
+    void solve() final
+    {
+         prepare_loop();
+         while (loop_next())
+             ;
+    }
 };
 
-template<typename data_t>
 class Solution : public std::exception {
-    vector_t<data_t> sol;
+    vec sol;
     
     public:
-        Solution(vector_t<data_t> sol_) : std::exception(),
-            sol(sol_)
+        Solution(const cvec_view& sol_) 
+            : std::exception(), sol(sol_)
         {
         }
         
-        vector_t<data_t> get_solution() { return sol; }
+    cvec_view get_solution() { return sol; }
 };
 
-template<typename data_t>
-bool check_solution(mccl::matrix_ref_t<data_t> &H01T_view, vector_ref_t<data_t>& S0, std::vector<uint32_t>& perm, size_t w, std::vector<uint32_t>& E1_sparse, size_t w1) {
-    vector_t<data_t> E0(S0.columns());
-    E0 ^= S0;
+bool check_solution(const mat_view& H01T_view, const vec_view& S0, std::vector<uint32_t>& perm, size_t w, std::vector<uint32_t>& E1_sparse, size_t w1) 
+{
+    vec E0(S0);
     for( auto i : E1_sparse ) {
         E0 ^= H01T_view[i];
     }
-    if(hammingweight(E0)< w-w1-E1_sparse.size()) {
+    if (hammingweight(E0)< w-w1-E1_sparse.size()) 
+    {
         std::cerr << "Found solution" << std::endl;
         // recover and submit solution?
         std::cerr << "found solution " << hammingweight(E0) << " " << w << " " << w1 << " " << E1_sparse.size() << std::endl;
@@ -188,15 +185,16 @@ bool check_solution(mccl::matrix_ref_t<data_t> &H01T_view, vector_ref_t<data_t>&
         size_t k = H01T_view.rows();
         size_t n = H01T_view.columns()+k;
         size_t scratch0 = get_scratch(n-k, 64);
-        mccl::vector_t<data_t> sol(n);
+        
+        vec sol(n);
         for( size_t i = 0; i < n-k; i++ ) {
             if (E0[i])
-                sol.bitset(perm[scratch0+i]-scratch0);
+                sol.setbit(perm[scratch0+i]-scratch0);
         }
         for( auto i : E1_sparse ) {
-            sol.bitset(perm[n-k+i+scratch0]-scratch0);
+            sol.setbit(perm[n-k+i+scratch0]-scratch0);
         }
-        throw Solution<data_t>(sol);
+        throw Solution(sol);
         return true;
     }
     return false;
@@ -213,21 +211,18 @@ and remove the overhead of virtualized function calls.
 In that case, be sure to make the crucial functions as final.
 */
 
-template<typename data_t, typename subISD_t = ISD_API_exhaustive<data_t> >
-class ISD_single_generic: public ISD_API_single<data_t>
+template<typename subISD_t = ISD_API_exhaustive<>>
+class ISD_single_generic: public ISD_API_single
 {
 private:
-    mccl::matrix_t<data_t>* H_ptr = nullptr;
-    mccl::matrix_t<data_t>* H01T = nullptr;
-    mccl::vector_t<data_t>* S_ptr = nullptr;
-    mccl::vector_ref_t<data_t>* S0_view = nullptr;
-    mccl::matrix_ref_t<data_t>* H01_S_view = nullptr;
-    mccl::matrix_ref_t<data_t>* H01T_view = nullptr;
-    mccl::matrix_ref_t<data_t>* H01T_S_view = nullptr;
-    mccl::matrix_ref_t<data_t>* H11_S_view = nullptr;
-    mccl::matrix_ref_t<data_t>* H11T_view = nullptr;
-    mccl::matrix_ref_t<data_t>* H11T_S_view = nullptr;
-    matrix_permute_t<uint64_t>* permutator = nullptr;
+    mat H;
+    mat H01T;
+    vec S;
+
+    vec_view S0_view;
+    mat_view H01_S_view, H01T_view, H01T_S_view, H11_S_view, H11T_view, H11T_S_view;    
+    matrix_permute_t permutator;
+    
     size_t n,k,w,rows,cols0,cols1,scratch0,cnt;
 public:
     ISD_single_generic(subISD_t& sI)
@@ -239,7 +234,8 @@ public:
     //virtual void configure(parameters_t& params) = 0;
     
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_) {
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_) final
+    {
         cnt = 0;
         w = w_;
         n = H_.columns();
@@ -248,37 +244,39 @@ public:
         cols0 = n-k;
         scratch0 = get_scratch(cols0, 64);
         cols1 = k;
-        H_ptr = new mccl::matrix_t<data_t>(n-k, cols0+scratch0+cols1+1); // +1 to store S
+        H.resize(n-k, scratch0 + cols0 + cols1 + 1); // scratch0 || cols0 || cols1 || S
+        H.clear();
         for( size_t i = 0; i < rows; i++ ) {
             for( size_t j = 0; j < cols0; j++ ) {
-                H_ptr->bitset(i,j+scratch0,H_(i,j));
+                H.setbit(i, scratch0 + j, H_(i,j));
             }
             for( size_t j = 0; j < cols1; j++ ) {
-                H_ptr->bitset(i, cols0+scratch0+j, H_(i, cols0+j));
+                H.setbit(i, scratch0 + cols0 + j, H_(i, cols0+j));
             }
-            H_ptr->bitset(i, cols0+scratch0+cols1, S[i]);
+            H.setbit(i, scratch0 + cols0 + cols1, S[i]);
         }
 
         size_t scratch1 = get_scratch(cols1+1, 64);
-        H01_S_view = new mccl::matrix_ref_t<data_t>(H_ptr->submatrix(0, rows, cols0+scratch0, cols1+1, scratch1));
+        H01_S_view.reset(H.submatrix(0, rows, cols0+scratch0, cols1+1));
 
-        H01T = new mccl::matrix_t<data_t>(cols1+1, rows);
+        H01T.resize(cols1+1, rows);
+        H01T.clear();
         size_t scratch01T = get_scratch(rows, 64);
-        H01T_S_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1+1, 0, rows, scratch01T));
-        H01T_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1, 0, rows, scratch01T));
-        S0_view = new mccl::vector_ref_t<data_t>(H01T->subvector(cols1, 0, rows, scratch01T));
+        H01T_S_view.reset(H01T.submatrix(0, cols1+1, 0, rows));
+        H01T_view.reset(H01T.submatrix(0, cols1, 0, rows));
+        S0_view.reset(H01T.subvector(cols1, 0, rows));
 
         // todo: fix for l > 0
-        H11T_view = new mccl::matrix_ref_t<data_t>(H01T->submatrix(0, cols1, 0, rows, scratch01T));
+        H11T_view.reset(H01T.submatrix(0, cols1, 0, rows));
 
-        permutator = new matrix_permute_t<uint64_t>(*H_ptr);
+        permutator.reset(H);
     }
     
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
         std::function<bool(std::vector<uint32_t>&, size_t)> callback = [this](std::vector<uint32_t>& E1_sparse, size_t w1){
-            if(check_solution(*(this->H01T_view), *(this->S0_view), this->permutator->get_permutation(), this->w, E1_sparse, w1)) {
+            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1)) {
                 std::cerr << "SubISD solution" << std::endl;
                 return true;
             }
@@ -286,24 +284,25 @@ public:
         };
 
         // still assuming ell=0
-        vector_ref_t<data_t> S1; // todo: take from H11T_S_view if ell>0
+        vec_view S1; // todo: take from H11T_S_view if ell>0
         size_t w1_max = 0;
 
-        subISD->initialize(*H11T_view, S1, w1_max, callback);
+        subISD->initialize(H11T_view, S1, w1_max, callback);
     }
     
     // perform one loop iteration, return true if successful and store result in e
-    bool loop_next() {
-        cnt++;
-        permutator->random_permute(scratch0, scratch0+cols0, scratch0+n);
-        auto pivotend = echelonize(*H_ptr, scratch0, scratch0+cols0);
+    bool loop_next() final
+    {
+        ++cnt;
+        permutator.random_permute(scratch0, scratch0+cols0, scratch0, scratch0+n);
+        auto pivotend = echelonize(H, scratch0, scratch0+cols0);
         if(pivotend != cols0)
             return true;
 
-        H01T_S_view->transpose(*H01_S_view);
+        H01T_S_view.transpose(H01_S_view);
         try {
             subISD->solve();
-        } catch(Solution<data_t>& sol) {
+        } catch(Solution& sol) {
             std::cerr << "ISD_single_generic found solution after " << cnt << " iterations" << std::endl;
             std::cerr << sol.get_solution() << std::endl;
             // todo: free memory
@@ -324,13 +323,14 @@ public:
     subISD_t* subISD;
 };
 
-template<typename data_t, typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
-class subISD_prange: public ISD_API_exhaustive<data_t, callback_t>
+template<typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
+class subISD_prange: public ISD_API_exhaustive<callback_t>
 {   
 private:
     callback_t callback;
 public:
-    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_, callback_t& _callback) {
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& _callback)
+    {
         callback = _callback;
     }
 
@@ -341,31 +341,31 @@ public:
     }
 };
 
-template<typename data_t, typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
-class subISD_LB: public ISD_API_exhaustive<data_t, callback_t>
+template<typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
+class subISD_LB: public ISD_API_exhaustive<callback_t>
 {   
 private:
     callback_t callback;
-    matrix_enumeraterows_t<uint64_t>* rowenum = nullptr;
+    matrix_enumeraterows_t rowenum;
     size_t p = 3;
 public:
-    void initialize(matrix_ref_t<data_t>& H_, vector_ref_t<data_t>& S, unsigned int w_, callback_t& _callback) {
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& _callback) {
         callback = _callback;
-        rowenum = new matrix_enumeraterows_t<uint64_t>(H_, p, 1);
+        rowenum.reset(H_, p, 1);
     }
 
     void prepare_loop() {
-        rowenum->reset(p, 1);
+        rowenum.reset(p, 1);
     }
 
     bool loop_next(){  
-        rowenum->compute();
+        rowenum.compute();
 
         // todo: optimize and pass computed error sum
         std::vector<uint32_t> E1_sparse;
-        E1_sparse.assign(rowenum->selection(), rowenum->selection()+rowenum->selectionsize());
+        E1_sparse.assign(rowenum.selection(), rowenum.selection()+rowenum.selectionsize());
         callback(E1_sparse, 0);
-        return rowenum->next();
+        return rowenum.next();
     }
 };
 

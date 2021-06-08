@@ -179,6 +179,7 @@ class mat;
     cnst mattype& setbit(size_t r, size_t c, bool b) cnst { m_setbit(ptr, r, c, b); return *this; } \
     cnst mattype& clear()                            cnst { m_set(ptr, 0); return *this; } \
     cnst mattype& set(bool b = true)                 cnst { m_set(ptr, b); return *this; } \
+    cnst mattype& setidentity()                      cnst { m_clear(ptr); for (size_t i = 0; i < rows() && i < columns(); ++i) setbit(i,i); return *this; } \
     cnst mattype& copy(const cmat_view& src)         cnst { m_copy(ptr, src.ptr); return *this; } \
     cnst mattype& transpose(const cmat_view& src)    cnst { m_transpose(ptr, src.ptr); return *this; } \
     cnst mattype& mnot()                             cnst { m_not(ptr); return *this; } \
@@ -245,6 +246,7 @@ public:
     
     // view management
     void reset(const cv_ptr& p) { ptr = p; }
+    void reset(const cvec_view& v) { ptr = v.ptr; }
     cvec_view subvector(size_t coloffset, size_t cols) const { return cvec_view(ptr.subvector(coloffset, cols)); }
 
     // automatic conversion
@@ -270,6 +272,7 @@ public:
 
     // view management
     void reset(const v_ptr& p) { ptr = p; }
+    void reset(const vec_view& v) { ptr = v.ptr; }
     vec_view subvector(size_t coloffset, size_t cols) const { return vec_view(ptr.subvector(coloffset, cols)); }
 
     // automatic conversion
@@ -303,6 +306,7 @@ public:
 
     // view management
     void reset(const cvi_ptr& p) { ptr = p; }
+    void reset(const cvec_view_it& v) { ptr = v.ptr; }
     cvec_view_it subvector(size_t coloffset, size_t cols) const { return cvec_view_it(ptr.subvectorit(coloffset, cols)); }
 
     // automatic conversion
@@ -334,6 +338,7 @@ public:
 
     // view management
     void reset(const vi_ptr& p) { ptr = p; }
+    void reset(const vec_view_it& v) { ptr = v.ptr; }
     vec_view_it subvector(size_t coloffset, size_t cols) const { return vec_view_it(ptr.subvectorit(coloffset, cols)); }
 
     // automatic conversion
@@ -375,6 +380,7 @@ public:
 
     // view management
     void reset(const cm_ptr& p) { ptr = p; }
+    void reset(const cmat_view& m) { ptr = m.ptr; }
     cvec_view_it subvector(size_t row, size_t coloffset, size_t cols) const { return cvec_view_it(ptr.subvectorit(row, coloffset, cols)); }
     cmat_view submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return cmat_view(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
 
@@ -405,6 +411,7 @@ public:
 
     // view management
     void reset(const m_ptr& p) { ptr = p; }
+    void reset(const mat_view& m) { ptr = m.ptr; }
     vec_view_it subvector(size_t row, size_t coloffset, size_t cols) const { return vec_view_it(ptr.subvectorit(row, coloffset, cols)); }
     mat_view submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return mat_view(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
 
@@ -858,6 +865,10 @@ struct mccl_base_random_generator
     void operator()(uint64_t& word)
     {
         word = rnd();
+    }
+    uint64_t operator()()
+    {
+        return rnd();
     }
     std::mt19937_64 rnd;
 };
