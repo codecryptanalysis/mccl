@@ -98,6 +98,7 @@ void v_print(std::ostream& o, const cv_ptr& v);
 
 void m_print(std::ostream& o, const cm_ptr& m, bool transpose = false);
 bool m_isequal(const cm_ptr& m1, const cm_ptr& m2);
+void m_swapcolumns(const m_ptr& m, size_t c1, size_t c2);
 void m_setcolumns(const m_ptr& m, size_t coloffset, size_t cols, bool b);
 void m_setcolumns(const m_ptr& m, size_t coloffset, size_t cols);
 void m_clearcolumns(const m_ptr& m, size_t coloffset, size_t cols);

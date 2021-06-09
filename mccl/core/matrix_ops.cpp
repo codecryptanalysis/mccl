@@ -64,6 +64,35 @@ bool m_isequal(const cm_ptr& m1, const cm_ptr& m2)
 	}
 	return true;
 }
+void m_swapcolumns(const m_ptr& m, size_t c1, size_t c2)
+{
+	size_t w1 = c1/64, w2 = c2/64, r2 = (c1-c2)%64;
+	uint64_t* w1ptr = m.data(0)+w1;
+	uint64_t w1mask = uint64_t(1) << (c1%64);
+	if (w1 == w2)
+	{
+		// same word column swap
+		for (size_t k = 0; k < m.rows; ++k,w1ptr+=m.stride)
+		{
+			uint64_t x1 = *w1ptr;
+			uint64_t tmp = (x1^rotate_left(x1,r2)) & w1mask;
+			*w1ptr = x1 ^ tmp ^ rotate_left(tmp,r2);
+		}
+	}
+	else
+	{
+		uint64_t* w2ptr = m.data(0)+w2;
+		// two word column swap
+		for (size_t k = 0; k < m.rows; ++k,w1ptr+=m.stride,w2ptr+=m.stride)
+		{
+			uint64_t x1 = *w1ptr, x2 = *w2ptr;
+			uint64_t tmp = (x1^rotate_left(x2,r2)) & w1mask;
+			*w1ptr = x1 ^ tmp;
+			*w2ptr = x2 ^ rotate_left(tmp,r2);
+		}
+	}
+}
+
 void m_setcolumns(const m_ptr& m, size_t coloffset, size_t cols, bool b)
 {
 	if (b)

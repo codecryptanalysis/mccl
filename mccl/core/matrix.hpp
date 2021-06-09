@@ -193,6 +193,7 @@ class mat;
     cnst mattype& mxor(const cmat_view& m1, const cmat_view& m2) cnst { m_xor(ptr, m1.ptr, m2.ptr); return *this; } \
     cnst mattype& mand(const cmat_view& m1, const cmat_view& m2) cnst { m_and(ptr, m1.ptr, m2.ptr); return *this; } \
     cnst mattype& mor (const cmat_view& m1, const cmat_view& m2) cnst { m_or (ptr, m1.ptr, m2.ptr); return *this; } \
+    cnst mattype& swapcolumns(size_t c1, size_t c2)              cnst { m_swapcolumns(ptr, c1, c2); return *this; } \
     cnst mattype& setcolumns(size_t c_off, size_t c_cnt, bool b) cnst { m_setcolumns(ptr, c_off, c_cnt, b); return *this; } \
     cnst mattype& setcolumns(size_t c_off, size_t c_cnt)         cnst { m_setcolumns(ptr, c_off, c_cnt); return *this; } \
     cnst mattype& clearcolumns(size_t c_off, size_t c_cnt)       cnst { m_clearcolumns(ptr, c_off, c_cnt); return *this; } \
@@ -940,6 +941,74 @@ size_t echelonize(const mat_view& m, size_t column_start = 0, size_t column_end 
             if (m(r,c))
                 mrowit.vxor(pivotrow);
         // increase pivot_start for next column
+        ++pivot_start;
+    }
+    return pivot_start;
+}
+
+// full row reduction on *transposed* matrix
+// aka full column reduction of matrix m over rows [row_start,row_end)
+// pivots may be selected from columns [pivot_start,columns())
+// returns pivotend = pivot_start + nrnewcolpivots
+size_t echelonizeT(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = 0)
+{
+    if (row_end > m.rows())
+        row_end = m.rows();
+    vec pivotrow(m.columns());
+    for (size_t r = row_start; r < row_end; ++r)
+    {
+        // find pivot for row r
+        size_t p = pivot_start;
+        for (; p < m.columns() && m(r,p) == false; ++p)
+            ;
+        // if no pivot found the continue with next column
+        if (p >= m.columns())
+            continue;
+        // swap column if necessary
+        if (p != pivot_start)
+            m.swapcolumns(p, pivot_start);
+        // reduce row c
+        pivotrow = v_copy(m[r]);
+        pivotrow.clearbit(pivot_start);
+        auto mrowit = m[r];
+        for (size_t r2 = r; r2 < m.rows(); ++r2,++mrowit)
+            if (m(r2,pivot_start))
+                mrowit ^= pivotrow;
+        // increase pivot_start for next row
+        ++pivot_start;
+    }
+    return pivot_start;
+}
+// full row reduction on *transposed* matrix
+// aka full column reduction of matrix m over rows [row_start,row_end)
+// pivots may be selected from columns [pivot_start,columns())
+// returns pivotend = pivot_start + nrnewcolpivots
+template<size_t bits>
+size_t echelonizeT(const mat_view& m, size_t row_start, size_t row_end, size_t pivot_start, aligned_tag<bits>)
+{
+    if (row_end > m.rows())
+        row_end = m.rows();
+    vec pivotrow(m.columns());
+    for (size_t r = row_start; r < row_end; ++r)
+    {
+        // find pivot for row r
+        size_t p = pivot_start;
+        for (; p < m.columns() && m(r,p) == false; ++p)
+            ;
+        // if no pivot found the continue with next column
+        if (p >= m.columns())
+            continue;
+        // swap column if necessary
+        if (p != pivot_start)
+            m.swapcolumns(p, pivot_start);
+        // reduce row c
+        pivotrow = v_copy(m[r], aligned_tag<bits>());
+        pivotrow.clearbit(pivot_start);
+        auto mrowit = m[r];
+        for (size_t r2 = r; r2 < m.rows(); ++r2,++mrowit)
+            if (m(r2,pivot_start))
+                mrowit.vxor(pivotrow, aligned_tag<bits>());
+        // increase pivot_start for next row
         ++pivot_start;
     }
     return pivot_start;
