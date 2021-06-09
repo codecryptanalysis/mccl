@@ -52,10 +52,11 @@ bool ISD_sparse_callback(void* ptr, const std::vector<uint32_t>& vec, size_t w)
 }
 
 // virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
-template<typename callback_t = ISD_callback_t>
+template<typename _callback_t = ISD_callback_t>
 class ISD_API_exhaustive
 {
 public:
+    typedef _callback_t callback_t;
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
     
@@ -78,14 +79,18 @@ public:
             ;
     }
 };
+typedef ISD_API_exhaustive<ISD_callback_t> ISD_API_exhaustive_t;
+typedef ISD_API_exhaustive<ISD_sparse_callback_t> ISD_API_exhaustive_sparse_t;
+
+
+
 
 static inline size_t get_scratch(size_t k, size_t sz) 
 {
     return ((k+sz-1)/sz) * sz - k;
 }
 
-template<typename callback_t = ISD_callback_t>
-class LB: public ISD_API_exhaustive<callback_t>
+class LB: public ISD_API_exhaustive_t
 {
 private:
     mat H;
@@ -99,7 +104,9 @@ private:
     size_t n,k,w,rows,cols0,cols1,scratch0,cnt;
     vec sol;
 
-public:    
+public:
+    using ISD_API_exhaustive_t::callback_t;
+    
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
     void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t callback, void* ptr) final 
     {
@@ -220,15 +227,15 @@ bool check_solution(const mat_view& H01T_view, const vec_view& S0, const std::ve
 
 /*
 This is the generic algorithm solving target-ISD using a to-be-specified subISD algorithm
-Therefore it is derived from ISD_API_target<data_t>.
-The subISD algorithm class is a template parameter defaulted to ISD_API_exhaustive<data_t> for flexibility:
+Therefore it is derived from ISD_API_target.
+The subISD algorithm class is a template parameter defaulted to ISD_API_exhaustive for flexibility:
 This enables it to work with any ISD_API_exhaustive derived object.
 However, for optimized performance it is also possible to pass the exhaustive-ISD algorithm type directly
 and remove the overhead of virtualized function calls.
 In that case, be sure to make the crucial functions as final.
 */
 
-template<typename subISD_t = ISD_API_exhaustive<>>
+template<typename subISD_t = ISD_API_exhaustive_sparse_t>
 class ISD_single_generic: public ISD_API_single
 {
 private:
@@ -356,15 +363,12 @@ public:
     subISD_t* subISD;
 };
 
-template<typename callback_t = ISD_sparse_callback_t>
-class subISD_prange: public ISD_API_exhaustive<callback_t>
+class subISD_prange
+    : public ISD_API_exhaustive_sparse_t
 {   
-private:
-    callback_t callback;
-    void* ptr;
-    std::vector<uint32_t> E1_sparse;
-        
-public:
+public:        
+    using ISD_API_exhaustive_sparse_t::callback_t;
+
     void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr)
     {
         callback = _callback;
@@ -376,18 +380,18 @@ public:
         (*callback)(ptr,E1_sparse, 0);
         return false;
     }
-};
-
-template<typename callback_t = ISD_sparse_callback_t>
-class subISD_LB: public ISD_API_exhaustive<callback_t>
-{   
 private:
     callback_t callback;
     void* ptr;
-    matrix_enumeraterows_t rowenum;
-    size_t p = 3;
     std::vector<uint32_t> E1_sparse;
+};
+
+class subISD_LB
+    : public ISD_API_exhaustive_sparse_t
+{   
 public:
+    using ISD_API_exhaustive_sparse_t::callback_t;
+
     void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr) final
     {
         callback = _callback;
@@ -417,6 +421,12 @@ public:
         while (loop_next())
             ;
     }
+private:
+    callback_t callback;
+    void* ptr;
+    matrix_enumeraterows_t rowenum;
+    static const size_t p = 3;
+    std::vector<uint32_t> E1_sparse;
 };
 
 MCCL_END_NAMESPACE

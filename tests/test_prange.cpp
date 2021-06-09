@@ -33,8 +33,8 @@ int main(int, char**)
 //    auto total_hw = hammingweight(Hraw);
 
     // test subISD_prange
-    subISD_prange<> prange;
-    ISD_single_generic<subISD_prange<>> ISD_single_prange(prange);
+    subISD_prange prange;
+    ISD_single_generic<subISD_prange> ISD_single_prange(prange);
     ISD_single_prange.initialize(Hraw, S, w);
     try 
     {
@@ -55,8 +55,8 @@ int main(int, char**)
     }
 
     // test subISD_LB
-    subISD_LB<> subLB;
-    ISD_single_generic<subISD_LB<>> ISD_single_LB(subLB);
+    subISD_LB subLB;
+    ISD_single_generic<subISD_LB> ISD_single_LB(subLB);
     ISD_single_LB.initialize(Hraw, S, w);
     try 
     {
@@ -76,7 +76,7 @@ int main(int, char**)
     }
 
     // test decoding API
-    LB<> decoder;
+    LB decoder;
     decoder.initialize(Hraw, S, w, nullptr, nullptr);
     decoder.solve();
 
