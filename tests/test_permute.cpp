@@ -28,7 +28,6 @@ std::size_t binomial(std::size_t k, std::size_t N)
 
 int test_enum(unsigned totalrows, unsigned minsumsize, unsigned maxsumsize)
 {
-//    std::cout << totalrows << " " << minsumsize << " " << maxsumsize << std::endl;
     mat m(totalrows, totalrows);
     for (unsigned i = 0; i < totalrows; ++i)
         m.setbit(i,i);
@@ -38,7 +37,6 @@ int test_enum(unsigned totalrows, unsigned minsumsize, unsigned maxsumsize)
     matrix_enumeraterows_t rowenum(m, maxsumsize, minsumsize);
     do {
         rowenum.compute();
-//        std::cout << rowenum.result() << std::endl;
         
         // check result        
         unsigned s = 0;
@@ -58,12 +56,10 @@ int test_enum(unsigned totalrows, unsigned minsumsize, unsigned maxsumsize)
         ++counts[rowenum.selectionsize()];
     } while (rowenum.next());
     
-    // compute pascal triangle
     for (unsigned j = minsumsize; j <= maxsumsize; ++j)
     {
         if (counts[j] != binomial(j,totalrows))
             return 1;
-//        std::cout << " " << j << " " << totalrows << " " << counts[j] << " " << binomial(j,totalrows) << std::endl;
     }
     
     return 0;
@@ -81,6 +77,7 @@ int main(int, char**)
     size_t n = parse.get_n();
     size_t k = parse.get_k();
     size_t w = parse.get_w();
+    std::cout << S << w << std::endl;
 
     std::vector<size_t> rowweights(n-k);
     for( size_t r = 0; r < n-k; r++)

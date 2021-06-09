@@ -108,7 +108,7 @@ public:
             H.setbit(i, cols0+scratch0+cols1, S[i]);
         }
 
-        size_t scratch1 = get_scratch(cols1+1, 64);
+//        size_t scratch1 = get_scratch(cols1+1, 64);
         H01_S.reset(H.submatrix(0, rows, scratch0+cols0, cols1+1));
 
         H01T.resize(cols1+1, rows);
@@ -170,7 +170,7 @@ class Solution : public std::exception {
     cvec_view get_solution() { return sol; }
 };
 
-bool check_solution(const mat_view& H01T_view, const vec_view& S0, std::vector<uint32_t>& perm, size_t w, std::vector<uint32_t>& E1_sparse, size_t w1) 
+bool check_solution(const mat_view& H01T_view, const vec_view& S0, const std::vector<uint32_t>& perm, size_t w, const std::vector<uint32_t>& E1_sparse, size_t w1) 
 {
     vec E0(S0);
     for( auto i : E1_sparse ) {
@@ -256,12 +256,12 @@ public:
             H.setbit(i, scratch0 + cols0 + cols1, S[i]);
         }
 
-        size_t scratch1 = get_scratch(cols1+1, 64);
+//        size_t scratch1 = get_scratch(cols1+1, 64);
         H01_S_view.reset(H.submatrix(0, rows, cols0+scratch0, cols1+1));
 
         H01T.resize(cols1+1, rows);
         H01T.clear();
-        size_t scratch01T = get_scratch(rows, 64);
+//        size_t scratch01T = get_scratch(rows, 64);
         H01T_S_view.reset(H01T.submatrix(0, cols1+1, 0, rows));
         H01T_view.reset(H01T.submatrix(0, cols1, 0, rows));
         S0_view.reset(H01T.subvector(cols1, 0, rows));
@@ -275,7 +275,7 @@ public:
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
-        std::function<bool(std::vector<uint32_t>&, size_t)> callback = [this](std::vector<uint32_t>& E1_sparse, size_t w1){
+        std::function<bool(const std::vector<uint32_t>&, size_t)> callback = [this](const std::vector<uint32_t>& E1_sparse, size_t w1){
             if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1)) {
                 std::cerr << "SubISD solution" << std::endl;
                 return true;
@@ -323,49 +323,60 @@ public:
     subISD_t* subISD;
 };
 
-template<typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
+template<typename callback_t = std::function<bool(const std::vector<uint32_t>&, size_t)>>
 class subISD_prange: public ISD_API_exhaustive<callback_t>
 {   
 private:
-    callback_t callback;
+    callback_t* callback;
+        std::vector<uint32_t> E1_sparse;
 public:
     void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& _callback)
     {
-        callback = _callback;
+        callback = &_callback;
     }
 
     bool loop_next(){
-        std::vector<uint32_t> E1_sparse = {};
-        callback(E1_sparse, 0);
+        (*callback)(E1_sparse, 0);
         return false;
     }
 };
 
-template<typename callback_t = std::function<bool(std::vector<uint32_t>&, size_t)>>
+template<typename callback_t = std::function<bool(const std::vector<uint32_t>&, size_t)>>
 class subISD_LB: public ISD_API_exhaustive<callback_t>
 {   
 private:
-    callback_t callback;
+    callback_t* callback;
     matrix_enumeraterows_t rowenum;
     size_t p = 3;
+    std::vector<uint32_t> E1_sparse;
 public:
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& _callback) {
-        callback = _callback;
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& _callback) final
+    {
+        callback = &_callback;
         rowenum.reset(H_, p, 1);
+        E1_sparse.resize(1);
     }
 
-    void prepare_loop() {
+    void prepare_loop() final 
+    {
         rowenum.reset(p, 1);
     }
 
-    bool loop_next(){  
+    bool loop_next() final
+    {
         rowenum.compute();
 
         // todo: optimize and pass computed error sum
-        std::vector<uint32_t> E1_sparse;
-        E1_sparse.assign(rowenum.selection(), rowenum.selection()+rowenum.selectionsize());
-        callback(E1_sparse, 0);
+        E1_sparse[0] = *rowenum.selection();
+        (*callback)(E1_sparse, 0);
         return rowenum.next();
+    }
+
+    void solve() final
+    {
+        prepare_loop();
+        while (loop_next())
+            ;
     }
 };
 

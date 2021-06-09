@@ -601,6 +601,25 @@ bool operator!=(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr 
 bool operator==(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
 bool operator!=(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
 
+bool operator==(const vec& v1, const vec& v2)       { return v1.isequal(v2); }
+bool operator!=(const vec& v1, const vec& v2)       { return !v1.isequal(v2); }
+bool operator==(const vec_view& v1, const vec& v2) { return v1.isequal(v2); }
+bool operator!=(const vec_view& v1, const vec& v2) { return !v1.isequal(v2); }
+bool operator==(const cvec_view& v1, const vec& v2) { return v1.isequal(v2); }
+bool operator!=(const cvec_view& v1, const vec& v2) { return !v1.isequal(v2); }
+bool operator==(const vec& v1, const vec_view& v2) { return v1.isequal(v2); }
+bool operator!=(const vec& v1, const vec_view& v2) { return !v1.isequal(v2); }
+bool operator==(const vec& v1, const cvec_view& v2) { return v1.isequal(v2); }
+bool operator!=(const vec& v1, const cvec_view& v2) { return !v1.isequal(v2); }
+bool operator==(const vec_view_it& v1, const vec& v2) { return v1.isequal(v2); }
+bool operator!=(const vec_view_it& v1, const vec& v2) { return !v1.isequal(v2); }
+bool operator==(const cvec_view_it& v1, const vec& v2) { return v1.isequal(v2); }
+bool operator!=(const cvec_view_it& v1, const vec& v2) { return !v1.isequal(v2); }
+bool operator==(const vec& v1, const vec_view_it& v2) { return v1.isequal(v2); }
+bool operator!=(const vec& v1, const vec_view_it& v2) { return !v1.isequal(v2); }
+bool operator==(const vec& v1, const cvec_view_it& v2) { return v1.isequal(v2); }
+bool operator!=(const vec& v1, const cvec_view_it& v2) { return !v1.isequal(v2); }
+
 bool operator==(const cmat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
 bool operator!=(const cmat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
 bool operator==(const cmat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
@@ -612,8 +631,12 @@ bool operator!=(const  mat_view& m1, const  mat_view& m2) { return m1.ptr != m2.
 
 bool operator==(const mat& m1, const mat& m2)       { return m1.isequal(m2); }
 bool operator!=(const mat& m1, const mat& m2)       { return !m1.isequal(m2); }
+bool operator==(const mat_view& m1, const mat& m2) { return m1.isequal(m2); }
+bool operator!=(const mat_view& m1, const mat& m2) { return !m1.isequal(m2); }
 bool operator==(const cmat_view& m1, const mat& m2) { return m1.isequal(m2); }
 bool operator!=(const cmat_view& m1, const mat& m2) { return !m1.isequal(m2); }
+bool operator==(const mat& m1, const mat_view& m2) { return m1.isequal(m2); }
+bool operator!=(const mat& m1, const mat_view& m2) { return !m1.isequal(m2); }
 bool operator==(const mat& m1, const cmat_view& m2) { return m1.isequal(m2); }
 bool operator!=(const mat& m1, const cmat_view& m2) { return !m1.isequal(m2); }
 

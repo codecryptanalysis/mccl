@@ -27,11 +27,9 @@ libmccl_la_SOURCES=\
 bin_isdsolver_SOURCES= src/isdsolver.cpp
 bin_isdsolver_LDADD  = libmccl.la
 
-#TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
-TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_marc
+TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
 
-#check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
-check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_marc
+check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la

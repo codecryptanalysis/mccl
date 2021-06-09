@@ -37,7 +37,8 @@ class Parser {
 	private:
 		//mccl::matrix_t<data_t> H;
 		bool Nset=false, Kset=false, Wset=false, Seedset=false;
-		size_t n, k, w, seed;
+		int64_t n, k, w, seed;
+		
 		std::vector<bool> ST;
 		std::vector<std::vector<bool>> HT;
 		mat H;
@@ -98,28 +99,28 @@ bool Parser::load_file(std::string filename)
 
 	if(ST_string.size()>0) {
 		ST = string_to_booleans(ST_string);
-		if(ST.size() != n-k) { std::cerr << "s doesn't have the correct length" << std::endl; return false; }
+		if(int64_t(ST.size()) != n-k) { std::cerr << "s doesn't have the correct length" << std::endl; return false; }
 	}
 
-	if(HT_string.size() != k) { std::cerr << "H^transpose is missing some rows" << std::endl; return false; }
+	if(int64_t(HT_string.size()) != k) { std::cerr << "H^transpose is missing some rows" << std::endl; return false; }
 	HT.clear();
 	for(auto &str : HT_string) {
 		auto row = string_to_booleans(str);
-		if(row.size()!=n-k) { std::cerr << "Row has wrong length." << std::endl; return false; };
+		if(int64_t(row.size())!=n-k) { std::cerr << "Row has wrong length." << std::endl; return false; };
 		HT.push_back(row);
 	}
 
 	H = mat(n-k, n);
 	H.setidentity();
-	for( size_t r = 0; r < n-k; r++) {
-		for( size_t c = 0; c < k; c++ ) {
+	for( int64_t r = 0; r < n-k; r++) {
+		for( int64_t c = 0; c < k; c++ ) {
 			if(HT[c][r])
 				H.setbit(r, n-k+c);
 		}
 	}
 
 	S = vec(n-k);
-	for( size_t r = 0; r < n-k; r++ ) {
+	for(int64_t r = 0; r < n-k; r++ ) {
 		if(ST[r])
 			S.setbit(r);
 	}
