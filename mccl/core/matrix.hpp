@@ -945,6 +945,40 @@ size_t echelonize(const mat_view& m, size_t column_start = 0, size_t column_end 
     }
     return pivot_start;
 }
+template<size_t bits>
+size_t echelonize(const mat_view& m, size_t column_start, size_t column_end, size_t pivot_start, aligned_tag<bits>)
+{
+    if (column_end > m.columns())
+        column_end = m.columns();
+    for (size_t c = column_start; c < column_end; ++c)
+    {
+        // find pivot for column c
+        size_t p = pivot_start;
+        for (; p < m.rows() && m(p,c) == false; ++p)
+            ;
+        // if no pivot found the continue with next column
+        if (p >= m.rows())
+            continue;
+        // swap row if necessary
+        if (p != pivot_start)
+            m[p].swap(m[pivot_start]);
+        // reduce column c
+        auto pivotrow = m[pivot_start];
+        auto mrowit = m[0];
+        //std::cerr << (mrowit) << std::endl;
+        for (size_t r = 0; r < pivot_start; ++r,++mrowit)
+            if (m(r,c))
+                mrowit.vxor(pivotrow, aligned_tag<bits>());
+        // skip pivotrow itself
+        ++mrowit;
+        for (size_t r = pivot_start+1; r < m.rows(); ++r,++mrowit)
+            if (m(r,c))
+                mrowit.vxor(pivotrow, aligned_tag<bits>());
+        // increase pivot_start for next column
+        ++pivot_start;
+    }
+    return pivot_start;
+}
 
 // full row reduction on *transposed* matrix
 // aka full column reduction of matrix m over rows [row_start,row_end)
