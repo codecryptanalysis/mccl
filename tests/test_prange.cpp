@@ -77,8 +77,7 @@ int main(int, char**)
 
     // test decoding API
     LB<> decoder;
-    std::function<bool(const cvec_view)> callback = nullptr;
-    decoder.initialize(Hraw, S, w, callback);
+    decoder.initialize(Hraw, S, w, nullptr, nullptr);
     decoder.solve();
 
     // prepare H for ISD, split into two parts with appropriate column padding

@@ -17,8 +17,8 @@ public:
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
     
-    // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(const mat_view& H0, const vec_view& s0, unsigned int w) = 0;
+    // deterministic initialization for given parity check matrix H and target syndrome s
+    virtual void initialize(const mat_view& H, const vec_view& s, unsigned int w) = 0;
     
     // probabilistic preparation of loop invariant
     virtual void prepare_loop() = 0;
@@ -35,19 +35,36 @@ public:
     }
 };
 
+// default callback types for subISD to the main ISD
+typedef bool (*ISD_callback_t)(void*, const cvec_view, size_t); 
+typedef bool (*ISD_sparse_callback_t)(void*, const std::vector<uint32_t>&, size_t);
+
+// generic callback functions that can be instantiated for any main ISD class
+template<typename ISD_t>
+bool ISD_callback(void* ptr, const cvec_view vec, size_t w)
+{
+    return reinterpret_cast<ISD_t*>(ptr)->callback(vec, w);
+}
+template<typename ISD_t>
+bool ISD_sparse_callback(void* ptr, const std::vector<uint32_t>& vec, size_t w)
+{
+    return reinterpret_cast<ISD_t*>(ptr)->callback(vec, w);
+}
+
 // virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
-template<typename callback_t = std::function<bool(const cvec_view)>>
+template<typename callback_t = ISD_callback_t>
 class ISD_API_exhaustive
 {
 public:
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
     
-    // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    virtual void initialize(const mat_view& H0, const vec_view& s0, unsigned int w, callback_t& callback) = 0;
+    // deterministic initialization for given parity check matrix H and target syndrome s
+    virtual void initialize(const mat_view& H, const vec_view& s, unsigned int w, callback_t callback, void* ptr = nullptr) = 0;
     
     // preparation of loop invariant
-    virtual void prepare_loop(){
+    virtual void prepare_loop()
+    {
     };
     
     // perform one loop iteration, return true if not finished
@@ -67,7 +84,7 @@ static inline size_t get_scratch(size_t k, size_t sz)
     return ((k+sz-1)/sz) * sz - k;
 }
 
-template<typename callback_t = std::function<bool(const cvec_view)>>
+template<typename callback_t = ISD_callback_t>
 class LB: public ISD_API_exhaustive<callback_t>
 {
 private:
@@ -84,7 +101,7 @@ private:
 
 public:    
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& callback) final 
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t callback, void* ptr) final 
     {
         cnt = 0;
         w = w_;
@@ -272,22 +289,36 @@ public:
         permutator.reset(H);
     }
     
+    // callback function
+    inline bool callback(const std::vector<uint32_t>& E1_sparse, size_t w1)
+    {
+            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1)) 
+            {
+                std::cerr << "SubISD solution" << std::endl;
+                return true;
+            }
+            return false;
+    }
+    
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
-        std::function<bool(const std::vector<uint32_t>&, size_t)> callback = [this](const std::vector<uint32_t>& E1_sparse, size_t w1){
-            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1)) {
+/*
+        std::function<bool(const std::vector<uint32_t>&, size_t)> callback = [this](const std::vector<uint32_t>& E1_sparse, size_t w1)
+        {
+            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1)) 
+            {
                 std::cerr << "SubISD solution" << std::endl;
                 return true;
             }
             return false;
         };
-
+*/
         // still assuming ell=0
         vec_view S1; // todo: take from H11T_S_view if ell>0
         size_t w1_max = 0;
 
-        subISD->initialize(H11T_view, S1, w1_max, callback);
+        subISD->initialize(H11T_view, S1, w1_max, ISD_sparse_callback<ISD_single_generic<subISD_t>>, this);
     }
     
     // perform one loop iteration, return true if successful and store result in e
@@ -300,9 +331,11 @@ public:
             return true;
 
         H01T_S_view.transpose(H01_S_view);
-        try {
+        try
+        {
             subISD->solve();
-        } catch(Solution& sol) {
+        } catch(Solution& sol)
+        {
             std::cerr << "ISD_single_generic found solution after " << cnt << " iterations" << std::endl;
             std::cerr << sol.get_solution() << std::endl;
             // todo: free memory
@@ -323,36 +356,42 @@ public:
     subISD_t* subISD;
 };
 
-template<typename callback_t = std::function<bool(const std::vector<uint32_t>&, size_t)>>
+template<typename callback_t = ISD_sparse_callback_t>
 class subISD_prange: public ISD_API_exhaustive<callback_t>
 {   
 private:
-    callback_t* callback;
-        std::vector<uint32_t> E1_sparse;
+    callback_t callback;
+    void* ptr;
+    std::vector<uint32_t> E1_sparse;
+        
 public:
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& _callback)
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr)
     {
-        callback = &_callback;
+        callback = _callback;
+        ptr = _ptr;
     }
 
-    bool loop_next(){
-        (*callback)(E1_sparse, 0);
+    bool loop_next()
+    {
+        (*callback)(ptr,E1_sparse, 0);
         return false;
     }
 };
 
-template<typename callback_t = std::function<bool(const std::vector<uint32_t>&, size_t)>>
+template<typename callback_t = ISD_sparse_callback_t>
 class subISD_LB: public ISD_API_exhaustive<callback_t>
 {   
 private:
-    callback_t* callback;
+    callback_t callback;
+    void* ptr;
     matrix_enumeraterows_t rowenum;
     size_t p = 3;
     std::vector<uint32_t> E1_sparse;
 public:
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t& _callback) final
+    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr) final
     {
-        callback = &_callback;
+        callback = _callback;
+        ptr = _ptr;
         rowenum.reset(H_, p, 1);
         E1_sparse.resize(1);
     }
@@ -368,7 +407,7 @@ public:
 
         // todo: optimize and pass computed error sum
         E1_sparse[0] = *rowenum.selection();
-        (*callback)(E1_sparse, 0);
+        (*callback)(ptr, E1_sparse, 0);
         return rowenum.next();
     }
 
