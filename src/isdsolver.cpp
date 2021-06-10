@@ -18,15 +18,9 @@ void run_subISD(mat_view &H, vec_view &S, size_t w) {
   subISD_t subISD;
   ISD_single_generic<subISD_t> ISD_single(subISD);
   ISD_single.initialize(H, S, w);
-  try {
-    ISD_single.solve();
-  }
-  catch(Solution& sol) {
-    std::cout << "Solution found:" << '\n';
-    std::cout << sol.get_solution() << '\n';
-    return;
-  }
-  std::cerr << "No solution found" << std::endl;
+  ISD_single.solve();
+  std::cout << "Solution found:" << '\n';
+  std::cout << ISD_single.get_solution() << '\n';
 }
 
 int main(int argc, char *argv[])

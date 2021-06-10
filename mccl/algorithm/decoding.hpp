@@ -261,6 +261,7 @@ private:
     mat H;
     mat H01T;
     vec S;
+    cvec_view solution;
 
     vec_view S0_view;
     mat_view H01_S_view, H01T_view, H01T_S_view, H11_S_view, H11T_view, H11T_S_view;    
@@ -325,6 +326,10 @@ public:
             }
             return false;
     }
+
+    cvec_view get_solution() {
+        return solution;
+    }
     
     // probabilistic preparation of loop invariant
     void prepare_loop() final
@@ -365,7 +370,7 @@ public:
             std::cerr << "ISD_single_generic found solution after " << cnt << " iterations" << std::endl;
             std::cerr << sol.get_solution() << std::endl;
             // todo: free memory
-            throw sol;
+            solution.reset(sol.get_solution());
             return false;
         }
         return true;

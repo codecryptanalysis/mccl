@@ -34,21 +34,18 @@ int main(int, char**)
 //    auto total_hw = hammingweight(Hraw);
 
     // test subISD_prange
-    subISD_prange prange;
-    ISD_single_generic<subISD_prange> ISD_single_prange(prange);
-    ISD_single_prange.initialize(Hraw, S, w);
-    try 
     {
+        subISD_prange prange;
+        ISD_single_generic<subISD_prange> ISD_single_prange(prange);
+        ISD_single_prange.initialize(Hraw, S, w);
         ISD_single_prange.solve();
-    } catch(Solution& sol)
-    {
-        status |= not(hammingweight(sol.get_solution()) <= w);
-        std::cerr << hammingweight(sol.get_solution()) << std::endl;
+        status |= not(hammingweight(ISD_single_prange.get_solution()) <= w);
+        std::cerr << hammingweight(ISD_single_prange.get_solution()) << std::endl;
         vec eval_S(Hraw.rows());
         vec r(Hraw.columns());
         for(size_t i = 0; i < Hraw.rows(); i++ ) 
         {
-            bool x = hammingweight(r.vand(Hraw[i],sol.get_solution()))%2;
+            bool x = hammingweight(r.vand(Hraw[i],ISD_single_prange.get_solution()))%2;
             if(x)
                 eval_S.setbit(i);
         }
@@ -56,20 +53,17 @@ int main(int, char**)
     }
 
     // test subISD_LB
-    subISD_LB subLB;
-    ISD_single_generic<subISD_LB> ISD_single_LB(subLB);
-    ISD_single_LB.initialize(Hraw, S, w);
-    try 
     {
+        subISD_LB subLB;
+        ISD_single_generic<subISD_LB> ISD_single_LB(subLB);
+        ISD_single_LB.initialize(Hraw, S, w);
         ISD_single_LB.solve();
-    } catch(Solution& sol) 
-    {
-        status |= not(hammingweight(sol.get_solution()) <= w);
-        std::cerr << hammingweight(sol.get_solution()) << std::endl;
+        status |= not(hammingweight(ISD_single_LB.get_solution()) <= w);
+        std::cerr << hammingweight(ISD_single_LB.get_solution()) << std::endl;
         vec eval_S(Hraw.rows());
         vec r(Hraw.columns());
         for(size_t i = 0; i < Hraw.rows(); i++ ) {
-            bool x = hammingweight(r.vand(Hraw[i],sol.get_solution()))%2;
+            bool x = hammingweight(r.vand(Hraw[i],ISD_single_LB.get_solution()))%2;
             if(x)
                 eval_S.setbit(i);
         }
