@@ -105,16 +105,16 @@ Discussion
 - [x] cleaning existing code for Prange/LB
 
 Discussion
-- New matrix type: `mat` and `vec` are pointers, `cmat` and `cvec` have const data. No more need to handle the scratch columns.
+- New matrix types: `mat_view` and `vec_view` are like pointers to a non-const data (you can still modify data through `const mat_view`), `cmat_view` and `cvec_view` have const data. `mat` and `vec` manage memory and behave like actual matrix/vector objects: automatic resizing on assignment and const data for const objects. Also no more need to handle the scratch columns.
 - Decoding algorithm split in `prange.hpp` and `LB.hpp`.
 - Command line utility `isdsolver.cpp`, need to check the solution and add a dedicated test. 
 - M4RI library is now useless, we can remove it (or at lease make it optional).
-- Next step: new setting. Transpose (so that we have the row permutation for free) and reverse (column reduction starting from the right) to easily obtain a multiple of 64.
+- Next step: new setting. Transposed H (so that we have the row permutation for free) and reverse (column reduction starting from the right) to easily obtain a multiple of 64 for H1T.
 - The `echelon` and `permute` functions are going to be dependant. Should we merge them?
 - Statistics. We have some Python code to compute the success probability. We could  try to see if we obtain the same results in practice. Also later we will need more statistical data (use .json format?). 
 
 ## 24/06/21
-- [ ] drop the M4RI dependency
+- [x] drop the M4RI dependency
 - [ ] implement (reverse) column reduction
 - [ ] rewrite Prange+LB in the new transpose/reverse setting
 - [ ] write LB for l>0 using the new transpose/reverse setting
