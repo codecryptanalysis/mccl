@@ -82,6 +82,54 @@ private:
     mccl_base_random_generator rndgen;
 };
 
+class matrix_row_permute_t
+{
+public:
+    matrix_row_permute_t() {}
+    matrix_row_permute_t(const mat_view& _m) { reset(_m); }
+    void reset(const mat_view& _m)
+    {
+    	m.reset(_m.ptr);
+    	permutation.resize(m.rows());
+    	std::iota(permutation.begin(), permutation.end(), 0);
+    };
+
+    // permute rows: swap each row in [b1:e1) with a uniformly random chosen row from [b2:e2)
+    void random_permute(size_t b1, size_t e1, size_t b2, size_t e2)
+    {
+    	if (b1 >= e1 || b2 >= e2)
+    		return;
+	if (e1 > m.rows())
+		e1 = m.rows();
+	if (e2 > m.rows())
+		e2 = m.rows();
+    	size_t n2 = e2 - b2;
+    	for (size_t i = b1; i < e1; ++i)
+    	{
+    		size_t j = b2 + (rndgen() % n2);
+    		if (j == i)
+    			continue;
+    		std::swap(permutation[i], permutation[j]);
+    		m[i].swap(m[j]);
+    	}
+    }
+
+    void random_permute(size_t b = 0, size_t e = ~uint64_t(0))
+    {
+	random_permute(b,e,b,e);
+    }
+    
+    std::vector<uint32_t>& get_permutation()
+    {
+  	return permutation;
+    }
+    
+private:
+    mat_view m;
+    std::vector<uint32_t> permutation;
+    mccl_base_random_generator rndgen;
+};
+
 
 class matrix_enumeraterows_t
 {
