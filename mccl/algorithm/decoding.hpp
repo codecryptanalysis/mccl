@@ -82,6 +82,120 @@ public:
 typedef ISD_API_exhaustive<ISD_callback_t> ISD_API_exhaustive_t;
 typedef ISD_API_exhaustive<ISD_sparse_callback_t> ISD_API_exhaustive_sparse_t;
 
+// virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
+template<typename _callback_t = ISD_callback_t>
+class ISD_API_exhaustive_transposed
+{
+public:
+    typedef _callback_t callback_t;
+    // pass parameters to actual object
+    //virtual void configure(parameters_t& params) = 0;
+    
+    // deterministic initialization for given parity check matrix H and target syndrome s
+    virtual void initialize(const mat_view& Htransposed, const vec_view& s, unsigned int w, callback_t callback, void* ptr = nullptr) = 0;
+    
+    // preparation of loop invariant
+    virtual void prepare_loop()
+    {
+    };
+    
+    // perform one loop iteration, return true if not finished
+    virtual bool loop_next() = 0;
+    
+    // run loop and pass all solutions through callback
+    virtual void solve()
+    {
+        prepare_loop();
+        while (loop_next())
+            ;
+    }
+};
+typedef ISD_API_exhaustive_transposed<ISD_callback_t> ISD_API_exhaustive_transposed_t;
+typedef ISD_API_exhaustive_transposed<ISD_sparse_callback_t> ISD_API_exhaustive_transposed_sparse_t;
+
+
+template<typename subISDT_t = ISD_API_exhaustive_transposed_t>
+class ISD_single_generic_transposed: public ISD_API_single
+{
+public:
+    using typename subISDT_t::callback_t;
+    static const size_t bit_alignment = 64;
+    
+    ISD_single_generic_transposed(subISDT_t& sI)
+        : subISDT(&sI)
+    {
+    }
+    
+    // pass parameters to actual object
+    //virtual void configure(parameters_t& params) = 0;
+    
+    // deterministic initialization for given parity check matrix H0 and target syndrome s0
+    void initialize(const mat_view& _H, const vec_view& _S, unsigned int _w, callback_t callback, void* ptr) final
+    {
+        n = _H.columns();
+        k = n - _H.rows();
+        
+        // round columns HT up to specified bit_alignment for simd processing
+        size_t HTrows = _H.columns(), HTcols = _H.rows(), HTpaddedcols = (HTcols + bit_alignment - 1) & ~size_t(bit_alignment - 1);
+        
+        HTpadded = mat(HTrows, HTcols);
+        HT.reset(HTpadded.submatrix(0, HTrows, 0, HTcols));
+        HT = m_transpose(_H);
+        
+        S = v_copy(_S);
+        
+        rowpermutator.resize(HT.rows());
+        for (size_t i = 0; i < HT.rows(); ++i)
+            rowpermutator[i] = i;
+            
+        sol = vec();
+    }
+    
+    // callback function
+    inline bool callback(const cvec_view sol2, size_t w1)
+    {
+            // TODO: actually check result and only set sol accordingly
+            sol = sol2;
+            return true;
+    }
+    
+    // probabilistic preparation of loop invariant
+    void prepare_loop() final
+    {
+        size_t w1_max = 0;
+
+        subISDT->initialize(H11T, S1, w1_max, ISD_callback<ISD_single_generic_transposed<subISDT_t>>, this);
+    }
+    
+    // perform one loop iteration, return true if successful and store result in e
+    bool loop_next() final
+    {
+        subISDT->solve();
+        return sol.columns() != 0;
+    }
+    
+    // run loop until a solution is found
+    void solve() final
+    {
+        prepare_loop();
+        while (!loop_next())
+            ;
+    }
+    
+private:
+    subISDT_t* subISDT;
+    mat HTpadded;
+    mat_view HT;
+    vec S;
+    vec sol;
+    
+    mat_view H11T;
+    vec_view S1;
+
+    std::vector<uint32_t> rowpermutator;
+    size_t n,k;
+};
+
 static inline size_t get_scratch(size_t k, size_t sz) 
 {
     return ((k+sz-1)/sz) * sz - k;
