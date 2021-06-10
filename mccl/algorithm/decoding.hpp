@@ -82,105 +82,10 @@ public:
 typedef ISD_API_exhaustive<ISD_callback_t> ISD_API_exhaustive_t;
 typedef ISD_API_exhaustive<ISD_sparse_callback_t> ISD_API_exhaustive_sparse_t;
 
-
-
-
 static inline size_t get_scratch(size_t k, size_t sz) 
 {
     return ((k+sz-1)/sz) * sz - k;
 }
-
-class LB: public ISD_API_exhaustive_t
-{
-private:
-    mat H;
-    mat H01T;
-    vec S;
-    
-    mat_view H01_S;
-    mat_view H01T_S;
-    matrix_permute_t permutator;
-    
-    size_t n,k,w,rows,cols0,cols1,scratch0,cnt;
-    vec sol;
-
-public:
-    using ISD_API_exhaustive_t::callback_t;
-    
-    // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t callback, void* ptr) final 
-    {
-        cnt = 0;
-        w = w_;
-        n = H_.columns();
-        k = n-H_.rows();
-        rows = n-k;
-        cols0 = n-k;
-        scratch0 = get_scratch(cols0, 64);
-        cols1 = k;
-        H.resize(n-k, scratch0+cols0+cols1+1); // scratchcols || H0 || H1 || S
-        for( size_t i = 0; i < rows; ++i ) 
-        {
-            for( size_t j = 0; j < cols0; ++j ) 
-            {
-                H.setbit(i, scratch0+j, H_(i,j));
-            }
-            for( size_t j = 0; j < cols1; ++j ) 
-            {
-                H.setbit(i, scratch0+cols0+j, H_(i, cols0+j));
-            }
-            H.setbit(i, cols0+scratch0+cols1, S[i]);
-        }
-
-//        size_t scratch1 = get_scratch(cols1+1, 64);
-        H01_S.reset(H.submatrix(0, rows, scratch0+cols0, cols1+1));
-
-        H01T.resize(cols1+1, rows);
-        H01T_S.reset(H01T.submatrix(0, cols1+1, 0, rows));
-
-        permutator.reset(H);
-        sol.resize(n);
-    }
-    
-    // // preparation of loop invariant
-    void prepare_loop() final
-    {
-    }
-    
-    // perform one loop iteration, return true if not finished
-    bool loop_next() final
-    {
-        ++cnt;
-        permutator.random_permute(scratch0, scratch0+cols0, scratch0, scratch0+n);
-        auto pivotend = echelonize(H, scratch0, scratch0+cols0);
-        if(pivotend != cols0)
-            return true;
-
-        H01T_S.transpose(H01_S);
-        auto S0 = H01T_S[cols1];
-        if (hammingweight(S0) <= w) {
-            auto perm = permutator.get_permutation();
-            for( size_t i = 0; i < n-k; i++ )
-            {
-                if (S0[i])
-                    sol.setbit(perm[scratch0+i]-scratch0);
-            }
-            std::cerr << "Found solution after " << cnt << " iterations." << std::endl;
-            std::cerr << S0 << std::endl;
-            std::cerr << sol << std::endl;
-            return false;
-        }
-        return true;
-    }
-    
-    // // run loop and pass all solutions through callback
-    void solve() final
-    {
-         prepare_loop();
-         while (loop_next())
-             ;
-    }
-};
 
 class Solution : public std::exception {
     vec sol;
@@ -194,7 +99,7 @@ class Solution : public std::exception {
     cvec_view get_solution() { return sol; }
 };
 
-bool check_solution(const mat_view& H01T_view, const vec_view& S0, const std::vector<uint32_t>& perm, size_t w, const std::vector<uint32_t>& E1_sparse, size_t w1) 
+inline bool check_solution(const mat_view& H01T_view, const vec_view& S0, const std::vector<uint32_t>& perm, size_t w, const std::vector<uint32_t>& E1_sparse, size_t w1) 
 {
     vec E0(S0);
     for( auto i : E1_sparse ) {
@@ -361,72 +266,6 @@ public:
     }
     
     subISD_t* subISD;
-};
-
-class subISD_prange
-    : public ISD_API_exhaustive_sparse_t
-{   
-public:        
-    using ISD_API_exhaustive_sparse_t::callback_t;
-
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr)
-    {
-        callback = _callback;
-        ptr = _ptr;
-    }
-
-    bool loop_next()
-    {
-        (*callback)(ptr,E1_sparse, 0);
-        return false;
-    }
-private:
-    callback_t callback;
-    void* ptr;
-    std::vector<uint32_t> E1_sparse;
-};
-
-class subISD_LB
-    : public ISD_API_exhaustive_sparse_t
-{   
-public:
-    using ISD_API_exhaustive_sparse_t::callback_t;
-
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr) final
-    {
-        callback = _callback;
-        ptr = _ptr;
-        rowenum.reset(H_, p, 1);
-        E1_sparse.resize(1);
-    }
-
-    void prepare_loop() final 
-    {
-        rowenum.reset(p, 1);
-    }
-
-    bool loop_next() final
-    {
-        rowenum.compute();
-
-        // todo: optimize and pass computed error sum
-        E1_sparse[0] = *rowenum.selection();
-        (*callback)(ptr, E1_sparse, 0);
-        return rowenum.next();
-    }
-
-    void solve() final
-    {
-        prepare_loop();
-        while (loop_next())
-            ;
-    }
-private:
-    callback_t callback;
-    void* ptr;
-    matrix_enumeraterows_t rowenum;
-    static const size_t p = 3;
-    std::vector<uint32_t> E1_sparse;
 };
 
 MCCL_END_NAMESPACE

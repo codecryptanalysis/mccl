@@ -1,7 +1,8 @@
 #include <mccl/config/config.hpp>
 
 #include <mccl/tools/parser.hpp>
-#include <mccl/algorithm/decoding.hpp>
+#include <mccl/algorithm/prange.hpp>
+#include <mccl/algorithm/LB.hpp>
 #include <mccl/core/matrix_permute.hpp>
 
 #include "test_utils.hpp"
@@ -75,10 +76,10 @@ int main(int, char**)
         status |= not(eval_S==S);
     }
 
-    // test decoding API
-    LB decoder;
-    decoder.initialize(Hraw, S, w, nullptr, nullptr);
-    decoder.solve();
+    // // test decoding API
+    // LB decoder;
+    // decoder.initialize(Hraw, S, w, nullptr, nullptr);
+    // decoder.solve();
 
     // prepare H for ISD, split into two parts with appropriate column padding
     size_t rows = n-k;
