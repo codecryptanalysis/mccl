@@ -9,8 +9,15 @@
 using namespace mccl;
 
 void usage() {
-  std::cout << "Usage: ./isdsolver -f INSTANCE_PATH -a ALGO " << '\n';
-  std::cout << "ALGO should be \"P\" for PRANGE algorithm or \"LB\" for LEE BRICKEL algorithm" << '\n';
+  std::cout << "Usage: isdsolver expects the following arguments " << '\n';
+  std::cout << "Necessary arguments:" << '\n';
+  std::cout << "\t -f\t to specify the path of the challenge instance file" << '\n';
+  std::cout << "Optional arguments:" << '\n';
+  std::cout << "\t -a\t to specify the desired algorithm" << '\n';
+  std::cout << "\t\t 'P' for PRANGE algorithm (default)" << '\n';
+  std::cout << "\t\t 'LB' for LEE BRICKELL algorithm" << '\n';
+  std::cout << "\t -n\t to repeat the algorithm several time" << '\n';
+  std::cout << "\t\t expects an integer (default = 1)" << '\n';
 }
 
 template<typename subISD_t = ISD_API_exhaustive_sparse_t>
@@ -26,16 +33,21 @@ void run_subISD(mat_view &H, vec_view &S, size_t w) {
 int main(int argc, char *argv[])
 {
     std::string path = "";
-    std::string algo = "";
+    std::string algo = "P";
+    std::string N_str = "";
+    int N = 1;
 
     int option;
-    while((option = getopt(argc, argv, ":f:a:")) != -1){
+    while((option = getopt(argc, argv, ":f:a:n:")) != -1){
       switch(option){
         case 'f':
           path = optarg;
           break;
         case 'a':
           algo = optarg;
+          break;
+        case 'n':
+          N_str = optarg;
           break;
         case '?':
           printf("Unknown option: %c\n", optopt);
@@ -48,21 +60,38 @@ int main(int argc, char *argv[])
       std::cout << "Using PRANGE algorithm" << '\n';
     }
     else if (algo=="LB") {
-      algo = "LEE BRICKEL";
-      std::cout << "Using LEE BRICKEL algorithm" << '\n';
+      algo = "LEE BRICKELL";
+      std::cout << "Using LEE BRICKELL algorithm" << '\n';
     }
     else {
       std::cout << "Unknown algorithm " << algo << '\n';
       usage();
-      std::cout << "Using PRANGE algorithm as default" << '\n';
-      algo = "PRANGE";
+      return 1;
     }
 
     if(path==""){
       std::cout << "Missing challenge instance" << '\n';
       usage();
-      std::cout << "Aborting" << '\n';
       return 1;
+    }
+
+    if(N_str!=""){
+      try{
+        N = std::stoi(N_str);
+      }
+      catch(...) {
+        std::cout << "Invalid argument for -n, expected a positive integer" << '\n';
+        usage();
+        return 1;
+      }
+      if(N<1){
+        std::cout << "Invalid argument for -n, expected a positive integer" << '\n';
+        usage();
+        return 1;
+      }
+      else if(N>1){
+        std::cout << "Repeating the algorithm " << N << " times" << '\n';
+      }
     }
 
     Parser parse;
@@ -86,13 +115,16 @@ int main(int argc, char *argv[])
 
 
     if (algo=="PRANGE")
-      run_subISD<subISD_prange>(H,S,w);
-    else if (algo=="LEE BRICKEL")
-      run_subISD<subISD_LB>(H,S,w);
+      for (int i=0; i<N; i++){
+        run_subISD<subISD_prange>(H,S,w);
+      }
+    else if (algo=="LEE BRICKELL")
+      for (int i=0; i<N; i++){
+        run_subISD<subISD_LB>(H,S,w);
+      }
     else {
       std::cout << "Unknown algorithm" << '\n';
       return 1;
     }
-
     return 0;
-}
+  }
