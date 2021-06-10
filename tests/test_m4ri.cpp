@@ -1,6 +1,5 @@
 #include <mccl/config/config.hpp>
 
-#include <mccl/core/matrix_detail.hpp>
 #include <mccl/core/matrix.hpp>
 #include <mccl/core/matrix_m4ri.hpp>
 
@@ -13,14 +12,6 @@
 
 using namespace mccl;
 
-typedef mccl::matrix_ref_t<uint64_t> matrixref;
-typedef mccl::matrix_ptr_t<uint64_t> matrixptr;
-typedef mccl::vector_ref_t<uint64_t> vectorref;
-typedef mccl::vector_ptr_t<uint64_t> vectorptr;
-typedef mccl::matrix_t<uint64_t> mat_t;
-typedef mccl::vector_t<uint64_t> vec_t;
-typedef mccl::detail::matrix_base_ref_t<uint64_t> base_t;
-
 int test_bool(bool val, const std::string& errmsg = "error")
 {
     if (val)
@@ -32,32 +23,32 @@ int test_bool(bool val, const std::string& errmsg = "error")
 void compile_test()
 {
     // don't call
-    mat_t mat(16,16);
-    vec_t vec(16);
-    vectorref vref(vec);
-    std::cout << mat << vec;
+    mat m(16,16);
+    vec v(16);
+    vec_view vref(v);
+    std::cout << m << v;
 
-    m4ri_transpose(mat, mat);
-    m4ri_add(mat, mat, mat);
-    m4ri_mul_naive(mat, mat, mat);
-    m4ri_addmul_naive(mat, mat, mat);
-    m4ri_gauss_delayed(mat);
-    m4ri_echelonize_naive(mat);
-    m4ri_invert_naive(mat, mat, mat);
+    m4ri_transpose(m, m);
+    m4ri_add(m, m, m);
+    m4ri_mul_naive(m, m, m);
+    m4ri_addmul_naive(m, m, m);
+    m4ri_gauss_delayed(m);
+    m4ri_echelonize_naive(m);
+    m4ri_invert_naive(m, m, m);
 
-    m4ri_echelonize(mat);
-    m4ri_echelonize_pluq(mat);
-    m4ri_echelonize_m4ri(mat);
-    m4ri_mul(mat, mat, mat);
-    m4ri_addmul(mat, mat, mat);
+    m4ri_echelonize(m);
+    m4ri_echelonize_pluq(m);
+    m4ri_echelonize_m4ri(m);
+    m4ri_mul(m, m, m);
+    m4ri_addmul(m, m, m);
 }
 
 int test_m4ri(size_t r = 512, size_t c = 512)
 {
     int status = 0;
     
-    mat_t m1(r,c);
-    mat_t m2(r,c);
+    mat m1(r,c);
+    mat m2(r,c);
 
     fillrandom(m1);
 

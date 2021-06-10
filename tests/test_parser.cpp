@@ -9,13 +9,13 @@
 #include <set>
 #include <utility>
 
-//using namespace mccl;
+using namespace mccl;
 
 int main(int, char**)
 {
     int status = 0;
 
-    Parser<uint64_t> parse;
+    Parser parse;
     status |= !parse.load_file("./tests/data/Goppa_1101.txt");
 
     auto H = parse.get_H();

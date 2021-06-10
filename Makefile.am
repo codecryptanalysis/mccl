@@ -15,8 +15,10 @@ libmccl_la_SOURCES=\
 	mccl/config/config.h \
 	mccl/config/config.hpp \
 	\
-	mccl/core/matrix_detail.hpp \
-	mccl/core/matrix_detail.inl \
+	mccl/core/matrix_base.hpp \
+	mccl/core/matrix_ops.hpp \
+	mccl/core/matrix_ops.inl \
+	mccl/core/matrix_ops.cpp \
 	mccl/core/matrix.hpp \
 	mccl/core/matrix_m4ri.hpp \
 	mccl/core/matrix_m4ri.cpp \
@@ -25,9 +27,9 @@ libmccl_la_SOURCES=\
 bin_isdsolver_SOURCES= src/isdsolver.cpp
 bin_isdsolver_LDADD  = libmccl.la
 
-TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange
+TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
 
-check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange
+check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
@@ -46,6 +48,9 @@ tests_test_permute_LDADD  = libmccl.la
 
 tests_test_prange_SOURCES= tests/test_prange.cpp
 tests_test_prange_LDADD  = libmccl.la
+
+tests_test_marc_SOURCES= tests/test_marc.cpp
+tests_test_marc_LDADD  = libmccl.la
 		
 CLANGFORMAT ?= clang-format
 .PHONY: check-style
