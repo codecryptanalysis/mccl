@@ -21,6 +21,21 @@ void usage() {
   std::cout << "\t\t expects an integer (default = 1)" << '\n';
 }
 
+// we should probably move this function in the tools
+std::size_t binomial(std::size_t k, std::size_t N)
+{
+    if (k > N) return 0;
+    std::size_t r = 1;
+    if (k > N-k)
+        k = N-k;
+    for (unsigned i = 0; i < k; ++i)
+    {
+        r *= (N-i);
+        r /= (i+1);
+    }
+    return r;
+}
+
 template<typename subISD_t = ISD_API_exhaustive_sparse_t>
 int run_subISD(mat_view &H, vec_view &S, size_t w) {
   subISD_t subISD;
@@ -127,6 +142,10 @@ int main(int argc, char *argv[])
         return 1;
       }
     }
-    std::cout << "TOTAL NUMBER OF ITERATIONS " << c << '\n';
+
+    float avg_cnt = (float) c / N;
+    float inv_avg_cnt = (float) 1 / avg_cnt;
+    std::cout << "Average number of iterations: " << avg_cnt << '\n';
+    std::cout << "Inverse of average number of iterations: " << inv_avg_cnt << '\n';
     return 0;
   }
