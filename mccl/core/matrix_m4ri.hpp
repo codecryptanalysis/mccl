@@ -1,8 +1,12 @@
 #ifndef MCCL_CORE_MATRIX_M4RI_HPP
 #define MCCL_CORE_MATRIX_M4RI_HPP
 
+#include <mccl/config/config.hpp>
 #include <mccl/core/matrix.hpp>
+
 #include <stdlib.h>
+
+#ifdef MCCL_HAVE_M4RI
 
 MCCL_BEGIN_NAMESPACE
 
@@ -107,5 +111,7 @@ static inline void m4ri_addmul(const mat_view& dst, const mat_view& A, const mat
 }
 
 MCCL_END_NAMESPACE
+
+#endif
 
 #endif

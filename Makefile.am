@@ -20,16 +20,14 @@ libmccl_la_SOURCES=\
 	mccl/core/matrix_ops.inl \
 	mccl/core/matrix_ops.cpp \
 	mccl/core/matrix.hpp \
-	mccl/core/matrix_m4ri.hpp \
-	mccl/core/matrix_m4ri.cpp \
 	mccl/core/matrix_permute.hpp
 
 bin_isdsolver_SOURCES= src/isdsolver.cpp
 bin_isdsolver_LDADD  = libmccl.la
 
-TESTS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
+TESTS= tests/test_compile tests/test_matrix tests/test_parser tests/test_permute tests/test_prange tests/test_marc
 
-check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_m4ri tests/test_parser tests/test_permute tests/test_prange tests/test_marc
+check_PROGRAMS= tests/test_compile tests/test_matrix tests/test_parser tests/test_permute tests/test_prange tests/test_marc
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
@@ -51,6 +49,16 @@ tests_test_prange_LDADD  = libmccl.la
 
 tests_test_marc_SOURCES= tests/test_marc.cpp
 tests_test_marc_LDADD  = libmccl.la
+
+if HAVE_M4RI
+
+libmccl_la_SOURCES += \
+	mccl/core/matrix_m4ri.hpp \
+	mccl/core/matrix_m4ri.cpp
+TESTS+=tests/test_m4ri
+check_PROGRAMS+=test/test_m4ri
+
+endif
 		
 CLANGFORMAT ?= clang-format
 .PHONY: check-style
