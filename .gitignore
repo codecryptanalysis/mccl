@@ -50,6 +50,7 @@ build-aux/*
 .deps
 .dirstamp
 .libs
+bin/*
 
 # executables
 tests/test_compile
@@ -58,3 +59,4 @@ tests/test_matrix
 tests/test_parser
 tests/test_permute
 tests/test_prange
+tests/test_marc
