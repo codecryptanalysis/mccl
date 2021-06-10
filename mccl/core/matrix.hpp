@@ -984,30 +984,33 @@ size_t echelonize(const mat_view& m, size_t column_start, size_t column_end, siz
 // aka full column reduction of matrix m over rows [row_start,row_end)
 // pivots may be selected from columns [pivot_start,columns())
 // returns pivotend = pivot_start + nrnewcolpivots
-size_t echelonizeT(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = 0)
+size_t echelonize_col(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = 0)
 {
     if (row_end > m.rows())
         row_end = m.rows();
-    vec pivotrow(m.columns());
     for (size_t r = row_start; r < row_end; ++r)
     {
         // find pivot for row r
         size_t p = pivot_start;
         for (; p < m.columns() && m(r,p) == false; ++p)
             ;
-        // if no pivot found the continue with next column
+        // if no pivot found the continue with next row
         if (p >= m.columns())
             continue;
         // swap column if necessary
         if (p != pivot_start)
             m.swapcolumns(p, pivot_start);
-        // reduce row c
-        pivotrow = v_copy(m[r]);
+        // reduce row r with column pivot_start
+        // note: first clear bit pivot_start in row r to prevent row r & column pivot_start to be changed
+        vec_view pivotrow(m[r]);
         pivotrow.clearbit(pivot_start);
-        auto mrowit = m[r];
-        for (size_t r2 = r; r2 < m.rows(); ++r2,++mrowit)
+        auto mrowit = m[0];
+        for (size_t r2 = 0; r2 < m.rows(); ++r2,++mrowit)
             if (m(r2,pivot_start))
-                mrowit ^= pivotrow;
+                mrowit.vxor(pivotrow);
+        // now just set pivotrow to zero except for column pivot_start
+        pivotrow.clear();
+        pivotrow.setbit(pivot_start);
         // increase pivot_start for next row
         ++pivot_start;
     }
@@ -1018,7 +1021,7 @@ size_t echelonizeT(const mat_view& m, size_t row_start = 0, size_t row_end = ~si
 // pivots may be selected from columns [pivot_start,columns())
 // returns pivotend = pivot_start + nrnewcolpivots
 template<size_t bits>
-size_t echelonizeT(const mat_view& m, size_t row_start, size_t row_end, size_t pivot_start, aligned_tag<bits>)
+size_t echelonize_col(const mat_view& m, size_t row_start, size_t row_end, size_t pivot_start, aligned_tag<bits>)
 {
     if (row_end > m.rows())
         row_end = m.rows();
@@ -1029,25 +1032,106 @@ size_t echelonizeT(const mat_view& m, size_t row_start, size_t row_end, size_t p
         size_t p = pivot_start;
         for (; p < m.columns() && m(r,p) == false; ++p)
             ;
-        // if no pivot found the continue with next column
+        // if no pivot found the continue with next row
         if (p >= m.columns())
             continue;
         // swap column if necessary
         if (p != pivot_start)
             m.swapcolumns(p, pivot_start);
-        // reduce row c
-        pivotrow = v_copy(m[r], aligned_tag<bits>());
+        // reduce row r with column pivot_start
+        // note: first clear bit pivot_start in row r to prevent row r & column pivot_start to be changed
+        vec_view pivotrow(m[r]);
         pivotrow.clearbit(pivot_start);
-        auto mrowit = m[r];
-        for (size_t r2 = r; r2 < m.rows(); ++r2,++mrowit)
+        auto mrowit = m[0];
+        for (size_t r2 = 0; r2 < m.rows(); ++r2,++mrowit)
             if (m(r2,pivot_start))
                 mrowit.vxor(pivotrow, aligned_tag<bits>());
+        // now just set pivotrow to zero except for column pivot_start
+        pivotrow.clear(aligned_tag<bits>());
+        pivotrow.setbit(pivot_start);
         // increase pivot_start for next row
         ++pivot_start;
     }
     return pivot_start;
 }
 
+// full *column* reduction of matrix m over rows [row_start,row_end) with *reverse* column ordering
+// pivots may be selected from columns [0, pivot_start)
+// returns pivotend = pivot_start - nrnewcolpivots
+size_t echelonize_col_rev(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = ~size_t(0))
+{
+    if (row_end > m.rows())
+        row_end = m.rows();
+    if (pivot_start > m.columns())
+        pivot_start = m.columns();
+    for (size_t r = row_start; r < row_end; ++r)
+    {
+        // find pivot for row r
+        size_t p = pivot_start;
+        for (; p > 0 && m(r,p-1) == false; --p)
+            ;
+        // if no pivot found the continue with next row
+        if (p == 0)
+            continue;
+        // operate on column pivot_start-1 and p-1 instead
+        --p; --pivot_start;
+        // swap column if necessary
+        if (p != pivot_start)
+            m.swapcolumns(p, pivot_start);
+        // reduce row r with column pivot_start
+        // note: first clear bit pivot_start in row r to prevent row r & column pivot_start to be changed
+        vec_view pivotrow(m[r]);
+        pivotrow.clearbit(pivot_start);
+        auto mrowit = m[0];
+        for (size_t r2 = 0; r2 < m.rows(); ++r2,++mrowit)
+            if (m(r2,pivot_start))
+                mrowit.vxor(pivotrow);
+        // now just set pivotrow to zero except for column pivot_start
+        pivotrow.clear();
+        pivotrow.setbit(pivot_start);
+        // need to decrease pivot_start by 1 for next row, but already done
+    }
+    return pivot_start;
+}
+// full *column* reduction of matrix m over rows [row_start,row_end) with *reverse* column ordering
+// pivots may be selected from columns [0, pivot_start)
+// returns pivotend = pivot_start - nrnewcolpivots
+template<size_t bits>
+size_t echelonize_col_rev(const mat_view& m, size_t row_start, size_t row_end, size_t pivot_start, aligned_tag<bits>)
+{
+    if (row_end > m.rows())
+        row_end = m.rows();
+    if (pivot_start > m.columns())
+        pivot_start = m.columns();
+    for (size_t r = row_start; r < row_end; ++r)
+    {
+        // find pivot for row r
+        size_t p = pivot_start;
+        for (; p > 0 && m(r,p-1) == false; --p)
+            ;
+        // if no pivot found the continue with next row
+        if (p == 0)
+            continue;
+        // operate on column pivot_start-1 and p-1 instead
+        --p; --pivot_start;
+        // swap column if necessary
+        if (p != pivot_start)
+            m.swapcolumns(p, pivot_start);
+        // reduce row r with column pivot_start
+        // note: first clear bit pivot_start in row r to prevent row r & column pivot_start to be changed
+        vec_view pivotrow(m[r]);
+        pivotrow.clearbit(pivot_start);
+        auto mrowit = m[0];
+        for (size_t r2 = 0; r2 < m.rows(); ++r2,++mrowit)
+            if (m(r2,pivot_start))
+                mrowit.vxor(pivotrow, aligned_tag<bits>());
+        // now just set pivotrow to zero except for column pivot_start
+        pivotrow.clear(aligned_tag<bits>());
+        pivotrow.setbit(pivot_start);
+        // need to decrease pivot_start by 1 for next row, but already done
+    }
+    return pivot_start;
+}
 
 MCCL_END_NAMESPACE
 

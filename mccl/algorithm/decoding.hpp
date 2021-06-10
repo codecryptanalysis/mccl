@@ -83,6 +83,7 @@ typedef ISD_API_exhaustive<ISD_callback_t> ISD_API_exhaustive_t;
 typedef ISD_API_exhaustive<ISD_sparse_callback_t> ISD_API_exhaustive_sparse_t;
 
 // virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
+// differs from ISD_API_exhaustive in that H is given transposed for better efficiency between main_ISD and sub_ISD
 template<typename _callback_t = ISD_callback_t>
 class ISD_API_exhaustive_transposed
 {
@@ -113,6 +114,15 @@ public:
 typedef ISD_API_exhaustive_transposed<ISD_callback_t> ISD_API_exhaustive_transposed_t;
 typedef ISD_API_exhaustive_transposed<ISD_sparse_callback_t> ISD_API_exhaustive_transposed_sparse_t;
 
+
+// implementation of ISD_single_generic that can be instantiated with any subISD
+// based on common view on transposed H
+// will use reverse column ordering for column reduction on Htransposed (instead of row reduction on H)
+//
+// HT = ( 0   IR  ) where IR is the reversed identity matrix IR with 1's on the anti-diagonal
+//      ( H1T H0T )
+//
+// this makes it easy to include additional columns of H0T together with H1T to subISD
 
 template<typename subISDT_t = ISD_API_exhaustive_transposed_t>
 class ISD_single_generic_transposed: public ISD_API_single
