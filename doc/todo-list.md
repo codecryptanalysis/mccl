@@ -100,11 +100,30 @@ Discussion
 - [x] Prange and Lee-Brickell following the API
 
 ## 10/06/21
-- [ ] simplification of the `matrix` type
-- [ ] command line utility
-- [ ] cleaning/commenting existing code for Prange/LB
-- [ ] initialization for l>0
-- [ ] python tool to compute the cost given the parameters (with the actual cost of each operation as a variable)
+- [x] simplification of the `matrix` type
+- [x] command line utility
+- [x] cleaning existing code for Prange/LB
+
+Discussion
+- New matrix type: `mat` and `vec` are pointers, `cmat` and `cvec` have const data. No more need to handle the scratch columns.
+- Decoding algorithm split in `prange.hpp` and `LB.hpp`.
+- Command line utility `isdsolver.cpp`, need to check the solution and add a dedicated test. 
+- M4RI library is now useless, we can remove it (or at lease make it optional).
+- Next step: new setting. Transpose (so that we have the row permutation for free) and reverse (column reduction starting from the right) to easily obtain a multiple of 64.
+- The `echelon` and `permute` functions are going to be dependant. Should we merge them?
+- Statistics. We have some Python code to compute the success probability. We could  try to see if we obtain the same results in practice. Also later we will need more statistical data (use .json format?). 
+
+## 24/06/21
+- [ ] drop the M4RI dependency
+- [ ] implement (reverse) column reduction
+- [ ] rewrite Prange+LB in the new transpose/reverse setting
+- [ ] write LB for l>0 using the new transpose/reverse setting
+- [ ] documentation of the new setting and API
+- [ ] `isdsolver.cpp` check that the solution is correct
+- [ ] add a test for `isdsolver.cpp`
+- [ ] add a parameter to run the solver multiple times and compute the success probability (compare with theoretical value from the Python tool)
+- [ ] merge `echelon` and `permute`?
+- [ ] python tool to compute the cost given the parameters
 - [ ] more flexible and optimized row-reduction
 - [ ] optimized (block) permutation
 
