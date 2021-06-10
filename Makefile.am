@@ -20,6 +20,7 @@ libmccl_la_SOURCES=\
 	mccl/core/matrix_ops.inl \
 	mccl/core/matrix_ops.cpp \
 	mccl/core/matrix.hpp \
+	mccl/core/matrix_m4ri.hpp \
 	mccl/core/matrix_permute.hpp
 
 bin_isdsolver_SOURCES= src/isdsolver.cpp
@@ -35,8 +36,6 @@ tests_test_compile_LDADD  = libmccl.la
 tests_test_matrix_SOURCES= tests/test_matrix.cpp
 tests_test_matrix_LDADD  = libmccl.la
 
-tests_test_m4ri_SOURCES= tests/test_m4ri.cpp
-tests_test_m4ri_LDADD  = libmccl.la
 
 tests_test_parser_SOURCES= tests/test_parser.cpp
 tests_test_parser_LDADD  = libmccl.la
@@ -50,13 +49,16 @@ tests_test_prange_LDADD  = libmccl.la
 tests_test_marc_SOURCES= tests/test_marc.cpp
 tests_test_marc_LDADD  = libmccl.la
 
+
 if HAVE_M4RI
 
-libmccl_la_SOURCES += \
-	mccl/core/matrix_m4ri.hpp \
-	mccl/core/matrix_m4ri.cpp
-TESTS+=tests/test_m4ri
-check_PROGRAMS+=test/test_m4ri
+libmccl_la_SOURCES += mccl/core/matrix_m4ri.cpp
+
+TESTS += tests/test_m4ri
+check_PROGRAMS += tests/test_m4ri
+
+tests_test_m4ri_SOURCES= tests/test_m4ri.cpp
+tests_test_m4ri_LDADD  = libmccl.la
 
 endif
 		
