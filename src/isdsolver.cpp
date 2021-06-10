@@ -12,6 +12,7 @@ void usage() {
   std::cout << "Usage: isdsolver expects the following arguments " << '\n';
   std::cout << "Necessary arguments:" << '\n';
   std::cout << "\t -f\t to specify the path of the challenge instance file" << '\n';
+  std::cout << "\t\t test files are available in 'tests/data/'" << '\n';
   std::cout << "Optional arguments:" << '\n';
   std::cout << "\t -a\t to specify the desired algorithm" << '\n';
   std::cout << "\t\t 'P' for PRANGE algorithm (default)" << '\n';
@@ -21,13 +22,14 @@ void usage() {
 }
 
 template<typename subISD_t = ISD_API_exhaustive_sparse_t>
-void run_subISD(mat_view &H, vec_view &S, size_t w) {
+int run_subISD(mat_view &H, vec_view &S, size_t w) {
   subISD_t subISD;
   ISD_single_generic<subISD_t> ISD_single(subISD);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
   std::cout << "Solution found:" << '\n';
   std::cout << ISD_single.get_solution() << '\n';
+  return ISD_single.get_cnt();
 }
 
 int main(int argc, char *argv[])
@@ -114,17 +116,17 @@ int main(int argc, char *argv[])
     std::cout << "w = " << w << '\n';
 
 
-    if (algo=="PRANGE")
-      for (int i=0; i<N; i++){
-        run_subISD<subISD_prange>(H,S,w);
+    int c = 0;
+    for (int i=0; i<N; i++){
+      if (algo=="PRANGE")
+        c += run_subISD<subISD_prange>(H,S,w);
+      else if (algo=="LEE BRICKELL")
+        c += run_subISD<subISD_LB>(H,S,w);
+      else {
+        std::cout << "Unknown algorithm" << '\n';
+        return 1;
       }
-    else if (algo=="LEE BRICKELL")
-      for (int i=0; i<N; i++){
-        run_subISD<subISD_LB>(H,S,w);
-      }
-    else {
-      std::cout << "Unknown algorithm" << '\n';
-      return 1;
     }
+    std::cout << "TOTAL NUMBER OF ITERATIONS " << c << '\n';
     return 0;
   }

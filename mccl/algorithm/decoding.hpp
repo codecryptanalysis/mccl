@@ -16,16 +16,16 @@ class ISD_API_single
 public:
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
-    
+
     // deterministic initialization for given parity check matrix H and target syndrome s
     virtual void initialize(const mat_view& H, const vec_view& s, unsigned int w) = 0;
-    
+
     // probabilistic preparation of loop invariant
     virtual void prepare_loop() = 0;
-    
+
     // perform one loop iteration, return true if successful and store result in e
     virtual bool loop_next() = 0;
-    
+
     // run loop until a solution is found
     virtual void solve()
     {
@@ -36,7 +36,7 @@ public:
 };
 
 // default callback types for subISD to the main ISD
-typedef bool (*ISD_callback_t)(void*, const cvec_view, size_t); 
+typedef bool (*ISD_callback_t)(void*, const cvec_view, size_t);
 typedef bool (*ISD_sparse_callback_t)(void*, const std::vector<uint32_t>&, size_t);
 
 // generic callback functions that can be instantiated for any main ISD class
@@ -59,18 +59,18 @@ public:
     typedef _callback_t callback_t;
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
-    
+
     // deterministic initialization for given parity check matrix H and target syndrome s
     virtual void initialize(const mat_view& H, const vec_view& s, unsigned int w, callback_t callback, void* ptr = nullptr) = 0;
-    
+
     // preparation of loop invariant
     virtual void prepare_loop()
     {
     };
-    
+
     // perform one loop iteration, return true if not finished
     virtual bool loop_next() = 0;
-    
+
     // run loop and pass all solutions through callback
     virtual void solve()
     {
@@ -90,18 +90,18 @@ public:
     typedef _callback_t callback_t;
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
-    
+
     // deterministic initialization for given parity check matrix H and target syndrome s
     virtual void initialize(const mat_view& Htransposed, const vec_view& s, unsigned int w, callback_t callback, void* ptr = nullptr) = 0;
-    
+
     // preparation of loop invariant
     virtual void prepare_loop()
     {
     };
-    
+
     // perform one loop iteration, return true if not finished
     virtual bool loop_next() = 0;
-    
+
     // run loop and pass all solutions through callback
     virtual void solve()
     {
@@ -120,37 +120,37 @@ class ISD_single_generic_transposed: public ISD_API_single
 public:
     using typename subISDT_t::callback_t;
     static const size_t bit_alignment = 64;
-    
+
     ISD_single_generic_transposed(subISDT_t& sI)
         : subISDT(&sI)
     {
     }
-    
+
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
-    
+
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
     void initialize(const mat_view& _H, const vec_view& _S, unsigned int _w, callback_t callback, void* ptr) final
     {
         n = _H.columns();
         k = n - _H.rows();
-        
+
         // round columns HT up to specified bit_alignment for simd processing
         size_t HTrows = _H.columns(), HTcols = _H.rows(), HTpaddedcols = (HTcols + bit_alignment - 1) & ~size_t(bit_alignment - 1);
-        
+
         HTpadded = mat(HTrows, HTcols);
         HT.reset(HTpadded.submatrix(0, HTrows, 0, HTcols));
         HT = m_transpose(_H);
-        
+
         S = v_copy(_S);
-        
+
         rowpermutator.resize(HT.rows());
         for (size_t i = 0; i < HT.rows(); ++i)
             rowpermutator[i] = i;
-            
+
         sol = vec();
     }
-    
+
     // callback function
     inline bool callback(const cvec_view sol2, size_t w1)
     {
@@ -158,7 +158,7 @@ public:
             sol = sol2;
             return true;
     }
-    
+
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
@@ -166,14 +166,14 @@ public:
 
         subISDT->initialize(H11T, S1, w1_max, ISD_callback<ISD_single_generic_transposed<subISDT_t>>, this);
     }
-    
+
     // perform one loop iteration, return true if successful and store result in e
     bool loop_next() final
     {
         subISDT->solve();
         return sol.columns() != 0;
     }
-    
+
     // run loop until a solution is found
     void solve() final
     {
@@ -181,14 +181,14 @@ public:
         while (!loop_next())
             ;
     }
-    
+
 private:
     subISDT_t* subISDT;
     mat HTpadded;
     mat_view HT;
     vec S;
     vec sol;
-    
+
     mat_view H11T;
     vec_view S1;
 
@@ -196,30 +196,30 @@ private:
     size_t n,k;
 };
 
-static inline size_t get_scratch(size_t k, size_t sz) 
+static inline size_t get_scratch(size_t k, size_t sz)
 {
     return ((k+sz-1)/sz) * sz - k;
 }
 
 class Solution : public std::exception {
     vec sol;
-    
+
     public:
-        Solution(const cvec_view& sol_) 
+        Solution(const cvec_view& sol_)
             : std::exception(), sol(sol_)
         {
         }
-        
+
     cvec_view get_solution() { return sol; }
 };
 
-inline bool check_solution(const mat_view& H01T_view, const vec_view& S0, const std::vector<uint32_t>& perm, size_t w, const std::vector<uint32_t>& E1_sparse, size_t w1) 
+inline bool check_solution(const mat_view& H01T_view, const vec_view& S0, const std::vector<uint32_t>& perm, size_t w, const std::vector<uint32_t>& E1_sparse, size_t w1)
 {
     vec E0(S0);
     for( auto i : E1_sparse ) {
         E0 ^= H01T_view[i];
     }
-    if (hammingweight(E0)< w-w1-E1_sparse.size()) 
+    if (hammingweight(E0)< w-w1-E1_sparse.size())
     {
         std::cerr << "Found solution" << std::endl;
         // recover and submit solution?
@@ -228,7 +228,7 @@ inline bool check_solution(const mat_view& H01T_view, const vec_view& S0, const 
         size_t k = H01T_view.rows();
         size_t n = H01T_view.columns()+k;
         size_t scratch0 = get_scratch(n-k, 64);
-        
+
         vec sol(n);
         for( size_t i = 0; i < n-k; i++ ) {
             if (E0[i])
@@ -264,19 +264,19 @@ private:
     cvec_view solution;
 
     vec_view S0_view;
-    mat_view H01_S_view, H01T_view, H01T_S_view, H11_S_view, H11T_view, H11T_S_view;    
+    mat_view H01_S_view, H01T_view, H01T_S_view, H11_S_view, H11T_view, H11T_S_view;
     matrix_permute_t permutator;
-    
+
     size_t n,k,w,rows,cols0,cols1,scratch0,cnt;
 public:
     ISD_single_generic(subISD_t& sI)
         : subISD(&sI)
     {
     }
-    
+
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
-    
+
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
     void initialize(const mat_view& H_, const vec_view& S, unsigned int w_) final
     {
@@ -315,11 +315,11 @@ public:
 
         permutator.reset(H);
     }
-    
+
     // callback function
     inline bool callback(const std::vector<uint32_t>& E1_sparse, size_t w1)
     {
-            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1)) 
+            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1))
             {
                 std::cerr << "SubISD solution" << std::endl;
                 return true;
@@ -330,14 +330,14 @@ public:
     cvec_view get_solution() {
         return solution;
     }
-    
+
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
 /*
         std::function<bool(const std::vector<uint32_t>&, size_t)> callback = [this](const std::vector<uint32_t>& E1_sparse, size_t w1)
         {
-            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1)) 
+            if(check_solution(this->H01T_view, this->S0_view, this->permutator.get_permutation(), this->w, E1_sparse, w1))
             {
                 std::cerr << "SubISD solution" << std::endl;
                 return true;
@@ -351,7 +351,7 @@ public:
 
         subISD->initialize(H11T_view, S1, w1_max, ISD_sparse_callback<ISD_single_generic<subISD_t>>, this);
     }
-    
+
     // perform one loop iteration, return true if successful and store result in e
     bool loop_next() final
     {
@@ -375,7 +375,7 @@ public:
         }
         return true;
     }
-    
+
     // run loop until a solution is found
     void solve() final
     {
@@ -383,7 +383,12 @@ public:
         while (loop_next())
             ;
     }
-    
+
+    int get_cnt() 
+    {
+        return cnt;
+    }
+
     subISD_t* subISD;
 };
 
