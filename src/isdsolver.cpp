@@ -2,7 +2,8 @@
 #include <unistd.h>
 
 #include <mccl/tools/parser.hpp>
-#include <mccl/algorithm/decoding.hpp>
+#include <mccl/algorithm/prange.hpp>
+#include <mccl/algorithm/LB.hpp>
 
 
 using namespace mccl;
@@ -10,6 +11,22 @@ using namespace mccl;
 void usage() {
   std::cout << "Usage: ./isdsolver -f INSTANCE_PATH -a ALGO " << '\n';
   std::cout << "ALGO should be \"P\" for PRANGE algorithm or \"LB\" for LEE BRICKEL algorithm" << '\n';
+}
+
+template<typename subISD_t = ISD_API_exhaustive_sparse_t>
+void run_subISD(mat_view &H, vec_view &S, size_t w) {
+  subISD_t subISD;
+  ISD_single_generic<subISD_t> ISD_single(subISD);
+  ISD_single.initialize(H, S, w);
+  try {
+    ISD_single.solve();
+  }
+  catch(Solution& sol) {
+    std::cout << "Solution found:" << '\n';
+    std::cout << sol.get_solution() << '\n';
+    return;
+  }
+  std::cerr << "No solution found" << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -74,30 +91,10 @@ int main(int argc, char *argv[])
     std::cout << "w = " << w << '\n';
 
 
-    if (algo=="PRANGE"){
-      subISD_prange prange;
-      ISD_single_generic<subISD_prange> ISD_single_prange(prange);
-      ISD_single_prange.initialize(H, S, w);
-      try {
-          ISD_single_prange.solve();
-      }
-      catch(Solution& sol) {
-        std::cout << "Solution found:" << '\n';
-        std::cout << sol.get_solution() << '\n';
-      }
-    }
-    else if (algo=="LEE BRICKEL"){
-      subISD_LB subLB;
-      ISD_single_generic<subISD_LB> ISD_single_LB(subLB);
-      ISD_single_LB.initialize(H, S, w);
-      try {
-        ISD_single_LB.solve();
-      }
-      catch(Solution& sol) {
-        std::cout << "Solution found:" << '\n';
-        std::cout << sol.get_solution() << '\n';
-      }
-    }
+    if (algo=="PRANGE")
+      run_subISD<subISD_prange>(H,S,w);
+    else if (algo=="LEE BRICKEL")
+      run_subISD<subISD_LB>(H,S,w);
     else {
       std::cout << "Unknown algorithm" << '\n';
       return 1;
