@@ -30,6 +30,8 @@ public:
 
         // todo: optimize and pass computed error sum
         unsigned sz = rowenum.selectionsize();
+        if (sz != E1_sparse.size())
+            E1_sparse.resize(sz);
         for(unsigned i = 0; i < sz; i++) E1_sparse[i] = rowenum.selection()[i];
         (*callback)(ptr, E1_sparse, 0);
         return rowenum.next();
