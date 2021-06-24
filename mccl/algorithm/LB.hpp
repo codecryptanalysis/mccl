@@ -16,7 +16,7 @@ public:
         callback = _callback;
         ptr = _ptr;
         rowenum.reset(H_, p, 1);
-        E1_sparse.resize(1);
+        E1_sparse.resize(p);
     }
 
     void prepare_loop() final 
@@ -29,7 +29,8 @@ public:
         rowenum.compute();
 
         // todo: optimize and pass computed error sum
-        E1_sparse[0] = *rowenum.selection();
+        unsigned sz = rowenum.selectionsize();
+        for(unsigned i = 0; i < sz; i++) E1_sparse[i] = rowenum.selection()[i];
         (*callback)(ptr, E1_sparse, 0);
         return rowenum.next();
     }
