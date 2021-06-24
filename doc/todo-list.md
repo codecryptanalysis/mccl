@@ -115,14 +115,28 @@ Discussion
 
 ## 24/06/21
 - [x] drop the M4RI dependency
-- [ ] implement (reverse) column reduction
+- [x] add a parameter to run the solver multiple times 
+- [x] compute the success probability (compare with theoretical value from the Python tool)
+
+Discussion
+- Comparison of success probability (observed vs theoretic) match for Prange but not Lee Brickell. There is a but in LB (callback function). 
+- Statistics: add a counter to each object, gather all counters at the end. One should be able to run the algorithms several times on the same object and keep track of all the counters / the average of the counters.
+- Need to make an average on different instances, not just rerun the algorithm on the same instance: we need an instance generator (random instances in the form of the SD problem). 
+- Merging `echelon` and `permute`: ongoing work.
+- Add the case p=0 to row enumeration (corner case).
+
+## 08/07/21
+- [x] fix Lee Brickell bug
+- [ ] check the success probability for fixed Lee Brickell
+- [ ] generator of random SD instances
+- [ ] statistics: count number of calls to each function
+- [ ] `isdsolver.cpp` check that the solution is correct
+- [ ] pass `p` as a parameter for LB.
+- [ ] merge `echelon` and `permute`, allow reverse column reduction
 - [ ] rewrite Prange+LB in the new transpose/reverse setting
 - [ ] write LB for l>0 using the new transpose/reverse setting
-- [ ] documentation of the new setting and API
-- [ ] `isdsolver.cpp` check that the solution is correct
 - [ ] add a test for `isdsolver.cpp`
-- [ ] add a parameter to run the solver multiple times and compute the success probability (compare with theoretical value from the Python tool)
-- [ ] merge `echelon` and `permute`?
+- [ ] documentation of the new setting and API
 - [ ] python tool to compute the cost given the parameters
 - [ ] more flexible and optimized row-reduction
 - [ ] optimized (block) permutation
