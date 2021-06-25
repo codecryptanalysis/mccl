@@ -11,6 +11,183 @@
 
 MCCL_BEGIN_NAMESPACE
 
+/*
+   Class to maintain H^T in desired ISD form:
+   The performance optimized ISD form for H is:
+      H = ( 0  | H1 )
+          ( AI | H0 )
+      where AI is the antidiagonal identity matrix
+      as a result of performing reverse row reduction from bottom to top
+   This translates to H^T to
+      H^T = ( 0    | AI   )
+            ( H1^T | H0^T )
+      This form ensures H1^T columns are before H0^T columns
+      and thus is flexible with padding H1^T column words (64-bit or s-bit SIMD) with additional H0^T columns
+*/
+class HT_ISD_form_t
+{
+public:
+    HT_ISD_form_t() {}
+    HT_ISD_form_t(const mat_view& _HT) { reset(_HT); }
+    void reset(const mat_view& _HT)
+    {
+    	HT.reset(_HT.ptr);
+    	perm.resize(HT.rows());
+    	std::iota(perm.begin(), perm.end(), 0);
+    	row_permute();
+    	echelonize(0, HT.rows(), HT.columns());
+    };
+
+    const std::vector<uint32_t>& permutation() const { return perm; }
+    
+    vec_view_it operator[](size_t r) const { return HT[perm[r]]; }
+    vec_view_it operator()(size_t r) const { return HT[perm[r]]; }
+
+    // permute rows: swap each row in [b1:e1) with a uniformly random chosen row from [b2:e2)
+    void row_permute(size_t b1, size_t e1, size_t b2, size_t e2)
+    {
+    	if (b1 >= e1 || b2 >= e2)
+    		return;
+	if (e1 > HT.rows())
+		e1 = HT.rows();
+	if (e2 > HT.rows())
+		e2 = HT.rows();
+    	size_t n2 = e2 - b2;
+    	for (size_t i = b1; i < e1; ++i)
+    	{
+    		size_t j = b2 + (rndgen() % n2);
+    		if (j == i)
+    			continue;
+    		std::swap(perm[i], perm[j]);
+    	}
+    }
+
+    void row_permute(size_t b = 0, size_t e = ~uint64_t(0))
+    {
+	row_permute(b,e,b,e);
+    }
+
+    // full *column* reduction of matrix H^T with reverse column ordering
+    //    note: column reduction normally should only do full column operations (swap, xor)
+    //          in this case row swaps are cheaper and also allowed when recorded in permutation perm
+    //          our implementation performs the xor of one column onto many columns at the same time by xoring rows
+    //
+    // this corresponds to full row reduction of matrix H with reverse row ordering
+    //    note: row reduction normally should only do full row operations (swap, xor)
+    //          in this case column swaps are allowed when recorded in permutation perm
+    //
+    // since we do reverse column ordering: pivot_end points to startpivot+1
+    size_t echelonize(size_t row_begin, size_t row_end, size_t pivot_end)
+    {
+    	for (size_t r = row_begin; r < row_end; ++r)
+    	{
+		--pivot_end;
+		// find pivot for row r column pivot_start
+		// normally we swap columns, but row swaps are also allowed for ISD
+		size_t r2 = r;
+		for (; r2 < HT.rows() && HT(perm[r2],pivot_end)==false; ++r2)
+			;
+		if (r2 == HT.rows())
+		{
+			++pivot_end;
+			continue;
+		}
+		if (r2 != r)
+			std::swap(perm[r], perm[r2]);
+		
+		vec_view pivotrow(HT[perm[r]]);
+		pivotrow.clearbit(pivot_end);
+		auto HTrowit = HT[0];
+		for (r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
+			if (HT(r2,pivot_end))
+				HTrowit.vxor(pivotrow);
+		pivotrow.clear();
+		pivotrow.setbit(pivot_end);
+    	}
+    	return pivot_end;
+    }
+    template<size_t bits>
+    size_t echelonize(size_t row_begin, size_t row_end, size_t pivot_end, aligned_tag<bits>)
+    {
+    	for (size_t r = row_begin; r < row_end; ++r)
+    	{
+		--pivot_end;
+		// find pivot for row r column pivot_start
+		// normally we swap columns, but row swaps are also allowed for ISD
+		size_t r2 = r;
+		for (; r2 < HT.rows() && HT(perm[r2],pivot_end)==false; ++r2)
+			;
+		if (r2 == HT.rows())
+		{
+			++pivot_end;
+			continue;
+		}
+		if (r2 != r)
+			std::swap(perm[r], perm[r2]);
+		
+		vec_view pivotrow(HT[perm[r]]);
+		pivotrow.clearbit(pivot_end);
+		auto HTrowit = HT[0];
+		for (r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
+			if (HT(r2,pivot_end))
+				HTrowit.vxor(pivotrow, aligned_tag<bits>());
+		pivotrow.clear(aligned_tag<bits>());
+		pivotrow.setbit(pivot_end);
+    	}
+    	return pivot_end;
+    }
+    
+    // requires that HT has ISD form up to row_start
+    void next_form(size_t AI_rows, size_t row_start = 0)
+    {
+    	row_permute(row_start, AI_rows, AI_rows, HT.rows());
+    	size_t pivot_end = echelonize(row_start, AI_rows, HT.columns() - row_start);
+    	if (HT.columns() - AI_rows != pivot_end)
+    	{
+    		std::cerr << "HT_ISD_form_t::next_form(" << AI_rows << "," << row_start << "): pivot_end=" << pivot_end << " != HT.columns()-AI_rows=" << HT.columns()-AI_rows << std::endl;
+    	}
+    }
+    template<size_t bits>
+    void next_form(size_t AI_rows, size_t row_start, aligned_tag<bits>)
+    {
+    	row_permute(row_start, AI_rows, AI_rows, HT.rows());
+    	size_t pivot_end = echelonize(row_start, AI_rows, HT.columns() - row_start, aligned_tag<bits>());
+    	if (HT.columns() - AI_rows != pivot_end)
+    	{
+    		std::cerr << "HT_ISD_form_t::next_form(" << AI_rows << "," << row_start << "): pivot_end=" << pivot_end << " != HT.columns()-AI_rows=" << HT.columns()-AI_rows << std::endl;
+    	}
+    }
+    
+private:
+    mat_view HT;
+    std::vector<uint32_t> perm;
+    mccl_base_random_generator rndgen;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class matrix_permute_t
 {
 public:
@@ -63,54 +240,6 @@ public:
 	    			*ptri = xi ^ tmp ^ rotate_right(tmp,rj);
 	    		}
 		}
-    	}
-    }
-
-    void random_permute(size_t b = 0, size_t e = ~uint64_t(0))
-    {
-	random_permute(b,e,b,e);
-    }
-    
-    std::vector<uint32_t>& get_permutation()
-    {
-  	return permutation;
-    }
-    
-private:
-    mat_view m;
-    std::vector<uint32_t> permutation;
-    mccl_base_random_generator rndgen;
-};
-
-class matrix_row_permute_t
-{
-public:
-    matrix_row_permute_t() {}
-    matrix_row_permute_t(const mat_view& _m) { reset(_m); }
-    void reset(const mat_view& _m)
-    {
-    	m.reset(_m.ptr);
-    	permutation.resize(m.rows());
-    	std::iota(permutation.begin(), permutation.end(), 0);
-    };
-
-    // permute rows: swap each row in [b1:e1) with a uniformly random chosen row from [b2:e2)
-    void random_permute(size_t b1, size_t e1, size_t b2, size_t e2)
-    {
-    	if (b1 >= e1 || b2 >= e2)
-    		return;
-	if (e1 > m.rows())
-		e1 = m.rows();
-	if (e2 > m.rows())
-		e2 = m.rows();
-    	size_t n2 = e2 - b2;
-    	for (size_t i = b1; i < e1; ++i)
-    	{
-    		size_t j = b2 + (rndgen() % n2);
-    		if (j == i)
-    			continue;
-    		std::swap(permutation[i], permutation[j]);
-    		m[i].swap(m[j]);
     	}
     }
 
