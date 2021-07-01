@@ -152,23 +152,24 @@ bool Parser::random_SD(int n_, int k_, int w_) {
 	// pick random weight w vec by picking random indices 
 	// until we have sampled w distinct ones
 	// works efficiently if w<<n.
-	mccl_base_random_generator gen;
-	vec E(n);
-	int cnt = 0;
-	while(cnt < w){
-		size_t ind = gen()%n;
-		if(!E[ind]) {
-			E.setbit(ind);
-			cnt++;
-		}
-	}
+	// mccl_base_random_generator gen;
+	// vec E(n);
+	// int cnt = 0;
+	// while(cnt < w){
+	// 	size_t ind = gen()%n;
+	// 	if(!E[ind]) {
+	// 		E.setbit(ind);
+	// 		cnt++;
+	// 	}
+	// }
 	//std::cout << "Generated error:" << E << std::endl;
 
 	// compute syndrome
 	S = vec(n-k);
-	for(size_t i =0; i < size_t(n-k); i++) {
-		S.setbit(i,hammingweight_xor(E, H[i])%2);
-	}
+	fillrandom(S);
+	// for(size_t i =0; i < size_t(n-k); i++) {
+	// 	S.setbit(i,hammingweight_xor(E, H[i])%2);
+	// }
 	//std::cout << "S: " << S << std::endl;
 	return true;
 }
