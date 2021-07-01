@@ -40,8 +40,8 @@ public:
 
     const std::vector<uint32_t>& permutation() const { return perm; }
     
-    vec_view_it operator[](size_t r) const { return HT[perm[r]]; }
-    vec_view_it operator()(size_t r) const { return HT[perm[r]]; }
+    vec_view_it operator[](size_t r) const { return HT[r]; }
+    vec_view_it operator()(size_t r) const { return HT[r]; }
 
     // permute rows: swap each row in [b1:e1) with a uniformly random chosen row from [b2:e2)
     void row_permute(size_t b1, size_t e1, size_t b2, size_t e2)
@@ -59,6 +59,26 @@ public:
     		if (j == i)
     			continue;
     		std::swap(perm[i], perm[j]);
+    		HT[i].swap(HT[j]);
+    	}
+    }
+    template<size_t bits>
+    void row_permute(size_t b1, size_t e1, size_t b2, size_t e2, aligned_tag<bits>)
+    {
+    	if (b1 >= e1 || b2 >= e2)
+    		return;
+	if (e1 > HT.rows())
+		e1 = HT.rows();
+	if (e2 > HT.rows())
+		e2 = HT.rows();
+    	size_t n2 = e2 - b2;
+    	for (size_t i = b1; i < e1; ++i)
+    	{
+    		size_t j = b2 + (rndgen() % n2);
+    		if (j == i)
+    			continue;
+    		std::swap(perm[i], perm[j]);
+    		HT[i].swap(HT[j], aligned_tag<bits>());
     	}
     }
 
@@ -85,7 +105,7 @@ public:
 		// find pivot for row r column pivot_start
 		// normally we swap columns, but row swaps are also allowed for ISD
 		size_t r2 = r;
-		for (; r2 < HT.rows() && HT(perm[r2],pivot_end)==false; ++r2)
+		for (; r2 < HT.rows() && HT(r2,pivot_end)==false; ++r2)
 			;
 		if (r2 == HT.rows())
 		{
@@ -93,9 +113,12 @@ public:
 			continue;
 		}
 		if (r2 != r)
+		{
 			std::swap(perm[r], perm[r2]);
+			HT[r2].swap(HT[r]);
+		}
 		
-		vec_view pivotrow(HT[perm[r]]);
+		vec_view pivotrow(HT[r]);
 		pivotrow.clearbit(pivot_end);
 		auto HTrowit = HT[0];
 		for (r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
@@ -115,7 +138,7 @@ public:
 		// find pivot for row r column pivot_start
 		// normally we swap columns, but row swaps are also allowed for ISD
 		size_t r2 = r;
-		for (; r2 < HT.rows() && HT(perm[r2],pivot_end)==false; ++r2)
+		for (; r2 < HT.rows() && HT(r2,pivot_end)==false; ++r2)
 			;
 		if (r2 == HT.rows())
 		{
@@ -123,9 +146,12 @@ public:
 			continue;
 		}
 		if (r2 != r)
+		{
 			std::swap(perm[r], perm[r2]);
+			HT[r2].swap(HT[r], aligned_tag<bits>());
+		}
 		
-		vec_view pivotrow(HT[perm[r]]);
+		vec_view pivotrow(HT[r]);
 		pivotrow.clearbit(pivot_end);
 		auto HTrowit = HT[0];
 		for (r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
@@ -150,7 +176,7 @@ public:
     template<size_t bits>
     void next_form(size_t AI_rows, size_t row_start, aligned_tag<bits>)
     {
-    	row_permute(row_start, AI_rows, AI_rows, HT.rows());
+    	row_permute(row_start, AI_rows, AI_rows, HT.rows(), aligned_tag<bits>());
     	size_t pivot_end = echelonize(row_start, AI_rows, HT.columns() - row_start, aligned_tag<bits>());
     	if (HT.columns() - AI_rows != pivot_end)
     	{
