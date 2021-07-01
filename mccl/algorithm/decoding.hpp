@@ -271,7 +271,7 @@ private:
     mat H;
     mat H01T;
     vec S;
-    cvec_view solution;
+    vec solution;
 
     vec_view S0_view;
     mat_view H01_S_view, H01T_view, H01T_S_view, H11_S_view, H11T_view, H11T_S_view;
@@ -324,6 +324,8 @@ public:
         H11T_view.reset(H01T.submatrix(0, cols1, 0, rows));
 
         permutator.reset(H);
+
+        solution = vec(n);
     }
 
     // callback function
@@ -380,7 +382,7 @@ public:
             std::cerr << "ISD_single_generic found solution after " << cnt << " iterations" << std::endl;
             std::cerr << sol.get_solution() << std::endl;
             // todo: free memory
-            solution.reset(sol.get_solution());
+            solution.copy(sol.get_solution());
             return false;
         }
         return true;
