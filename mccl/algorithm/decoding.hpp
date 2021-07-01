@@ -371,7 +371,10 @@ public:
         permutator.random_permute(scratch0, scratch0+cols0, scratch0, scratch0+n);
         auto pivotend = echelonize(H, scratch0, scratch0+cols0);
         if(pivotend != cols0)
+        {
+            --cnt;
             return true;
+        }
 
         H01T_S_view.transpose(H01_S_view);
         try
