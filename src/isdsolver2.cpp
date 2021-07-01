@@ -56,11 +56,13 @@ int main(int argc, char *argv[])
     size_t n = 0, k = 0, w = 0;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
+    // These are the core commands, you need at least one of these
     cmdopts.add_options()
       ("help,h", "Show options")
       ("file,f", po::value<std::string>(&filepath), "Specify input file")
       ("gen,g", "Generate random ISD instances")
       ;
+    // these are other configuration options
     opts.add_options()
       ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
@@ -83,6 +85,17 @@ int main(int argc, char *argv[])
     if (algo != "P" && algo != "LB")
     {
       std::cout << "Unknown algorithm: " << algo << std::endl;
+      return 1;
+    }
+    if (vm.positional.size() > 0)
+      n = vm.positional[0].as<size_t>();
+    if (vm.positional.size() > 1)
+      k = vm.positional[1].as<size_t>();
+    if (vm.positional.size() > 2)
+      w = vm.positional[2].as<size_t>();
+    if (vm.positional.size() > 3)
+    {
+      std::cout << "Unknown option: " << vm.positional[3].as<std::string>() << std::endl;
       return 1;
     }
 
