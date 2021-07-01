@@ -130,9 +130,15 @@ int main(int argc, char *argv[])
     std::cout << "k = " << k << '\n';
     std::cout << "w = " << w << '\n';
 
-
     int c = 0;
     for (int i=0; i<N; i++){
+      std::cerr << "Start rerandomize" << std::endl;
+      if(N>1) { // if N > 1 regenerate each run, todo: make this optional
+        parse.regenerate();
+        H.reset(parse.get_H());
+        S.reset(parse.get_S());
+      }
+      std::cerr << "Start alg" << std::endl;
       if (algo=="PRANGE")
         c += run_subISD<subISD_prange>(H,S,w);
       else if (algo=="LEE BRICKELL")

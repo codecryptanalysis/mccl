@@ -28,6 +28,8 @@ std::vector<bool> string_to_booleans(std::string& str) {
 class Parser {
 	public:
 		bool load_file(std::string filename);
+		bool random_SD(int n, int k, int w);
+		bool regenerate();
 		const mat_view& get_H() { return H; }
 		const vec_view& get_S() { return S; }
 		size_t get_n() { return n; };
@@ -126,6 +128,56 @@ bool Parser::load_file(std::string filename)
 	}
 	return true;
 }
+
+// generate random testcase
+bool Parser::random_SD(int n_, int k_, int w_) {
+	n=n_;
+	k=k_;
+	w=w_;
+	seed=0;
+
+	if(n<=0) { std::cerr << "Length not positive" << std::endl; return false; } 
+	if(k<=0 or k >= n) { std::cerr << "Dimension not in correct range" << std::endl; return false; } 
+	if(w<0 or w>n-k) { std::cerr << "Weight not in correct range [0,n-k]" << std::endl; return false; }
+	H = mat(n-k,n);
+	fillrandom(H);
+	// force identity part for comptability
+	for(size_t i = 0; i < size_t(n-k); i++) {
+		for(size_t j=0; j < size_t(n-k); j++ ) {
+			H.clearbit(i,j);
+		}
+		H.setbit(i,i);
+	}
+
+	// pick random weight w vec by picking random indices 
+	// until we have sampled w distinct ones
+	// works efficiently if w<<n.
+	mccl_base_random_generator gen;
+	vec E(n);
+	int cnt = 0;
+	while(cnt < w){
+		size_t ind = gen()%n;
+		if(!E[ind]) {
+			E.setbit(ind);
+			cnt++;
+		}
+	}
+	//std::cout << "Generated error:" << E << std::endl;
+
+	// compute syndrome
+	S = vec(n-k);
+	for(size_t i =0; i < size_t(n-k); i++) {
+		S.setbit(i,hammingweight_xor(E, H[i])%2);
+	}
+	//std::cout << "S: " << S << std::endl;
+	return true;
+}
+
+bool Parser::regenerate() {
+	return random_SD(n,k,w);
+}
+
+
 
 MCCL_END_NAMESPACE
 
