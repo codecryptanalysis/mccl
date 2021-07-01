@@ -229,7 +229,7 @@ inline bool check_solution(const mat_view& H01T_view, const vec_view& S0, const 
     for( auto i : E1_sparse ) {
         E0 ^= H01T_view[i];
     }
-    if (hammingweight(E0)< w-w1-E1_sparse.size())
+    if (hammingweight(E0)<= w-w1-E1_sparse.size())
     {
         std::cerr << "Found solution" << std::endl;
         // recover and submit solution?
