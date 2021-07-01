@@ -79,4 +79,18 @@ def weights_SD(n, r, p, ell):
 def weights_MMT(n, r, p, ell, ell2):
     return weights_ISD_generic(n,r,p,ell,subISD_MMT(ell2))
 
+def unique_proba_prange(n, r, w, ell=0):
+    W, norm = weights_prange(n, r, ell)
+    return W[w]/norm
 
+def random_proba_prange(n, r, w, ell=0):
+    W, norm = weights_prange(n, r, ell)
+    return sum(W[:(w+1)])/norm
+
+def unique_proba_LB(n, r, w, p=3, ell=0):
+    W, norm = weights_LB(n, r, p, ell)
+    return W[w]/norm
+
+def random_proba_LB(n, r, w, p=3, ell=0):
+    W, norm = weights_LB(n, r, p, ell)
+    return sum(W[:(w+1)])/norm
