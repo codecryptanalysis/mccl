@@ -29,7 +29,7 @@ def dGV(n, k):
 
 def param_SD(n):
     k = n//2
-    w = ceil(1.05 * dGV(n,k))
+    w = int(ceil(1.05 * dGV(n,k)))
     return (k,w)
 
 

@@ -81,16 +81,28 @@ def weights_MMT(n, r, p, ell, ell2):
 
 def unique_proba_prange(n, r, w, ell=0):
     W, norm = weights_prange(n, r, ell)
-    return W[w]/norm
+    return W[w]/comb(n,w)
 
 def random_proba_prange(n, r, w, ell=0):
     W, norm = weights_prange(n, r, ell)
     return sum(W[:(w+1)])/norm
 
-def unique_proba_LB(n, r, w, p=3, ell=0):
-    W, norm = weights_LB(n, r, p, ell)
-    return W[w]/norm
+def random_expectation_prange(n, r, w, ell=0):
+    return random_proba_prange(n, r, w, ell)
 
-def random_proba_LB(n, r, w, p=3, ell=0):
+def random_expectation_LB(n, r, w, p=3, ell=0):
     W, norm = weights_LB(n, r, p, ell)
     return sum(W[:(w+1)])/norm
+
+def random_proba_LB(n, r, w, p=3):
+    proba_not = 1.
+    for pp in range(p+1):
+        samples = comb(n-r, pp)
+        W = weights_ball(r, w-pp)
+        proba_one = sum(W)/2**r
+        proba_not = proba_not * (1-proba_one)**samples
+    return 1-proba_not
+
+def unique_proba_LB(n, r, w, p=3, ell=0):
+    W, norm = weights_LB(n, r, p, ell)
+    return W[w]/comb(n,w)
