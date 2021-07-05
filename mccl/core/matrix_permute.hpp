@@ -28,165 +28,132 @@ class HT_ISD_form_t
 {
 public:
     HT_ISD_form_t() {}
-    HT_ISD_form_t(const mat_view& _HT) { reset(_HT); }
-    void reset(const mat_view& _HT)
+    HT_ISD_form_t(const mat_view& _HT, size_t _echelon_rows) { reset(_HT, _echelon_rows); }
+    void reset(const mat_view& _HT, size_t _echelon_rows)
     {
+    	assert(_echelon_rows < _HT.rows());
+
     	HT.reset(_HT.ptr);
+    	echelon_rows = _echelon_rows;
+    	ISD_rows = HT.rows() - echelon_rows;
+    	cur_row = 0;
+
     	perm.resize(HT.rows());
     	std::iota(perm.begin(), perm.end(), 0);
-    	row_permute();
-    	echelonize(0, HT.rows(), HT.columns());
+
+    	for (size_t i = 0; i < echelon_rows; ++i)
+    		update1(i);
     };
 
     const std::vector<uint32_t>& permutation() const { return perm; }
     
     vec_view_it operator[](size_t r) const { return HT[r]; }
     vec_view_it operator()(size_t r) const { return HT[r]; }
-
-    // permute rows: swap each row in [b1:e1) with a uniformly random chosen row from [b2:e2)
-    void row_permute(size_t b1, size_t e1, size_t b2, size_t e2)
-    {
-    	if (b1 >= e1 || b2 >= e2)
-    		return;
-	if (e1 > HT.rows())
-		e1 = HT.rows();
-	if (e2 > HT.rows())
-		e2 = HT.rows();
-    	size_t n2 = e2 - b2;
-    	for (size_t i = b1; i < e1; ++i)
-    	{
-    		size_t j = b2 + (rndgen() % n2);
-    		if (j == i)
-    			continue;
-    		std::swap(perm[i], perm[j]);
-    		HT[i].swap(HT[j]);
-    	}
-    }
-    template<size_t bits>
-    void row_permute(size_t b1, size_t e1, size_t b2, size_t e2, aligned_tag<bits>)
-    {
-    	if (b1 >= e1 || b2 >= e2)
-    		return;
-	if (e1 > HT.rows())
-		e1 = HT.rows();
-	if (e2 > HT.rows())
-		e2 = HT.rows();
-    	size_t n2 = e2 - b2;
-    	for (size_t i = b1; i < e1; ++i)
-    	{
-    		size_t j = b2 + (rndgen() % n2);
-    		if (j == i)
-    			continue;
-    		std::swap(perm[i], perm[j]);
-    		HT[i].swap(HT[j], aligned_tag<bits>());
-    	}
-    }
-
-    void row_permute(size_t b = 0, size_t e = ~uint64_t(0))
-    {
-	row_permute(b,e,b,e);
-    }
-
-    // full *column* reduction of matrix H^T with reverse column ordering
-    //    note: column reduction normally should only do full column operations (swap, xor)
-    //          in this case row swaps are cheaper and also allowed when recorded in permutation perm
-    //          our implementation performs the xor of one column onto many columns at the same time by xoring rows
-    //
-    // this corresponds to full row reduction of matrix H with reverse row ordering
-    //    note: row reduction normally should only do full row operations (swap, xor)
-    //          in this case column swaps are allowed when recorded in permutation perm
-    //
-    // since we do reverse column ordering: pivot_end points to startpivot+1
-    size_t echelonize(size_t row_begin, size_t row_end, size_t pivot_end)
-    {
-    	for (size_t r = row_begin; r < row_end; ++r)
-    	{
-		--pivot_end;
-		// find pivot for row r column pivot_start
-		// normally we swap columns, but row swaps are also allowed for ISD
-		size_t r2 = r;
-		for (; r2 < HT.rows() && HT(r2,pivot_end)==false; ++r2)
-			;
-		if (r2 == HT.rows())
-		{
-			++pivot_end;
-			continue;
-		}
-		if (r2 != r)
-		{
-			std::swap(perm[r], perm[r2]);
-			HT[r2].swap(HT[r]);
-		}
-		
-		vec_view pivotrow(HT[r]);
-		pivotrow.clearbit(pivot_end);
-		auto HTrowit = HT[0];
-		for (r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
-			if (HT(r2,pivot_end))
-				HTrowit.vxor(pivotrow);
-		pivotrow.clear();
-		pivotrow.setbit(pivot_end);
-    	}
-    	return pivot_end;
-    }
-    template<size_t bits>
-    size_t echelonize(size_t row_begin, size_t row_end, size_t pivot_end, aligned_tag<bits>)
-    {
-    	for (size_t r = row_begin; r < row_end; ++r)
-    	{
-		--pivot_end;
-		// find pivot for row r column pivot_start
-		// normally we swap columns, but row swaps are also allowed for ISD
-		size_t r2 = r;
-		for (; r2 < HT.rows() && HT(r2,pivot_end)==false; ++r2)
-			;
-		if (r2 == HT.rows())
-		{
-			++pivot_end;
-			continue;
-		}
-		if (r2 != r)
-		{
-			std::swap(perm[r], perm[r2]);
-			HT[r2].swap(HT[r], aligned_tag<bits>());
-		}
-		
-		vec_view pivotrow(HT[r]);
-		pivotrow.clearbit(pivot_end);
-		auto HTrowit = HT[0];
-		for (r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
-			if (HT(r2,pivot_end))
-				HTrowit.vxor(pivotrow, aligned_tag<bits>());
-		pivotrow.clear(aligned_tag<bits>());
-		pivotrow.setbit(pivot_end);
-    	}
-    	return pivot_end;
-    }
     
-    // requires that HT has ISD form up to row_start
-    void next_form(size_t AI_rows, size_t row_start = 0)
+    // update 1 echelon row: swap with random row outside echelon form and bring it back to echelon form
+    void update1(size_t idx)
     {
-    	row_permute(row_start, AI_rows, AI_rows, HT.rows());
-    	size_t pivot_end = echelonize(row_start, AI_rows, HT.columns() - row_start);
-    	if (HT.columns() - AI_rows != pivot_end)
-    	{
-    		std::cerr << "HT_ISD_form_t::next_form(" << AI_rows << "," << row_start << "): pivot_end=" << pivot_end << " != HT.columns()-AI_rows=" << HT.columns()-AI_rows << std::endl;
-    	}
+    	assert(idx < echelon_rows);
+    	// echelon row idx must have 1-bit in column pivotcol:
+    	size_t pivotcol = HT.columns() - idx - 1;
+    	// find random row to swap with
+    	//   must have bit set at pivot column
+    	//   start at random position and then do linear search
+    	//   TODO: avoid ending up at previously swapped out column, maybe reduce search region?
+    	size_t r = rndgen() % ISD_rows;
+	for (; r < ISD_rows && HT(echelon_rows + r,pivotcol)==false; ++r)
+		;
+	// wrap around
+	if (r == ISD_rows) // unlikely
+	{
+		r = 0;
+		for (; r < ISD_rows && HT(echelon_rows + r,pivotcol)==false; ++r)
+			;
+	}
+	// oh oh if we wrap around twice
+	if (r == ISD_rows) // unlikely
+		throw std::runtime_error("HT_ISD_form_t::update(): cannot find pivot");
+	// swap rows
+	std::swap(perm[idx], perm[echelon_rows + r]);
+	HT[idx].swap(HT[echelon_rows + r]);
+
+	// bring back in echelon form
+	vec_view pivotrow(HT[idx]);
+	pivotrow.clearbit(pivotcol);
+	auto HTrowit = HT[0];
+	for (size_t r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
+		if (HT(r2,pivotcol))
+			HTrowit.vxor(pivotrow);
+	pivotrow.clear();
+	pivotrow.setbit(pivotcol);
+    }
+    // update 1 echelon row: swap with random row outside echelon form and bring it back to echelon form
+    template<size_t bits>
+    void update1(size_t idx, aligned_tag<bits>)
+    {
+    	assert(idx < echelon_rows);
+    	// echelon row idx must have 1-bit in column pivotcol:
+    	size_t pivotcol = HT.columns() - idx - 1;
+    	// find random row to swap with
+    	//   must have bit set at pivot column
+    	//   start at random position and then do linear search
+    	//   TODO: avoid ending up at previously swapped out column, maybe reduce search region?
+    	size_t r = rndgen() % ISD_rows;
+	for (; r < ISD_rows && HT(r,pivotcol)==false; ++r)
+		;
+	// wrap around
+	if (r == ISD_rows) // unlikely
+	{
+		r = 0;
+		for (; r < ISD_rows && HT(r,idx)==false; ++r)
+			;
+	}
+	// oh oh if we wrap around twice
+	if (r == ISD_rows) // unlikely
+		throw std::runtime_error("HT_ISD_form_t::update(): cannot find pivot");
+	// swap rows
+	std::swap(perm[idx], perm[r]);
+	HT[idx].swap(HT[r], aligned_tag<bits>());
+
+	// bring back in echelon form
+	vec_view pivotrow(HT[idx]);
+	pivotrow.clearbit(pivotcol);
+	auto HTrowit = HT[0];
+	for (size_t r2 = 0; r2 < HT.rows(); ++r2,++HTrowit)
+		if (HT(r2,pivotcol))
+			HTrowit.vxor(pivotrow, aligned_tag<bits>());
+	pivotrow.clear(aligned_tag<bits>());
+	pivotrow.setbit(pivotcol);
+    }
+
+    void update1()
+    {
+    	update(cur_row++);
     }
     template<size_t bits>
-    void next_form(size_t AI_rows, size_t row_start, aligned_tag<bits>)
+    void update1(aligned_tag<bits>)
     {
-    	row_permute(row_start, AI_rows, AI_rows, HT.rows(), aligned_tag<bits>());
-    	size_t pivot_end = echelonize(row_start, AI_rows, HT.columns() - row_start, aligned_tag<bits>());
-    	if (HT.columns() - AI_rows != pivot_end)
-    	{
-    		std::cerr << "HT_ISD_form_t::next_form(" << AI_rows << "," << row_start << "): pivot_end=" << pivot_end << " != HT.columns()-AI_rows=" << HT.columns()-AI_rows << std::endl;
-    	}
+    	update(cur_row++, aligned_tag<bits>());
     }
-    
+
+    void update(size_t rows)
+    {
+    	for (size_t i = 0; i < rows; ++i)
+    		update1();
+	// TODO: improved multirow update using method of 4 russians
+    }
+    template<size_t bits>
+    void update(size_t rows, aligned_tag<bits>)
+    {
+    	for (size_t i = 0; i < rows; ++i)
+    		update1(aligned_tag<bits>());
+	// TODO: improved multirow update using method of 4 russians
+    }
+
 private:
     mat_view HT;
     std::vector<uint32_t> perm;
+    size_t echelon_rows, ISD_rows, cur_row;
     mccl_base_random_generator rndgen;
 };
 
