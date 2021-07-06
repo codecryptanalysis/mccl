@@ -92,9 +92,9 @@ public:
             return true;
         unsigned i = 1;
         for (; i < cp; ++i)
-            if (++curidx[i] < rows)
+            if (++curidx[i] + i < rows)
                 break;
-        if (i >= cp || curidx[i]+i >= rows)
+        if (i >= cp)
         {
             if (++cp > p)
                 return false;
