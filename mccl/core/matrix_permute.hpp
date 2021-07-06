@@ -49,10 +49,10 @@ public:
     	
     	// setup HST
     	size_t HTrows = H_.columns(), HTcols = H_.rows();
-    	size_t HTcolspadded = (HTcols + bit_alignment - 1) & (bit_alignment-1);
+    	size_t HTcolspadded = (HTcols + bit_alignment - 1) & ~(bit_alignment-1);
     	HT_columns = HTcols;
     	H2T_columns = l_;
-    	H2T_columns_padded = (H2T_columns + bit_alignment - 1) & (bit_alignment - 1);
+    	H2T_columns_padded = (H2T_columns + bit_alignment - 1) & ~(bit_alignment - 1);
     	H1T_columns = HTcols - l_;
     	echelon_rows = HTcols - l_;
     	ISD_rows = HTrows - echelon_rows;
@@ -151,6 +151,7 @@ public:
 			HSTrowit.vxor(pivotrow, this_aligned_tag());
 	pivotrow.clear(this_aligned_tag());
 	pivotrow.setbit(pivotcol);
+//	std::cout << idx << HST << std::endl;
     }
     void update1()
     {
