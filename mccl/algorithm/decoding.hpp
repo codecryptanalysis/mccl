@@ -187,7 +187,7 @@ public:
         w = _w;
         HST.reset(_H, _S, l);
 
-        C.resize(HST.HSTpadded().columns());
+        C.resize(HST.Spadded().columns());
         C2padded.reset(C.subvector(0, HST.S2padded().columns()));
         C1restpadded.reset(C.subvector(HST.S2padded().columns(), HST.S1restpadded().columns()));
         
@@ -225,9 +225,9 @@ public:
             // 3. construct full solution on E1 and E2 part
             C.copy(HST.Spadded(), this_aligned_tag());
             for (p = begin; p != end; ++p)
-                C.vxor(HST.HTpadded()[*p], this_aligned_tag());
-            if (wsol != hammingweight(C, this_aligned_tag()))
-                throw;
+                C.vxor(HST.H12Tpadded()[*p], this_aligned_tag());
+            if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
+                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 1");
             for (p = begin; p != end; ++p)
                 sol.push_back(HST.permutation( HST.echelonrows() + *p ));
             for (size_t c = 0; c < HST.HT().columns(); ++c)
@@ -235,7 +235,7 @@ public:
                 if (C[c] == false)
                     continue;
                 if (c < HST.H2T().columns())
-                    throw;
+                    throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 2");
                 sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
             }
             return false;

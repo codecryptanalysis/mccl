@@ -38,12 +38,13 @@ int run_subISD(mat_view &H, vec_view &S, size_t w) {
 }
 
 template<typename subISDT_t = ISD_API_exhaustive_transposed_sparserange_t>
-int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t u)
+int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u)
 {
   subISDT_t subISDT;
+  subISDT.configure(p);
   ISD_single_generic_transposed<subISDT_t> ISD_single(subISDT);
-  ISD_single.initialize(H, S, w);
   ISD_single.configure(l, u);
+  ISD_single.initialize(H, S, w);
   ISD_single.solve();
   std::cout << "Solution found:\n";
   std::cout << ISD_single.get_solution() << std::endl;
@@ -56,7 +57,7 @@ try
 {
     std::string filepath, algo;
     size_t trials = 1;
-    size_t n = 0, k = 0, w = 0, l = 0, u = 1;
+    size_t n = 0, k = 0, w = 0, l = 0, u = 1, p = 3;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
     // These are the core commands, you need at least one of these
@@ -67,7 +68,7 @@ try
       ;
     // these are other configuration options
     opts.add_options()
-      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, TP")
+      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, TP, TLB")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("genunique", "Generate unique decoding instance")
       ("genrandom", "Generate random decoding instance")
@@ -75,6 +76,7 @@ try
       ("k", po::value<size_t>(&k), "Code dimension")
       ("w", po::value<size_t>(&w), "Error weight")
       ("l", po::value<size_t>(&l)->default_value(0), "H2 rows")
+      ("p", po::value<size_t>(&p)->default_value(3), "subISD parameter p")
       ("u", po::value<size_t>(&u)->default_value(1), "I column swaps per iteration")
       ;
     allopts.add(cmdopts).add(opts);
@@ -87,7 +89,7 @@ try
       std::cout << cmdopts << opts;
       return 0;
     }
-    if (algo != "P" && algo != "LB" && algo != "TP")
+    if (algo != "P" && algo != "LB" && algo != "TP" && algo != "TLB")
     {
       std::cout << "Unknown algorithm: " << algo << std::endl;
       return 1;
@@ -134,7 +136,7 @@ try
     if (u < 1)
       u = 1;
 
-    std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", u=" << u << " | trials=" << trials << std::endl;
+    std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", p=" << p << ", u=" << u << " | trials=" << trials << std::endl;
 
     mat_view H = parse.get_H();
     vec_view S = parse.get_S();
@@ -151,7 +153,9 @@ try
       else if (algo=="LB")
         c += run_subISD<subISD_LB>(H,S,w);
       else if (algo=="TP")
-        c += run_subISDT<subISDT_prange>(H,S,w,l,u);
+        c += run_subISDT<subISDT_prange>(H,S,w,l,p,u);
+      else if (algo=="TLB")
+        c += run_subISDT<subISDT_LB>(H,S,w,l,p,u);
     }
 
     float avg_cnt = float(c) / float(trials);

@@ -11,7 +11,7 @@ class subISD_prange
 public:        
     using ISD_API_exhaustive_sparse_t::callback_t;
 
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr)
+    void initialize(const mat_view&, const vec_view&, unsigned int w_, callback_t _callback, void* _ptr)
     {
         callback = _callback;
         ptr = _ptr;
@@ -34,12 +34,16 @@ class subISDT_prange
 {
 public:
     using ISD_API_exhaustive_transposed_sparserange_t::callback_t;
+
+    void configure(size_t)
+    {
+    }
     
-    void initialize(const cmat_view& HTpadded, size_t HTcolumns, const cvec_view& Spadded, unsigned int w, callback_t _callback, void* _ptr) final
+    void initialize(const cmat_view&, size_t HTcolumns, const cvec_view&, unsigned int w, callback_t _callback, void* _ptr) final
     {
         // should only be used with l=0
         if (HTcolumns != 0)
-            throw;
+            throw std::runtime_error("subISDT_prange::initialize(): Prange doesn't support l>0");
         callback = _callback;
         ptr = _ptr;
     }

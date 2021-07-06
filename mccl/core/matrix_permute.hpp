@@ -62,10 +62,12 @@ public:
     	HST.clear();
 
     	// create views
-    	_HT      .reset(HST.submatrix(0, HTrows, 0, HTcols));
-    	_HTpadded.reset(HST.submatrix(0, HTrows, 0, HTcolspadded));
-    	_S       .reset(HST[HTrows].subvector(0, HTcols));
-    	_Spadded .reset(HST[HTrows].subvector(0, HTcolspadded));
+    	_HT        .reset(HST.submatrix(0, HTrows, 0, HTcols));
+    	_HTpadded  .reset(HST.submatrix(0, HTrows, 0, HTcolspadded));
+    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, HTcols));
+    	_H12Tpadded.reset(HST.submatrix(echelon_rows, ISD_rows, 0, HTcolspadded));
+    	_S         .reset(HST[HTrows].subvector(0, HTcols));
+    	_Spadded   .reset(HST[HTrows].subvector(0, HTcolspadded));
 
 	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, H2T_columns));
 	_H2Tpadded.reset(HST.submatrix(echelon_rows, ISD_rows, 0, H2T_columns_padded));
@@ -102,6 +104,8 @@ public:
 
     const cmat_view& HT()            const { return _HT; }
     const cmat_view& HTpadded()      const { return _HTpadded; }
+    const cmat_view& H12T()          const { return _H12T; }
+    const cmat_view& H12Tpadded()    const { return _H12Tpadded; }
     const cmat_view& H2T()           const { return _H2T; }
     const cmat_view& H2Tpadded()     const { return _H2Tpadded; }
     const cmat_view& H1Trest()       const { return _H1Trest; }
@@ -168,7 +172,7 @@ public:
 private:
     mat HST;
 
-    mat_view _HT, _HTpadded;
+    mat_view _HT, _HTpadded, _H12T, _H12Tpadded;
     vec_view _S, _Spadded;
 
     mat_view _H2T, _H2Tpadded;
