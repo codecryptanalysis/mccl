@@ -163,7 +163,7 @@ static inline void v_2op_f(const v_ptr& dst, const cv_ptr& src, aligned_tag<bits
 }
 
 template<size_t bits, void f(block_t<bits>*, block_t<bits>*, const block_t<bits>*, const block_t<bits>*)>
-static inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2)
+static inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (dst.columns != src1.columns || dst.columns != src2.columns)
