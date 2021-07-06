@@ -6,22 +6,10 @@
 #include <mccl/algorithm/LB.hpp>
 
 #include <mccl/contrib/program_options.hpp>
+
 namespace po = program_options;
 
 using namespace mccl;
-
-void usage() {
-  std::cout << "Usage: isdsolver expects the following arguments " << '\n';
-  std::cout << "Necessary arguments:" << '\n';
-  std::cout << "\t -f\t to specify the path of the challenge instance file" << '\n';
-  std::cout << "\t\t test files are available in 'tests/data/'" << '\n';
-  std::cout << "Optional arguments:" << '\n';
-  std::cout << "\t -a\t to specify the desired algorithm" << '\n';
-  std::cout << "\t\t 'P' for PRANGE algorithm (default)" << '\n';
-  std::cout << "\t\t 'LB' for LEE BRICKELL algorithm" << '\n';
-  std::cout << "\t -n\t to repeat the algorithm several time" << '\n';
-  std::cout << "\t\t expects an integer (default = 1)" << '\n';
-}
 
 // we should probably move this function in the tools
 std::size_t binomial(std::size_t k, std::size_t N)
@@ -49,6 +37,18 @@ int run_subISD(mat_view &H, vec_view &S, size_t w) {
   return ISD_single.get_cnt();
 }
 
+template<typename subISDT_t = ISD_API_exhaustive_transposed_sparserange_t>
+int run_subISDT(mat_view& H, vec_view& S, size_t w)
+{
+  subISDT_t subISDT;
+  ISD_single_generic_transposed<subISDT_t> ISD_single(subISDT);
+  ISD_single.initialize(H, S, w);
+  ISD_single.solve();
+  std::cout << "Solution found:" << std::endl;
+  std::cout << ISD_single.get_solution() << std::endl;
+  return ISD_single.get_cnt();
+}
+
 int main(int argc, char *argv[])
 {
     std::string filepath, algo;
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
       ;
     // these are other configuration options
     opts.add_options()
-      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB")
+      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, TP")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("genunique", "Generate unique decoding instance")
       ("genrandom", "Generate random decoding instance")
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
       std::cout << cmdopts << opts;
       return 0;
     }
-    if (algo != "P" && algo != "LB")
+    if (algo != "P" && algo != "LB" && algo != "TP")
     {
       std::cout << "Unknown algorithm: " << algo << std::endl;
       return 1;
@@ -137,6 +137,8 @@ int main(int argc, char *argv[])
         c += run_subISD<subISD_prange>(H,S,w);
       else if (algo=="LB")
         c += run_subISD<subISD_LB>(H,S,w);
+      else if (algo=="TP")
+        c += run_subISDT<subISDT_prange>(H,S,w);
     }
 
     float avg_cnt = float(c) / float(trials);
