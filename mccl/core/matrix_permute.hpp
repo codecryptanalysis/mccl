@@ -151,7 +151,6 @@ public:
 			HSTrowit.vxor(pivotrow, this_aligned_tag());
 	pivotrow.clear(this_aligned_tag());
 	pivotrow.setbit(pivotcol);
-//	std::cout << idx << HST << std::endl;
     }
     void update1()
     {

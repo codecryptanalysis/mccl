@@ -166,10 +166,18 @@ public:
     ISD_single_generic_transposed(subISDT_t& sI)
         : subISDT(&sI)
     {
+        n = k = w = 0;
+        l = 0; // ISD form parameter
+        u = 1; // how many rows to swap each iteration. max n - k - l
     }
 
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
+    void configure(size_t _l = 0, size_t _u = 1)
+    {
+        l = _l;
+        u = _u;
+    }
 
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
     void initialize(const mat_view& _H, const vec_view& _S, unsigned int _w) final
@@ -177,8 +185,6 @@ public:
         n = _H.columns();
         k = n - _H.rows();
         w = _w;
-        l = 0; // ISD form parameter
-        u = 1; //n - k - l; // how many rows to swap each iteration
         HST.reset(_H, _S, l);
 
         C.resize(HST.HSTpadded().columns());

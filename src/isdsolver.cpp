@@ -38,11 +38,12 @@ int run_subISD(mat_view &H, vec_view &S, size_t w) {
 }
 
 template<typename subISDT_t = ISD_API_exhaustive_transposed_sparserange_t>
-int run_subISDT(mat_view& H, vec_view& S, size_t w)
+int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t u)
 {
   subISDT_t subISDT;
   ISD_single_generic_transposed<subISDT_t> ISD_single(subISDT);
   ISD_single.initialize(H, S, w);
+  ISD_single.configure(l, u);
   ISD_single.solve();
   std::cout << "Solution found:\n";
   std::cout << ISD_single.get_solution() << std::endl;
@@ -51,9 +52,11 @@ int run_subISDT(mat_view& H, vec_view& S, size_t w)
 
 int main(int argc, char *argv[])
 {
+try
+{
     std::string filepath, algo;
     size_t trials = 1;
-    size_t n = 0, k = 0, w = 0;
+    size_t n = 0, k = 0, w = 0, l = 0, u = 1;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
     // These are the core commands, you need at least one of these
@@ -71,6 +74,8 @@ int main(int argc, char *argv[])
       ("n", po::value<size_t>(&n), "Code length")
       ("k", po::value<size_t>(&k), "Code dimension")
       ("w", po::value<size_t>(&w), "Error weight")
+      ("l", po::value<size_t>(&l)->default_value(0), "H2 rows")
+      ("u", po::value<size_t>(&u)->default_value(1), "I column swaps per iteration")
       ;
     allopts.add(cmdopts).add(opts);
     po::variables_map vm;
@@ -94,8 +99,12 @@ int main(int argc, char *argv[])
     if (vm.positional.size() > 2)
       w = vm.positional[2].as<size_t>();
     if (vm.positional.size() > 3)
+      l = vm.positional[3].as<size_t>();
+    if (vm.positional.size() > 4)
+      u = vm.positional[4].as<size_t>();
+    if (vm.positional.size() > 5)
     {
-      std::cout << "Unknown option: " << vm.positional[3].as<std::string>() << std::endl;
+      std::cout << "Unknown option: " << vm.positional[5].as<std::string>() << std::endl;
       return 1;
     }
 
@@ -120,8 +129,12 @@ int main(int argc, char *argv[])
       }
       parse.random_SD(n, k, w);
     }
+    if (l > n-k)
+      l = n-k;
+    if (u < 1)
+      u = 1;
 
-    std::cout << "n=" << n << ", k=" << k << ", w=" << w << ", algo=" << algo << ", trials=" << trials << std::endl;
+    std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", u=" << u << " | trials=" << trials << std::endl;
 
     mat_view H = parse.get_H();
     vec_view S = parse.get_S();
@@ -138,7 +151,7 @@ int main(int argc, char *argv[])
       else if (algo=="LB")
         c += run_subISD<subISD_LB>(H,S,w);
       else if (algo=="TP")
-        c += run_subISDT<subISDT_prange>(H,S,w);
+        c += run_subISDT<subISDT_prange>(H,S,w,l,u);
     }
 
     float avg_cnt = float(c) / float(trials);
@@ -146,4 +159,11 @@ int main(int argc, char *argv[])
     std::cout << "Average number of iterations: " << avg_cnt << '\n';
     std::cout << "Inverse of average number of iterations: " << inv_avg_cnt << '\n';
     return 0;
-  }
+} catch (std::exception& e) {
+    std::cerr << "Caught exception: " << e.what() << std::endl;
+    return 1;
+} catch (...) {
+    std::cerr << "Caught unknown exception!" << std::endl;
+    return 1;
+}
+}
