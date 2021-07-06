@@ -154,7 +154,9 @@ public:
     }
     void update1()
     {
-    	update(cur_row++);
+    	update1(cur_row++);
+    	if (cur_row == echelon_rows)
+    		cur_row = 0;
     }
     void update(size_t rows)
     {
