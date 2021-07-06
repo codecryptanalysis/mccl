@@ -44,7 +44,7 @@ int run_subISDT(mat_view& H, vec_view& S, size_t w)
   ISD_single_generic_transposed<subISDT_t> ISD_single(subISDT);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
-  std::cout << "Solution found:" << std::endl;
+  std::cout << "Solution found:\n";
   std::cout << ISD_single.get_solution() << std::endl;
   return ISD_single.get_cnt();
 }

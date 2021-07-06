@@ -178,7 +178,7 @@ public:
         k = n - _H.rows();
         w = _w;
         l = 0; // ISD form parameter
-        u = 1; // how many rows to swap each iteration
+        u = 1; //n - k - l; // how many rows to swap each iteration
         HST.reset(_H, _S, l);
 
         C.resize(HST.HSTpadded().columns());
