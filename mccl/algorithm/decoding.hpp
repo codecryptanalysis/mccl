@@ -36,20 +36,45 @@ public:
 };
 
 // default callback types for subISD to the main ISD
-typedef bool (*ISD_callback_t)(void*, const cvec_view, size_t);
-typedef bool (*ISD_sparse_callback_t)(void*, const std::vector<uint32_t>&, size_t);
+// takes pointer to object & representation of H2T rows & and w1partial
+// returns true if solution is correct and exhaustive enumeration can be stopped
+typedef bool (*ISD_callback_t)(void*, const cvec_view, unsigned int);
+typedef bool (*ISD_sparse_callback_t)(void*, const std::vector<uint32_t>&, unsigned int);
+typedef bool (*ISD_sparserange_callback_t)(void*, const uint32_t*, const uint32_t*, unsigned int);
 
 // generic callback functions that can be instantiated for any main ISD class
 template<typename ISD_t>
-bool ISD_callback(void* ptr, const cvec_view vec, size_t w)
+bool ISD_callback(void* ptr, const cvec_view vec, unsigned int w)
 {
     return reinterpret_cast<ISD_t*>(ptr)->callback(vec, w);
 }
 template<typename ISD_t>
-bool ISD_sparse_callback(void* ptr, const std::vector<uint32_t>& vec, size_t w)
+bool ISD_sparse_callback(void* ptr, const std::vector<uint32_t>& vec, unsigned int w)
 {
     return reinterpret_cast<ISD_t*>(ptr)->callback(vec, w);
 }
+template<typename ISD_t>
+bool ISD_sparserange_callback(void* ptr, const uint32_t* begin, const uint32_t* end, unsigned int w)
+{
+    return reinterpret_cast<ISD_t*>(ptr)->callback(begin, end, w);
+}
+
+template<typename ISD_t>
+ISD_callback_t make_ISD_callback(const ISD_t&, ISD_callback_t)
+{
+    return ISD_callback<ISD_t>;
+}
+template<typename ISD_t>
+ISD_sparse_callback_t make_ISD_callback(const ISD_t&, ISD_sparse_callback_t)
+{
+    return ISD_sparse_callback<ISD_t>;
+}
+template<typename ISD_t>
+ISD_sparserange_callback_t make_ISD_callback(const ISD_t&, ISD_sparserange_callback_t)
+{
+    return ISD_sparserange_callback<ISD_t>;
+}
+
 
 // virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
 template<typename _callback_t = ISD_callback_t>
@@ -81,10 +106,16 @@ public:
 };
 typedef ISD_API_exhaustive<ISD_callback_t> ISD_API_exhaustive_t;
 typedef ISD_API_exhaustive<ISD_sparse_callback_t> ISD_API_exhaustive_sparse_t;
+typedef ISD_API_exhaustive<ISD_sparserange_callback_t> ISD_API_exhaustive_sparserange_t;
+
+
+
+
+
 
 // virtual base class: interface for 'exhaustive' ISD returning as many solutions as efficiently as possible
 // differs from ISD_API_exhaustive in that H is given transposed for better efficiency between main_ISD and sub_ISD
-template<typename _callback_t = ISD_callback_t>
+template<typename _callback_t = ISD_sparserange_callback_t>
 class ISD_API_exhaustive_transposed
 {
 public:
@@ -93,12 +124,10 @@ public:
     //virtual void configure(parameters_t& params) = 0;
 
     // deterministic initialization for given parity check matrix H and target syndrome s
-    virtual void initialize(const mat_view& Htransposed, const vec_view& s, unsigned int w, callback_t callback, void* ptr = nullptr) = 0;
+    virtual void initialize(const cmat_view& Htransposed_padded, size_t Hcolumns, const cvec_view& s, unsigned int w, callback_t callback, void* ptr = nullptr) = 0;
 
     // preparation of loop invariant
-    virtual void prepare_loop()
-    {
-    };
+    virtual void prepare_loop() = 0;
 
     // perform one loop iteration, return true if not finished
     virtual bool loop_next() = 0;
@@ -113,6 +142,7 @@ public:
 };
 typedef ISD_API_exhaustive_transposed<ISD_callback_t> ISD_API_exhaustive_transposed_t;
 typedef ISD_API_exhaustive_transposed<ISD_sparse_callback_t> ISD_API_exhaustive_transposed_sparse_t;
+typedef ISD_API_exhaustive_transposed<ISD_sparserange_callback_t> ISD_API_exhaustive_transposed_sparserange_t;
 
 
 // implementation of ISD_single_generic that can be instantiated with any subISD
@@ -124,12 +154,14 @@ typedef ISD_API_exhaustive_transposed<ISD_sparse_callback_t> ISD_API_exhaustive_
 //
 // this makes it easy to include additional columns of H0T together with H1T to subISD
 
-template<typename subISDT_t = ISD_API_exhaustive_transposed_t>
+template<typename subISDT_t = ISD_API_exhaustive_transposed_sparserange_t, size_t _bit_alignment = 64>
 class ISD_single_generic_transposed: public ISD_API_single
 {
 public:
-    using typename subISDT_t::callback_t;
-    static const size_t bit_alignment = 64;
+    typedef typename subISDT_t::callback_t callback_t;
+    
+    static const size_t bit_alignment = _bit_alignment;
+    typedef aligned_tag<bit_alignment> this_aligned_tag;
 
     ISD_single_generic_transposed(subISDT_t& sI)
         : subISDT(&sI)
@@ -140,48 +172,91 @@ public:
     //virtual void configure(parameters_t& params) = 0;
 
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(const mat_view& _H, const vec_view& _S, unsigned int _w, callback_t callback, void* ptr) final
+    void initialize(const mat_view& _H, const vec_view& _S, unsigned int _w) final
     {
         n = _H.columns();
         k = n - _H.rows();
+        w = _w;
+        l = 0; // ISD form parameter
+        u = 1; // how many rows to swap each iteration
+        HST.reset(_H, _S, l);
 
-        // round columns HT up to specified bit_alignment for simd processing
-        size_t HTrows = _H.columns(), HTcols = _H.rows(), HTpaddedcols = (HTcols + bit_alignment - 1) & ~size_t(bit_alignment - 1);
-
-        HTpadded = mat(HTrows, HTcols);
-        HT.reset(HTpadded.submatrix(0, HTrows, 0, HTcols));
-        HT = m_transpose(_H);
-
-        S = v_copy(_S);
-
-        rowpermutator.resize(HT.rows());
-        for (size_t i = 0; i < HT.rows(); ++i)
-            rowpermutator[i] = i;
-
-        sol = vec();
+        C.resize(HST.HSTpadded().columns());
+        C2padded.reset(C.subvector(0, HST.S2padded().columns()));
+        C1restpadded.reset(C.subvector(HST.S2padded().columns(), HST.S1restpadded().columns()));
+        
+        sol.clear();
+        cnt = 0;
     }
 
     // callback function
-    inline bool callback(const cvec_view sol2, size_t w1)
+    inline bool callback(const uint32_t* begin, const uint32_t* end, unsigned int w1partial)
     {
-            // TODO: actually check result and only set sol accordingly
-            sol = sol2;
-            return true;
+            // weight of solution consists of w2 (=end-begin) + w1partial (given) + w1rest (computed below)
+            size_t wsol = w1partial + (end - begin);
+            if (wsol > w)
+                return true;
+            // 1. compute w1rest
+            auto p = begin, e = end - 1;
+            if (p == end)
+            {
+                wsol += hammingweight(HST.S1restpadded(), this_aligned_tag());
+            }
+            else if (p == e)
+            {
+                wsol += hammingweight_xor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
+            }
+            else
+            {
+                C1restpadded.vxor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
+                for (++p; p != e; ++p)
+                    C1restpadded.vxor(HST.H1Trestpadded()[*p], this_aligned_tag());
+                wsol += hammingweight_xor(C1restpadded, HST.H1Trestpadded()[*e], this_aligned_tag());
+            }
+            // 2. check weight: too large => return
+            if (wsol > w)
+                return true;
+            // 3. construct full solution on E1 and E2 part
+            C.copy(HST.Spadded(), this_aligned_tag());
+            for (p = begin; p != end; ++p)
+                C.vxor(HST.HTpadded()[*p], this_aligned_tag());
+            if (wsol != hammingweight(C, this_aligned_tag()))
+                throw;
+            for (p = begin; p != end; ++p)
+                sol.push_back(HST.permutation( HST.echelonrows() + *p ));
+            for (size_t c = 0; c < HST.HT().columns(); ++c)
+            {
+                if (C[c] == false)
+                    continue;
+                if (c < HST.H2T().columns())
+                    throw;
+                sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
+            }
+            return false;
+    }
+    inline bool callback(const std::vector<uint32_t>& sol, unsigned int w1partial)
+    {
+        return callback(&sol[0], (&sol[0])+sol.size(), w1partial);
     }
 
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
-        size_t w1_max = 0;
-
-        subISDT->initialize(H11T, S1, w1_max, ISD_callback<ISD_single_generic_transposed<subISDT_t>>, this);
+        subISDT->initialize(HST.H2Tpadded(), HST.H2T().columns(), HST.S2padded(), w, 
+        //ISD_sparserange_callback<ISD_single_generic_transposed<subISDT_t>>, 
+        make_ISD_callback(*this, callback_t()),
+        this);
     }
 
     // perform one loop iteration, return true if successful and store result in e
     bool loop_next() final
     {
+        ++cnt;
+        // swap u rows in HST & bring in echelon form
+        HST.update(u);
+        // find all subISD solutions
         subISDT->solve();
-        return sol.columns() != 0;
+        return !sol.empty();
     }
 
     // run loop until a solution is found
@@ -192,19 +267,38 @@ public:
             ;
     }
 
+    vec get_solution() const
+    {
+        vec ret;
+        ret.resize(HST.HT().rows());
+        for (unsigned i = 0; i < sol.size(); ++i)
+            ret.setbit(sol[i]);
+        return ret;
+    }
+    size_t get_cnt() const { return cnt; }
+    
 private:
     subISDT_t* subISDT;
-    mat HTpadded;
-    mat_view HT;
-    vec S;
-    vec sol;
-
-    mat_view H11T;
-    vec_view S1;
-
-    std::vector<uint32_t> rowpermutator;
-    size_t n,k;
+    HST_ISD_form_t<_bit_alignment> HST;
+    vec C;
+    vec_view C2padded, C1restpadded;
+    
+    std::vector<uint32_t> sol;
+    
+    size_t n, k, w, l, u;
+    
+    size_t cnt;
 };
+
+
+
+
+
+
+
+
+
+
 
 static inline size_t get_scratch(size_t k, size_t sz)
 {
