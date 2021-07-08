@@ -144,11 +144,13 @@ public:
             {
                 unsigned int w = hammingweight(curpath[cp] & padmask);
                 if (cp + w <= wmax)
-                    (*callback)(ptr, &curidx[0], &curidx[0] + cp, w);
+                    if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, w))
+                        return false;
             }
         }
         else
-            (*callback)(ptr, &curidx[0], &curidx[0] + cp, 0);
+            if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, 0))
+                return false;
         return next<use_curpath>();
     }
 

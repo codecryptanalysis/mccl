@@ -234,6 +234,7 @@ public:
                 C.vxor(HST.H12Tpadded()[*p], this_aligned_tag());
             if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
                 throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 1: w1partial is not correct?");
+            sol.clear();
             for (p = begin; p != end; ++p)
                 sol.push_back(HST.permutation( HST.echelonrows() + *p ));
             for (size_t c = 0; c < HST.HT().columns(); ++c)
