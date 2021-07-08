@@ -143,7 +143,7 @@ public:
             if ((curpath[cp] & firstwordmask) == 0) // unlikely
             {
                 unsigned int w = hammingweight(curpath[cp] & padmask);
-                if (cp + w < wmax)
+                if (cp + w <= wmax)
                     (*callback)(ptr, &curidx[0], &curidx[0] + cp, w);
             }
         }
