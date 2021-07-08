@@ -7,6 +7,14 @@
 #include <algorithm>
 #include <stdexcept>
 
+#ifdef MCCL_HAVE_CPU_COUNTERS
+#ifdef _WIN32
+#include <intrin.h>
+#else
+#include <x86intrin.h>
+#endif
+#endif
+
 MCCL_BEGIN_NAMESPACE
 
 template<typename number_t>
@@ -20,6 +28,10 @@ struct number_statistic
   void clear()
   {
     samples.clear();
+  }
+  void reserve(size_t n)
+  {
+    samples.reserve(n);
   }
   size_t size() const
   {
@@ -39,6 +51,8 @@ struct number_statistic
   {
     if (size() == 0)
       throw std::runtime_error("number_statistic::median(): no samples!");
+    if (size() == 1)
+      return samples[0];
     std::sort(samples.begin(), samples.end());
     if (samples.size()%2 == 0)
     {
@@ -67,8 +81,27 @@ struct time_statistic
   time_point _start;
 };
 
+struct cpucycle_statistic
+  : public number_statistic<uint64_t>
+{
+#ifdef MCCL_HAVE_CPU_COUNTERS
+  static inline uint64_t clock() { return __rdtsc(); }
+#else
+  static inline uint64_t clock() { return 0; }
+#endif
+  void start()
+  {
+    _start = clock();
+  }
+  void stop()
+  {
+    uint64_t _end = clock();
+    this->add( _end - _start );
+  }
+  uint64_t _start;
+};
+
 
 MCCL_END_NAMESPACE
 
 #endif
-
