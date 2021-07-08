@@ -1,7 +1,8 @@
 #include <mccl/config/config.hpp>
-#include <mccl/tools/parser.hpp>
 #include <mccl/algorithm/prange.hpp>
 #include <mccl/algorithm/LB.hpp>
+#include <mccl/tools/parser.hpp>
+#include <mccl/tools/statistics.hpp>
 
 #include <mccl/contrib/program_options.hpp>
 
@@ -16,46 +17,8 @@ using namespace mccl;
 
 bool quiet = false;
 
-template<typename number_t>
-struct number_statistic
-{
-  std::vector<number_t> samples;
-  void add(number_t n)
-  {
-    samples.push_back(n);
-  }
-  void clear()
-  {
-    samples.clear();
-  }
-  size_t size() const
-  {
-    return samples.size();
-  }
-  double total()
-  {
-    return double(std::accumulate(samples.begin(), samples.end(), number_t(0)));
-  }
-  double mean()
-  {
-    if (size() == 0)
-      throw std::runtime_error("number_statistic::mean(): no samples!");
-    return total()/double(size());
-  }
-  double median()
-  {
-    if (size() == 0)
-      throw std::runtime_error("number_statistic::median(): no samples!");
-    std::sort(samples.begin(), samples.end());
-    if (samples.size()%2 == 0)
-    {
-      return double(samples[size()/2 - 1] + samples[size()/2])/double(2.0);
-    }
-    return samples[samples.size()];
-  }
-};
-
 // we should probably move this function in the tools
+/*
 std::size_t binomial(std::size_t k, std::size_t N)
 {
     if (k > N) return 0;
@@ -69,9 +32,11 @@ std::size_t binomial(std::size_t k, std::size_t N)
     }
     return r;
 }
+*/
 
 template<typename subISD_t = ISD_API_exhaustive_sparse_t>
-int run_subISD(mat_view &H, vec_view &S, size_t w) {
+int run_subISD(mat_view &H, vec_view &S, size_t w)
+{
   subISD_t subISD;
   ISD_single_generic<subISD_t> ISD_single(subISD);
   ISD_single.initialize(H, S, w);
@@ -127,8 +92,8 @@ try
       ("w", po::value<size_t>(&w), "Error weight")
       ("l", po::value<size_t>(&l)->default_value(0), "H2 rows")
       ("p", po::value<size_t>(&p)->default_value(3), "subISD parameter p")
-      ("u", po::value<size_t>(&u)->default_value(1), "I column swaps per iteration")
-      ("q", po::bool_switch(&quiet), "Quiet: supress most output")
+      ("updaterows,u", po::value<size_t>(&u)->default_value(1), "I column swaps per iteration")
+      ("quiet,q", po::bool_switch(&quiet), "Quiet: supress most output")
       ;
     allopts.add(cmdopts).add(opts);
     po::variables_map vm;
@@ -191,17 +156,20 @@ try
 
     mat_view H = parse.get_H();
     vec_view S = parse.get_S();
+
     number_statistic<size_t> cnt_stat;
-    number_statistic<double> time_stat;
-    auto time_start = std::chrono::high_resolution_clock::now();
+    time_statistic time_trial_stat, time_total_stat;
+
+    time_total_stat.start();
     for (size_t i = 0; i < trials; ++i)
     {
-      if(i > 0 && vm.count("gen")) {
+      if(i > 0 && vm.count("gen"))
+      {
         parse.regenerate();
         H.reset(parse.get_H());
         S.reset(parse.get_S());
       }
-      auto trial_start = std::chrono::high_resolution_clock::now();
+      time_trial_stat.start();
       if (algo=="P")
         cnt_stat.add( run_subISD<subISD_prange>(H,S,w) );
       else if (algo=="LB")
@@ -210,24 +178,26 @@ try
         cnt_stat.add( run_subISDT<subISDT_prange>(H,S,w,l,p,u) );
       else if (algo=="TLB")
         cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u) );
-      auto trial_end = std::chrono::high_resolution_clock::now();
-      time_stat.add( std::chrono::duration<double>(trial_end - trial_start).count() );
+      time_trial_stat.stop();
     }
-    auto time_end = std::chrono::high_resolution_clock::now();
-    double total_time = std::chrono::duration<double>(time_end - time_start).count();
+    time_total_stat.stop();
     
     double mean_cnt = cnt_stat.mean(), median_cnt = cnt_stat.median();
     double inv_mean_cnt = double(1.0) / mean_cnt, inv_median_cnt = double(1.0) / median_cnt;
-    std::cout << "Time: total=" << total_time << "s (total mean=" << total_time/double(trials) << ") mean=" << time_stat.mean() << "s median=" << time_stat.median() << "s" << std::endl;
+    std::cout << "Time: total=" << time_total_stat.total() << "s (total mean=" << time_total_stat.total()/double(trials) << ") mean=" << time_trial_stat.mean() << "s median=" << time_trial_stat.median() << "s" << std::endl;
     std::cout << "Number of iterations: mean=" << mean_cnt << " median=" << median_cnt << std::endl;
     std::cout << "Inverse of iterations: invmean=" << inv_mean_cnt << " invmedian=" << inv_median_cnt << std::endl;
-    std::cout << "Mean iteration time: " << total_time / cnt_stat.total() << "s" << std::endl;
+    std::cout << "Mean iteration time: " << time_total_stat.total() / cnt_stat.total() << "s" << std::endl;
     
     return 0;
-} catch (std::exception& e) {
+}
+catch (std::exception& e)
+{
     std::cerr << "Caught exception: " << e.what() << std::endl;
     return 1;
-} catch (...) {
+}
+catch (...)
+{
     std::cerr << "Caught unknown exception!" << std::endl;
     return 1;
 }

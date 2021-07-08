@@ -11,7 +11,7 @@ class subISD_prange
 public:        
     using ISD_API_exhaustive_sparse_t::callback_t;
 
-    void initialize(const mat_view&, const vec_view&, unsigned int w_, callback_t _callback, void* _ptr)
+    void initialize(const mat_view&, const vec_view&, unsigned int, callback_t _callback, void* _ptr)
     {
         callback = _callback;
         ptr = _ptr;
@@ -39,7 +39,7 @@ public:
     {
     }
     
-    void initialize(const cmat_view&, size_t HTcolumns, const cvec_view&, unsigned int w, callback_t _callback, void* _ptr) final
+    void initialize(const cmat_view&, size_t HTcolumns, const cvec_view&, unsigned int, callback_t _callback, void* _ptr) final
     {
         // should only be used with l=0
         if (HTcolumns != 0)

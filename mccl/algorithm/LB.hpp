@@ -11,7 +11,12 @@ class subISD_LB
 public:
     using ISD_API_exhaustive_sparse_t::callback_t;
 
-    void initialize(const mat_view& H_, const vec_view& S, unsigned int w_, callback_t _callback, void* _ptr) final
+    void configure(size_t _p = 3)
+    {
+        p = _p;
+    }
+
+    void initialize(const mat_view& H_, const vec_view&, unsigned int, callback_t _callback, void* _ptr) final
     {
         callback = _callback;
         ptr = _ptr;
@@ -47,7 +52,7 @@ private:
     callback_t callback;
     void* ptr;
     matrix_enumeraterows_t rowenum;
-    static const size_t p = 3;
+    size_t p = 3;
     std::vector<uint32_t> E1_sparse;
 };
 
