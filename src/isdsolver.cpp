@@ -1,15 +1,59 @@
-#include <iostream>
-#include <unistd.h>
-
+#include <mccl/config/config.hpp>
 #include <mccl/tools/parser.hpp>
 #include <mccl/algorithm/prange.hpp>
 #include <mccl/algorithm/LB.hpp>
 
 #include <mccl/contrib/program_options.hpp>
 
+#include <iostream>
+#include <unistd.h>
+#include <chrono>
+#include <algorithm>
+
 namespace po = program_options;
 
 using namespace mccl;
+
+bool quiet = false;
+
+template<typename number_t>
+struct number_statistic
+{
+  std::vector<number_t> samples;
+  void add(number_t n)
+  {
+    samples.push_back(n);
+  }
+  void clear()
+  {
+    samples.clear();
+  }
+  size_t size() const
+  {
+    return samples.size();
+  }
+  double total()
+  {
+    return double(std::accumulate(samples.begin(), samples.end(), number_t(0)));
+  }
+  double mean()
+  {
+    if (size() == 0)
+      throw std::runtime_error("number_statistic::mean(): no samples!");
+    return total()/double(size());
+  }
+  double median()
+  {
+    if (size() == 0)
+      throw std::runtime_error("number_statistic::median(): no samples!");
+    std::sort(samples.begin(), samples.end());
+    if (samples.size()%2 == 0)
+    {
+      return double(samples[size()/2 - 1] + samples[size()/2])/double(2.0);
+    }
+    return samples[samples.size()];
+  }
+};
 
 // we should probably move this function in the tools
 std::size_t binomial(std::size_t k, std::size_t N)
@@ -32,8 +76,11 @@ int run_subISD(mat_view &H, vec_view &S, size_t w) {
   ISD_single_generic<subISD_t> ISD_single(subISD);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
-  std::cout << "Solution found:" << '\n';
-  std::cout << ISD_single.get_solution() << '\n';
+  if (!quiet)
+  {
+    std::cout << "Solution found:" << '\n';
+    std::cout << ISD_single.get_solution() << '\n';
+  }
   return ISD_single.get_cnt();
 }
 
@@ -46,8 +93,11 @@ int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u
   ISD_single.configure(l, u);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
-  std::cout << "Solution found:\n";
-  std::cout << ISD_single.get_solution() << std::endl;
+  if (!quiet)
+  {
+    std::cout << "Solution found:\n";
+    std::cout << ISD_single.get_solution() << std::endl;
+  }
   return ISD_single.get_cnt();
 }
 
@@ -78,6 +128,7 @@ try
       ("l", po::value<size_t>(&l)->default_value(0), "H2 rows")
       ("p", po::value<size_t>(&p)->default_value(3), "subISD parameter p")
       ("u", po::value<size_t>(&u)->default_value(1), "I column swaps per iteration")
+      ("q", po::bool_switch(&quiet), "Quiet: supress most output")
       ;
     allopts.add(cmdopts).add(opts);
     po::variables_map vm;
@@ -140,7 +191,9 @@ try
 
     mat_view H = parse.get_H();
     vec_view S = parse.get_S();
-    int c = 0;
+    number_statistic<size_t> cnt_stat;
+    number_statistic<double> time_stat;
+    auto time_start = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < trials; ++i)
     {
       if(i > 0 && vm.count("gen")) {
@@ -148,20 +201,28 @@ try
         H.reset(parse.get_H());
         S.reset(parse.get_S());
       }
+      auto trial_start = std::chrono::high_resolution_clock::now();
       if (algo=="P")
-        c += run_subISD<subISD_prange>(H,S,w);
+        cnt_stat.add( run_subISD<subISD_prange>(H,S,w) );
       else if (algo=="LB")
-        c += run_subISD<subISD_LB>(H,S,w);
+        cnt_stat.add( run_subISD<subISD_LB>(H,S,w) );
       else if (algo=="TP")
-        c += run_subISDT<subISDT_prange>(H,S,w,l,p,u);
+        cnt_stat.add( run_subISDT<subISDT_prange>(H,S,w,l,p,u) );
       else if (algo=="TLB")
-        c += run_subISDT<subISDT_LB>(H,S,w,l,p,u);
+        cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u) );
+      auto trial_end = std::chrono::high_resolution_clock::now();
+      time_stat.add( std::chrono::duration<double>(trial_end - trial_start).count() );
     }
-
-    float avg_cnt = float(c) / float(trials);
-    float inv_avg_cnt = float(1) / avg_cnt;
-    std::cout << "Average number of iterations: " << avg_cnt << '\n';
-    std::cout << "Inverse of average number of iterations: " << inv_avg_cnt << '\n';
+    auto time_end = std::chrono::high_resolution_clock::now();
+    double total_time = std::chrono::duration<double>(time_end - time_start).count();
+    
+    double mean_cnt = cnt_stat.mean(), median_cnt = cnt_stat.median();
+    double inv_mean_cnt = double(1.0) / mean_cnt, inv_median_cnt = double(1.0) / median_cnt;
+    std::cout << "Time: total=" << total_time << "s (total mean=" << total_time/double(trials) << ") mean=" << time_stat.mean() << "s median=" << time_stat.median() << "s" << std::endl;
+    std::cout << "Number of iterations: mean=" << mean_cnt << " median=" << median_cnt << std::endl;
+    std::cout << "Inverse of iterations: invmean=" << inv_mean_cnt << " invmedian=" << inv_median_cnt << std::endl;
+    std::cout << "Mean iteration time: " << total_time / cnt_stat.total() << "s" << std::endl;
+    
     return 0;
 } catch (std::exception& e) {
     std::cerr << "Caught exception: " << e.what() << std::endl;
