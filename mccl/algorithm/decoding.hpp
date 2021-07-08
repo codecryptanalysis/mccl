@@ -189,6 +189,8 @@ public:
         n = _H.columns();
         k = n - _H.rows();
         w = _w;
+        Horg.reset(_H);
+        Sorg.reset(_S);
         HST.reset(_H, _S, l);
 
         C.resize(HST.Spadded().columns());
@@ -242,6 +244,8 @@ public:
                     throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 2: H2T combination non-zero!");
                 sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
             }
+            if (!check_solution())
+                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 3: solution is incorrect!");
             return false;
     }
     inline bool callback(const std::vector<uint32_t>& sol, unsigned int w1partial)
@@ -253,7 +257,6 @@ public:
     void prepare_loop() final
     {
         subISDT->initialize(HST.H2Tpadded(), HST.H2T().columns(), HST.S2padded(), w, 
-        //ISD_sparserange_callback<ISD_single_generic_transposed<subISDT_t>>, 
         make_ISD_callback(*this, callback_t()),
         this);
     }
@@ -285,18 +288,43 @@ public:
             ret.setbit(sol[i]);
         return ret;
     }
+    bool check_solution() const
+    {
+        vec E = get_solution();
+        vec tmp(Sorg.columns());
+        for (size_t i = 0; i < Horg.rows(); ++i)
+        {
+            unsigned int b = hammingweight_and(Horg[i], E) % 2;
+            if (b)
+                tmp.setbit(i);
+        }
+        if (tmp != Sorg)
+        {
+            std::cout << HST.HT() << std::endl << "E\n" << E << std::endl << tmp << std::endl << Sorg << std::endl;
+        }
+        return tmp == Sorg;
+    }
+    
     size_t get_cnt() const { return cnt; }
     
 private:
     subISDT_t* subISDT;
+    // original parity check matrix H^T and syndrome S
+    cmat_view Horg;
+    cvec_view Sorg;
+    // maintains (U(H|S)P)^T in ISD form for random column permutations P
     HST_ISD_form_t<_bit_alignment> HST;
+    // temporary vector to compute sum of syndrome and H columns
     vec C;
     vec_view C2padded, C1restpadded;
     
+    // solution with respect to original H
     std::vector<uint32_t> sol;
     
+    // parameters
     size_t n, k, w, l, u;
     
+    // iteration count
     size_t cnt;
 };
 
