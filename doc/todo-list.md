@@ -126,29 +126,40 @@ Discussion
 - Add the case p=0 to row enumeration (corner case).
 
 ## 08/07/21
-- [x] fix Lee Brickell bug
-- [ ] check the success probability for fixed Lee Brickell
-- [ ] generator of random SD instances
+- [x] fix Lee Brickell bugs
+- [x] check the success probability for fixed Lee-Brickell
+- [x] generator of random SD instances
+- [x] handling options for command line interface
+- [x] merge `echelon` and `permute`, allow reverse column reduction (anti-diagonal)
+- [x] rewrite Prange+LB in the new transposed setting
+- [x] optimized column randomization: swap a small number of columns
+- [x] Lee-Brickell with `l`>0
+- [x] print more statistics
+
+Discussion
+- new HST setting
+- new `sparserange` format for vectors
+- improved column permutation by swaping a small number of columns. How to compute the success probability? Using Markov chains, see [BLP08](https://eprint.iacr.org/2008/318.pdf) (and associated code [here](https://github.com/christianepeters/isdf2/)).
+
+## TODO for next session
+- [ ] delete the code related to the non-transposed setting
+- [ ] compute success probablity for LB with `l`>0
+- [ ] improve the `update` (column swap), add an option (`u=-1`?) for full random permutation
+- [ ] compute success probability with optimized column permutation using Markov chain (see if it matches the observations)
+- [ ] add an option to stop the algorithm after a fixed number of iterations (and/or time limit)  
 - [ ] statistics: count number of calls to each function
+- [ ] store a table giving the value `w` in terms of `n` for the SD challenge and make this the default value of `w`
 - [ ] `isdsolver.cpp` check that the solution is correct
-- [ ] pass `p` as a parameter for LB.
-- [ ] merge `echelon` and `permute`, allow reverse column reduction
-- [ ] rewrite Prange+LB in the new transpose/reverse setting
-- [ ] write LB for l>0 using the new transpose/reverse setting
 - [ ] add a test for `isdsolver.cpp`
-- [ ] documentation of the new setting and API
-- [ ] python tool to compute the cost given the parameters
-- [ ] more flexible and optimized row-reduction
-- [ ] optimized (block) permutation
+- [ ] documentation of the new HST setting
 
 # Phase 2
 
 - [ ] Birthday search
-- [ ] Canteaut-Chabaud: only permute a small number of columns instead of a full permutation
 - [ ] Stern/Dumer
 
 Once this is achieved:
-- See how this performs on challenge instances.
+- See how this performs on large challenge instances.
 - Present the project to other members of the community for feedback.
 
 # Phase 3
