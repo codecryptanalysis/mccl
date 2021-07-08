@@ -16,7 +16,7 @@ namespace po = program_options;
 using namespace mccl;
 
 bool quiet = false;
-
+vec checksol;
 // we should probably move this function in the tools
 /*
 std::size_t binomial(std::size_t k, std::size_t N)
@@ -41,11 +41,9 @@ int run_subISD(mat_view &H, vec_view &S, size_t w)
   ISD_single_generic<subISD_t> ISD_single(subISD);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
+  checksol = ISD_single.get_solution();
   if (!quiet)
-  {
-    std::cout << "Solution found:" << '\n';
-    std::cout << ISD_single.get_solution() << '\n';
-  }
+    std::cout << "Solution found:\n" << checksol << std::endl;
   return ISD_single.get_cnt();
 }
 
@@ -58,11 +56,9 @@ int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u
   ISD_single.configure(l, u);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
+  checksol = ISD_single.get_solution();
   if (!quiet)
-  {
-    std::cout << "Solution found:\n";
-    std::cout << ISD_single.get_solution() << std::endl;
-  }
+    std::cout << "Solution found:\n" << checksol << std::endl;
   return ISD_single.get_cnt();
 }
 
@@ -179,15 +175,17 @@ try
       else if (algo=="TLB")
         cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u) );
       time_trial_stat.stop();
+      if (!parse.check_solution(checksol))
+        throw std::runtime_error("found incorrect solution!");
     }
     time_total_stat.stop();
     
     double mean_cnt = cnt_stat.mean(), median_cnt = cnt_stat.median();
     double inv_mean_cnt = double(1.0) / mean_cnt, inv_median_cnt = double(1.0) / median_cnt;
-    std::cout << "Time: total=" << time_total_stat.total() << "s (total mean=" << time_total_stat.total()/double(trials) << ") mean=" << time_trial_stat.mean() << "s median=" << time_trial_stat.median() << "s" << std::endl;
-    std::cout << "Number of iterations: mean=" << mean_cnt << " median=" << median_cnt << std::endl;
+    std::cout << "Time                 :   total=" << time_total_stat.total() << "s (total mean=" << time_total_stat.total()/double(trials) << ") mean=" << time_trial_stat.mean() << "s median=" << time_trial_stat.median() << "s" << std::endl;
+    std::cout << "Number of iterations :    mean=" << mean_cnt << " median=" << median_cnt << std::endl;
     std::cout << "Inverse of iterations: invmean=" << inv_mean_cnt << " invmedian=" << inv_median_cnt << std::endl;
-    std::cout << "Mean iteration time: " << time_total_stat.total() / cnt_stat.total() << "s" << std::endl;
+    std::cout << "Time per iteration   :    mean=" << time_total_stat.total() / cnt_stat.total() << "s" << std::endl;
     
     return 0;
 }

@@ -164,6 +164,8 @@ public:
     }
     void update(size_t rows)
     {
+    	if (rows > echelon_rows)
+    		rows = echelon_rows;
     	for (size_t i = 0; i < rows; ++i)
     		update1();
 	// TODO: improved multirow update using method of 4 russians

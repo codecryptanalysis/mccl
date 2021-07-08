@@ -487,6 +487,8 @@ public:
     vec& operator=(const vec& v) { assign(v); return *this; }
     vec& operator=(const cvec_view& v) { assign(v); return *this; }
     vec& operator=(vec&& v) { swap(v); return *this; }
+    template<typename F>
+    vec(vector_result<F>&& vr) { vr.r.resize_me(*this); vr.r(ptr); }
 
     // view management
     cvec_view subvector(size_t coloffset, size_t cols) const { return cvec_view(ptr.subvector(coloffset, cols)); }

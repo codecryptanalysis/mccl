@@ -36,8 +36,8 @@ class Parser {
 		size_t get_k() { return k; };
 		size_t get_w() { return w; };
 		size_t get_seed() { return seed; };
+		bool check_solution(const cvec_view& E);
 	private:
-		//mccl::matrix_t<data_t> H;
 		bool Nset=false, Kset=false, Wset=false, Seedset=false;
 		int64_t n, k, w, seed;
 		
@@ -178,7 +178,17 @@ bool Parser::regenerate() {
 	return random_SD(n,k,w);
 }
 
-
+bool Parser::check_solution(const cvec_view& E)
+{
+	if (E.columns() != H.columns())
+		throw std::runtime_error("Parser::check_solution(): incorrect dimension of E");
+	mat HT = m_transpose(H);
+	vec C = v_copy(S);
+	for (size_t i = 0; i < E.columns(); ++i)
+		if (E[i])
+			C.vxor(HT[i]);
+	return 0 == hammingweight(C);
+}
 
 MCCL_END_NAMESPACE
 
