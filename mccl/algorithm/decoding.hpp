@@ -15,6 +15,7 @@ class ISD_API_single
 {
 public:
     // pass parameters to actual object
+    // if called then it must be called before initialize
     //virtual void configure(parameters_t& params) = 0;
 
     // deterministic initialization for given parity check matrix H and target syndrome s
@@ -83,6 +84,7 @@ class ISD_API_exhaustive
 public:
     typedef _callback_t callback_t;
     // pass parameters to actual object
+    // if called then it must be called before initialize
     //virtual void configure(parameters_t& params) = 0;
 
     // deterministic initialization for given parity check matrix H and target syndrome s
@@ -121,6 +123,7 @@ class ISD_API_exhaustive_transposed
 public:
     typedef _callback_t callback_t;
     // pass parameters to actual object
+    // if called then it must be called before initialize
     //virtual void configure(parameters_t& params) = 0;
 
     // deterministic initialization for given parity check matrix H and target syndrome s
@@ -173,6 +176,7 @@ public:
 
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
+    // if called then it must be called before initialize
     void configure(size_t _l = 0, size_t _u = 1)
     {
         l = _l;
@@ -227,7 +231,7 @@ public:
             for (p = begin; p != end; ++p)
                 C.vxor(HST.H12Tpadded()[*p], this_aligned_tag());
             if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
-                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 1");
+                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 1: w1partial is not correct?");
             for (p = begin; p != end; ++p)
                 sol.push_back(HST.permutation( HST.echelonrows() + *p ));
             for (size_t c = 0; c < HST.HT().columns(); ++c)
@@ -235,7 +239,7 @@ public:
                 if (C[c] == false)
                     continue;
                 if (c < HST.H2T().columns())
-                    throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 2");
+                    throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 2: H2T combination non-zero!");
                 sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
             }
             return false;

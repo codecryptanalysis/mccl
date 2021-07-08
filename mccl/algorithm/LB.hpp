@@ -63,63 +63,143 @@ public:
         p = _p;
     }
     
-    void initialize(const cmat_view& HTpadded, size_t HTcolumns, const cvec_view& Spadded, unsigned int w, callback_t _callback, void* _ptr) final
+    void initialize(const cmat_view& _HTpadded, size_t _HTcolumns, const cvec_view& _Spadded, unsigned int w, callback_t _callback, void* _ptr) final
     {
-        if (HTcolumns != 0)
-            throw std::runtime_error("LB: l > 0 not yet supported");
+        HTpadded.reset(_HTpadded);
+        Spadded.reset(_Spadded);
+        columns = _HTcolumns;
         callback = _callback;
         ptr = _ptr;
+        wmax = w;
+        
+        if (HTpadded.columns()-columns >= 64)
+            throw std::runtime_error("LB: HTpadded must round up columns to multiple of 64");
+        // maybe we can generalize HTpadded.columns() not to be multiple of 64
+        if (HTpadded.columns()%64 != 0)
+            throw std::runtime_error("LB: HTpadded must have columns multiple of 64");
+        // TODO: allow HTpadded.columns()>64 by prefiltering using 1 word, then computing remaining words
+        if (HTpadded.columns() > 64)
+            throw std::runtime_error("LB currently doesn't support HTpadded with columns > 64");
+
         rows = HTpadded.rows();
+        words = HTpadded.columns()/64;
+
+        // need to check these are correct in all cases!
+        lastwordmask = detail::lastwordmask( columns );
+        firstwordmask = ((words == 1) ? lastwordmask : ~uint64_t(0));
+        padmask = detail::lastwordmask( HTpadded.columns() ) & ~lastwordmask;
+    }
+
+    void solve() final
+    {
+        prepare_loop();
+        if (words == 0)
+        {
+            while (_loop_next<false>())
+                ;
+        }
+        else
+        {
+            while (_loop_next<true>())
+                ;
+        }
     }
     
     void prepare_loop() final
     {
-        curidx.resize(p + 1);
-        cp = 0;
-        curidx[0] = rows - 1;
-    }
-    
-    bool loop_next() final
-    {
-        (*callback)(ptr, &curidx[0], &curidx[0] + cp, 0);
-        return next();
+        curidx.resize(p);
+        curpath.resize(p+1, 0);
+            
+        cp = 1;
+        curidx[0] = 0;
+        if (words > 0)
+        {
+            firstwords.resize(rows);
+            for (unsigned i = 0; i < rows; ++i)
+                firstwords[i] = *HTpadded.data(i);
+            curpath[0] = *Spadded.data();
+            curpath[1] = curpath[0] ^ firstwords[0];
+        }
     }
 
-    bool next()
+    bool loop_next() final
     {
-//        std::cout << "!" << cp << "!" << curidx[0] << "." << curidx[1] << "." << curidx[2] << "   " << std::flush;
-        if (++curidx[0] < rows)
-            return true;
-        unsigned i = 1;
-        for (; i < cp; ++i)
-            if (++curidx[i] + i < rows)
-                break;
-        if (i >= cp)
-        {
-            if (++cp > p)
-                return false;
-            curidx[cp - 1] = 0;
-            i = cp - 1;
-        }
-        for (; i > 0;)
-        {
-            --i;
-            curidx[i] = curidx[i+1]+1;
-        }
-        return true;
+        if (words == 0)
+            return _loop_next<false>();
+        else
+            return _loop_next<true>();
     }
     
-    void solve() final
+    template<bool use_curpath>
+    bool _loop_next()
     {
-        prepare_loop();
-        while (loop_next())
-            ;
+        if (use_curpath)
+        {
+            if ((curpath[cp] & firstwordmask) == 0) // unlikely
+            {
+                unsigned int w = hammingweight(curpath[cp] & padmask);
+                if (cp + w < wmax)
+                    (*callback)(ptr, &curidx[0], &curidx[0] + cp, w);
+            }
+        }
+        else
+            (*callback)(ptr, &curidx[0], &curidx[0] + cp, 0);
+        return next<use_curpath>();
+    }
+
+    template<bool use_curpath>
+    inline bool next()
+    {
+        if (++curidx[cp - 1] < rows) // likely
+        {
+            if (use_curpath)
+                curpath[cp] = curpath[cp-1] ^ firstwords[ curidx[cp-1] ];
+            return true;
+        }
+        unsigned i = cp - 1;
+        while (i >= 1)
+        {
+            if (++curidx[i-1] >= rows - (cp-i)) // likely
+                --i;
+            else
+            {
+                if (use_curpath)
+                    curpath[i] = curpath[i-1] ^ firstwords[ curidx[i-1] ];
+                break;
+            }
+        }
+        if (i == 0)
+        {
+            if (++cp > p) // unlikely
+                return false;
+            curidx[0] = 0;
+            if (use_curpath)
+                curpath[1] = curpath[0] ^ firstwords[0];
+            i = 1;
+        }
+        for (; i < cp; ++i)
+        {
+            curidx[i] = curidx[i-1] + 1;
+            if (use_curpath)
+                curpath[i+1] = curpath[i] ^ firstwords[ curidx[i] ];
+        }
+        return true;
     }
     
 private:
     callback_t callback;
     void* ptr;
+    cmat_view HTpadded;
+    cvec_view Spadded;
+    size_t columns, words;
+    unsigned int wmax;
+    
     std::vector<uint32_t> curidx;
+    std::vector<uint64_t> curpath;
+    std::vector<uint64_t> firstwords;
+    
+    uint64_t lastwordmask, firstwordmask, padmask;
+    
     size_t p, cp, rows;
 };
 

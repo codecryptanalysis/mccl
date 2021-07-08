@@ -160,6 +160,7 @@ class mat;
 // common class members for: cmat_view, mat_view, mat
 #define CONST_MATRIX_CLASS_MEMBERS \
     const uint64_t* data() const { return ptr.ptr; } \
+    const uint64_t* data(size_t r) const { return ptr.ptr + r*ptr.stride; } \
     size_t columns() const { return ptr.columns; } \
     size_t rowwords() const { return (ptr.columns+63)/64; } \
     size_t rows() const { return ptr.rows; } \
