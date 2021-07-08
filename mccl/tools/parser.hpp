@@ -182,11 +182,10 @@ bool Parser::check_solution(const cvec_view& E)
 {
 	if (E.columns() != H.columns())
 		throw std::runtime_error("Parser::check_solution(): incorrect dimension of E");
-	mat HT = m_transpose(H);
 	vec C = v_copy(S);
-	for (size_t i = 0; i < E.columns(); ++i)
-		if (E[i])
-			C.vxor(HT[i]);
+	for (size_t i = 0; i < H.rows(); ++i)
+		if (1 == (hammingweight_and(H[i], E)%2))
+			C.flipbit(i);
 	return 0 == hammingweight(C);
 }
 

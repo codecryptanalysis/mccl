@@ -122,7 +122,8 @@ public:
     // update 1 echelon row: swap with random row outside echelon form and bring it back to echelon form
     void update1(size_t idx)
     {
-    	assert(idx < echelon_rows);
+    	if (idx >= echelon_rows)
+    		throw std::runtime_error("HST_ISD_form_t::update(): bad input index");
     	// echelon row idx must have 1-bit in column pivotcol:
     	size_t pivotcol = HT_columns - idx - 1;
     	// find random row to swap with
@@ -133,14 +134,14 @@ public:
 	for (; r < ISD_rows && HST(echelon_rows + r,pivotcol)==false; ++r)
 		;
 	// wrap around
-	if (r == ISD_rows) // unlikely
+	if (r >= ISD_rows) // unlikely
 	{
 		r = 0;
 		for (; r < ISD_rows && HST(echelon_rows + r,pivotcol)==false; ++r)
 			;
 	}
 	// oh oh if we wrap around twice
-	if (r == ISD_rows) // unlikely
+	if (r >= ISD_rows) // unlikely
 		throw std::runtime_error("HST_ISD_form_t::update(): cannot find pivot");
 	// swap rows
 	std::swap(perm[idx], perm[echelon_rows + r]);

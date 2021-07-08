@@ -176,7 +176,7 @@ try
         cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u) );
       time_trial_stat.stop();
       if (!parse.check_solution(checksol))
-        throw std::runtime_error("found incorrect solution!");
+        throw std::runtime_error("Found incorrect solution!");
     }
     time_total_stat.stop();
     

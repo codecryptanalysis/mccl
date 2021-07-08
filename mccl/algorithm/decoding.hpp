@@ -291,17 +291,13 @@ public:
     }
     bool check_solution() const
     {
-        vec E = get_solution();
+        vec E(get_solution());
         vec tmp(Sorg.columns());
         for (size_t i = 0; i < Horg.rows(); ++i)
         {
             unsigned int b = hammingweight_and(Horg[i], E) % 2;
             if (b)
                 tmp.setbit(i);
-        }
-        if (tmp != Sorg)
-        {
-            std::cout << HST.HT() << std::endl << "E\n" << E << std::endl << tmp << std::endl << Sorg << std::endl;
         }
         return tmp == Sorg;
     }
