@@ -3,36 +3,18 @@
 #include <mccl/algorithm/LB.hpp>
 #include <mccl/tools/parser.hpp>
 #include <mccl/tools/statistics.hpp>
+#include <mccl/tools/utils.hpp>
 
 #include <mccl/contrib/program_options.hpp>
 
 #include <iostream>
 #include <unistd.h>
-#include <chrono>
-#include <algorithm>
 
 namespace po = program_options;
 
 using namespace mccl;
 
 bool quiet = false;
-vec checksol;
-// we should probably move this function in the tools
-/*
-std::size_t binomial(std::size_t k, std::size_t N)
-{
-    if (k > N) return 0;
-    std::size_t r = 1;
-    if (k > N-k)
-        k = N-k;
-    for (unsigned i = 0; i < k; ++i)
-    {
-        r *= (N-i);
-        r /= (i+1);
-    }
-    return r;
-}
-*/
 
 template<typename subISD_t = ISD_API_exhaustive_sparse_t>
 int run_subISD(mat_view &H, vec_view &S, size_t w)
@@ -41,9 +23,8 @@ int run_subISD(mat_view &H, vec_view &S, size_t w)
   ISD_single_generic<subISD_t> ISD_single(subISD);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
-  checksol = ISD_single.get_solution();
   if (!quiet)
-    std::cout << "Solution found:\n" << checksol << std::endl;
+    std::cout << "Solution found:\n" << ISD_single.get_solution() << std::endl;
   return ISD_single.get_cnt();
 }
 
@@ -56,9 +37,8 @@ int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u
   ISD_single.configure(l, u);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
-  checksol = ISD_single.get_solution();
   if (!quiet)
-    std::cout << "Solution found:\n" << checksol << std::endl;
+    std::cout << "Solution found:\n" << ISD_single.get_solution() << std::endl;
   return ISD_single.get_cnt();
 }
 
@@ -68,7 +48,8 @@ try
 {
     std::string filepath, algo;
     size_t trials = 1;
-    size_t n = 0, k = 0, w = 0, l = 0, u = 1, p = 3;
+    size_t n = 0, l = 0, p = 3;
+    int k = -1, w = -1, u = -1;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
     // These are the core commands, you need at least one of these
@@ -84,11 +65,11 @@ try
       ("genunique", "Generate unique decoding instance")
       ("genrandom", "Generate random decoding instance")
       ("n", po::value<size_t>(&n), "Code length")
-      ("k", po::value<size_t>(&k), "Code dimension")
-      ("w", po::value<size_t>(&w), "Error weight")
+      ("k", po::value<int>(&k)->default_value(-1), "Code dimension ( -1 = auto with rate 1/2 )")
+      ("w", po::value<int>(&w)->default_value(-1), "Error weight ( -1 = 1.05*d_GV )")
       ("l", po::value<size_t>(&l)->default_value(0), "H2 rows")
       ("p", po::value<size_t>(&p)->default_value(3), "subISD parameter p")
-      ("updaterows,u", po::value<size_t>(&u)->default_value(1), "I column swaps per iteration")
+      ("updaterows,u", po::value<int>(&u)->default_value(-1), "Echelon column swaps per iteration ( -1 = full )")
       ("quiet,q", po::bool_switch(&quiet), "Quiet: supress most output")
       ;
     allopts.add(cmdopts).add(opts);
@@ -109,13 +90,13 @@ try
     if (vm.positional.size() > 0)
       n = vm.positional[0].as<size_t>();
     if (vm.positional.size() > 1)
-      k = vm.positional[1].as<size_t>();
+      k = vm.positional[1].as<int>();
     if (vm.positional.size() > 2)
-      w = vm.positional[2].as<size_t>();
+      w = vm.positional[2].as<int>();
     if (vm.positional.size() > 3)
       l = vm.positional[3].as<size_t>();
     if (vm.positional.size() > 4)
-      u = vm.positional[4].as<size_t>();
+      u = vm.positional[4].as<int>();
     if (vm.positional.size() > 5)
     {
       std::cout << "Unknown option: " << vm.positional[5].as<std::string>() << std::endl;
@@ -136,6 +117,12 @@ try
       w = parse.get_w();
     } else
     {
+      // automatic choice of k is using rate 1/2
+      if (k == -1)
+        k = n / 2;
+      // automatic choice of w is based on GV-bound: w = ceil(1.05 * d_GV)
+      if (w == -1)
+        w = get_cryptographic_w(n, k);
       if (n == 0 || k >= n || w >= n)
       {
         std::cout << "Bad input parameters: n=" << n << ", k=" << k << ", w=" << w << std::endl;
@@ -145,8 +132,8 @@ try
     }
     if (l > n-k)
       l = n-k;
-    if (u < 1)
-      u = 1;
+    if (u == 0)
+      u = -1;
 
     std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", p=" << p << ", u=" << u << " | trials=" << trials << std::endl;
 
@@ -175,8 +162,6 @@ try
       else if (algo=="TLB")
         cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u) );
       time_trial_stat.stop();
-      if (!parse.check_solution(checksol))
-        throw std::runtime_error("Found incorrect solution!");
     }
     time_total_stat.stop();
     
