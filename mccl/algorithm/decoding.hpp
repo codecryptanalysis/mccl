@@ -171,13 +171,13 @@ public:
     {
         n = k = w = 0;
         l = 0; // ISD form parameter
-        u = 1; // how many rows to swap each iteration. max n - k - l
+        u = -1; // how many rows to swap each iteration. max n - k - l
     }
 
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
     // if called then it must be called before initialize
-    void configure(size_t _l = 0, size_t _u = 1)
+    void configure(size_t _l = 0, int _u = -1)
     {
         l = _l;
         u = _u;
@@ -245,8 +245,9 @@ public:
                     throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 2: H2T combination non-zero!");
                 sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
             }
-            if (!check_solution())
-                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 3: solution is incorrect!");
+//		// TODO: make option to verify solutions
+//            if (!check_solution())
+//                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 3: solution is incorrect!");
             return false;
     }
     inline bool callback(const std::vector<uint32_t>& sol, unsigned int w1partial)
@@ -289,6 +290,7 @@ public:
             ret.setbit(sol[i]);
         return ret;
     }
+
     bool check_solution() const
     {
         vec E(get_solution());
@@ -319,7 +321,8 @@ private:
     std::vector<uint32_t> sol;
     
     // parameters
-    size_t n, k, w, l, u;
+    size_t n, k, w, l;
+    int u;
     
     // iteration count
     size_t cnt;

@@ -48,8 +48,8 @@ try
 {
     std::string filepath, algo;
     size_t trials = 1;
-    size_t n = 0, l = 0, p = 3;
-    int k = -1, w = -1, u = -1;
+    size_t l = 0, p = 3;
+    int n = 0, k = -1, w = -1, u = -1;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
     // These are the core commands, you need at least one of these
@@ -64,7 +64,7 @@ try
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("genunique", "Generate unique decoding instance")
       ("genrandom", "Generate random decoding instance")
-      ("n", po::value<size_t>(&n), "Code length")
+      ("n", po::value<int>(&n), "Code length")
       ("k", po::value<int>(&k)->default_value(-1), "Code dimension ( -1 = auto with rate 1/2 )")
       ("w", po::value<int>(&w)->default_value(-1), "Error weight ( -1 = 1.05*d_GV )")
       ("l", po::value<size_t>(&l)->default_value(0), "H2 rows")
@@ -123,16 +123,16 @@ try
       // automatic choice of w is based on GV-bound: w = ceil(1.05 * d_GV)
       if (w == -1)
         w = get_cryptographic_w(n, k);
-      if (n == 0 || k >= n || w >= n)
+      if (n <= 0 || k >= n || w >= n)
       {
         std::cout << "Bad input parameters: n=" << n << ", k=" << k << ", w=" << w << std::endl;
         return 1;
       }
       parse.random_SD(n, k, w);
     }
-    if (l > n-k)
-      l = n-k;
-    if (u == 0)
+    if (l > size_t(n-k))
+      l = size_t(n-k);
+    if (u <= 0)
       u = -1;
 
     std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", p=" << p << ", u=" << u << " | trials=" << trials << std::endl;

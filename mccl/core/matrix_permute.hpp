@@ -56,6 +56,7 @@ public:
     	H1T_columns = HTcols - l_;
     	echelon_rows = HTcols - l_;
     	ISD_rows = HTrows - echelon_rows;
+    	max_update_rows = std::min<size_t>(echelon_rows, ISD_rows);
     	cur_row = 0;
 
     	HST.resize(HTrows + 1, HTcolspadded);
@@ -163,10 +164,11 @@ public:
     	if (cur_row == echelon_rows)
     		cur_row = 0;
     }
-    void update(size_t rows)
+    void update(int r = -1)
     {
-    	if (rows > echelon_rows)
-    		rows = echelon_rows;
+    	size_t rows = r>0 ? r : max_update_rows;
+    	if (rows > max_update_rows)
+    		rows = max_update_rows;
     	for (size_t i = 0; i < rows; ++i)
     		update1();
 	// TODO: improved multirow update using method of 4 russians
@@ -186,7 +188,7 @@ private:
     
     std::vector<uint32_t> perm;
     size_t HT_columns, H1T_columns, H2T_columns, H2T_columns_padded;
-    size_t echelon_rows, ISD_rows, cur_row;
+    size_t echelon_rows, ISD_rows, cur_row, max_update_rows;
     mccl_base_random_generator rndgen;
 };
 
