@@ -56,7 +56,7 @@ public:
     	H1T_columns = HTcols - l_;
     	echelon_rows = HTcols - l_;
     	ISD_rows = HTrows - echelon_rows;
-    	max_update_rows = std::min<size_t>(echelon_rows, ISD_rows);
+    	max_update_rows = std::min<size_t>(echelon_rows, (ISD_rows*3)/4);
     	cur_row = 0;
 
     	HST.resize(HTrows + 1, HTcolspadded);
@@ -84,9 +84,12 @@ public:
     	_HT.transpose(H_);
     	_S.copy(S_);
 
-    	// setup perm
+    	// setup HT row perm
     	perm.resize(HTrows);
     	std::iota(perm.begin(), perm.end(), 0);
+    	// setup HT echelon row perm: used to pick n random echelon rows
+    	echelon_perm.resize(echelon_rows);
+    	std::iota(echelon_perm.begin(), echelon_perm.end(), 0);
 
     	// randomize & bring into ISD form
     	for (size_t i = 0; i < echelon_rows; ++i)
@@ -120,36 +123,18 @@ public:
     const cvec_view& S1restpadded() const { return _S1restpadded; }
     
     
-    // update 1 echelon row: swap with random row outside echelon form and bring it back to echelon form
-    void update1(size_t idx)
+    // swap with random row outside echelon form and bring it back to echelon form
+    void swap_echelon(size_t echelon_idx, size_t ISD_idx)
     {
-    	if (idx >= echelon_rows)
-    		throw std::runtime_error("HST_ISD_form_t::update(): bad input index");
-    	// echelon row idx must have 1-bit in column pivotcol:
-    	size_t pivotcol = HT_columns - idx - 1;
-    	// find random row to swap with
-    	//   must have bit set at pivot column
-    	//   start at random position and then do linear search
-    	//   TODO: avoid ending up at previously swapped out column, maybe reduce search region?
-    	size_t r = rndgen() % ISD_rows;
-	for (; r < ISD_rows && HST(echelon_rows + r,pivotcol)==false; ++r)
-		;
-	// wrap around
-	if (r >= ISD_rows) // unlikely
-	{
-		r = 0;
-		for (; r < ISD_rows && HST(echelon_rows + r,pivotcol)==false; ++r)
-			;
-	}
-	// oh oh if we wrap around twice
-	if (r >= ISD_rows) // unlikely
-		throw std::runtime_error("HST_ISD_form_t::update(): cannot find pivot");
+    	if (echelon_idx >= echelon_rows || echelon_rows + ISD_idx >= perm.size())
+    		throw std::runtime_error("HST_ISD_form_t::swap_echelon(): bad input index");
 	// swap rows
-	std::swap(perm[idx], perm[echelon_rows + r]);
-	HST[idx].swap(HST[echelon_rows + r], this_aligned_tag());
+	std::swap(perm[echelon_idx], perm[echelon_rows + ISD_idx]);
+	HST[echelon_idx].swap(HST[echelon_rows + ISD_idx], this_aligned_tag());
 
 	// bring HST back in echelon form
-	vec_view pivotrow(HST[idx]);
+	size_t pivotcol = HT_columns - echelon_idx - 1;
+	vec_view pivotrow(HST[echelon_idx]);
 	pivotrow.clearbit(pivotcol);
 	auto HSTrowit = HST[0];
 	for (size_t r2 = 0; r2 < HST.rows(); ++r2,++HSTrowit)
@@ -158,20 +143,114 @@ public:
 	pivotrow.clear(this_aligned_tag());
 	pivotrow.setbit(pivotcol);
     }
-    void update1()
+    // update 1 echelon row
+    void update1(size_t echelon_idx)
     {
-    	update1(cur_row++);
-    	if (cur_row == echelon_rows)
-    		cur_row = 0;
+    	if (echelon_idx >= echelon_rows)
+    		throw std::runtime_error("HST_ISD_form_t::update(): bad input index");
+    	// echelon row idx must have 1-bit in column pivotcol:
+    	size_t pivotcol = HT_columns - echelon_idx - 1;
+    	// find random row to swap with
+    	//   must have bit set at pivot column
+    	//   start at random position and then do linear search
+    	size_t ISD_idx = rndgen() % ISD_rows;
+	for (; ISD_idx < ISD_rows && HST(echelon_rows + ISD_idx,pivotcol)==false; ++ISD_idx)
+		;
+	// wrap around
+	if (ISD_idx >= ISD_rows) // unlikely
+	{
+		ISD_idx = 0;
+		for (; ISD_idx < ISD_rows && HST(echelon_rows + ISD_idx,pivotcol)==false; ++ISD_idx)
+			;
+	}
+	// oh oh if we wrap around twice
+	if (ISD_idx >= ISD_rows) // unlikely
+		throw std::runtime_error("HST_ISD_form_t::update1(): cannot find pivot");
+	swap_echelon(echelon_idx, ISD_idx);
     }
-    void update(int r = -1)
+    // update 1 echelon row, but only consider the n last swapped ISD rows
+    void update1_ISDsubset(size_t echelon_idx)
     {
-    	size_t rows = r>0 ? r : max_update_rows;
-    	if (rows > max_update_rows)
-    		rows = max_update_rows;
+    	if (echelon_idx >= echelon_rows)
+    		throw std::runtime_error("HST_ISD_form_t::update1_ISDsubset(): bad input index");
+	if (ISD_subset.size() < ISD_rows/4)
+	{
+		// reset ISD_subset
+		ISD_subset.resize(ISD_rows);
+		std::iota(ISD_subset.begin(), ISD_subset.end(), 0);
+		for (size_t i = 0; i < ISD_rows; ++i)
+			std::swap( ISD_subset[i], ISD_subset[ rndgen() % ISD_rows ] );
+	}
+    	// echelon row idx must have 1-bit in column pivotcol:
+    	size_t pivotcol = HT_columns - echelon_idx - 1;
+    	// find random row to swap with
+    	//   must have bit set at pivot column
+    	//   start at random position and then do linear search
+    	size_t ISD_idx = rndgen() % ISD_subset.size();
+	for (; ISD_idx < ISD_subset.size() && HST(echelon_rows + ISD_subset[ISD_idx],pivotcol)==false; ++ISD_idx)
+		;
+	// wrap around
+	if (ISD_idx >= ISD_subset.size()) // unlikely
+	{
+		ISD_idx = 0;
+		for (; ISD_idx < ISD_subset.size() && HST(echelon_rows + ISD_subset[ISD_idx],pivotcol)==false; ++ISD_idx)
+			;
+	}
+	// oh oh if we wrap around twice
+	if (ISD_idx >= ISD_subset.size()) // unlikely
+		throw std::runtime_error("HST_ISD_form_t::update1_ISDsubset(): cannot find pivot");
+	// remove chosen index from ISD_subset
+	std::swap(ISD_subset[ISD_idx], ISD_subset.back());
+	ISD_idx = ISD_subset.back();
+	ISD_subset.pop_back();
+	swap_echelon(echelon_idx, ISD_idx);
+    }
+    // chooses echelon rows in round-robin fashion
+    // stateful ISD selection:
+    //    maintains a ISD row subset in random order
+    //    then picks one ISD row at a time and removes it from the subset
+    //    when subset < ISD_rows/4 then refreshes it
+    // when ISD_subset_refresh = true & r < 3/4 ISD_rows then guaranteed that r unique ISD rows are selected at random
+    void update_seq(int r = -1, bool ISD_subset_refresh = false)
+    {
+    	if (ISD_subset_refresh)
+    		ISD_subset.clear();
+    	size_t rows = r > 0 ? std::min<size_t>(r,max_update_rows) : max_update_rows;
     	for (size_t i = 0; i < rows; ++i)
-    		update1();
-	// TODO: improved multirow update using method of 4 russians
+    	{
+    		update1_ISDsubset(cur_row++);
+    		if (cur_row == echelon_rows)
+    			cur_row = 0;
+	}
+    }
+    // chooses r random echelon rows, which are then updated in random order
+    // stateful ISD selection:
+    //    maintains a ISD row subset in random order
+    //    then picks one ISD row at a time and removes it from the subset
+    //    when subset < ISD_rows/4 then refreshes it
+    // when ISD_subset_refresh = true & r < 3/4 ISD_rows then guaranteed that r unique ISD rows are selected at random
+    void update_rnd(int r = -1, bool ISD_subset_refresh = false)
+    {
+    	if (ISD_subset_refresh)
+    		ISD_subset.clear();
+    	size_t rows = r > 0 ? std::min<size_t>(r,max_update_rows) : max_update_rows;
+    	for (size_t i = 0; i < rows; ++i)
+    	{
+    		cur_row = rndgen() % echelon_rows;
+    		std::swap(echelon_perm[i], echelon_perm[cur_row]);
+    	}
+    	for (size_t i = 0; i < rows; ++i)
+    	{
+    		cur_row = echelon_perm[i];
+    		update1_ISDsubset(cur_row);
+	}
+    }
+    // default choice is to use type 3 [citation here] mixing:
+    // choose r echelon rows and r ISD rows at random and swap them
+    // with r = min(echelon_rows, 3/4 ISD_rows)
+    void update(int r = -1, bool ISD_subset_refresh = true)
+    {
+    	update_rnd(r, ISD_subset_refresh);
     }
 
 private:
@@ -189,6 +268,8 @@ private:
     std::vector<uint32_t> perm;
     size_t HT_columns, H1T_columns, H2T_columns, H2T_columns_padded;
     size_t echelon_rows, ISD_rows, cur_row, max_update_rows;
+    std::vector<uint32_t> ISD_subset, echelon_perm;
+
     mccl_base_random_generator rndgen;
 };
 
