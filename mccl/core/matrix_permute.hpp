@@ -99,7 +99,25 @@ public:
 
     	// randomize & bring into ISD form
     	for (echelon_start = 0; echelon_start < echelon_rows; ++echelon_start)
-    		update1(echelon_start);
+    	{
+    		size_t pivotcol = HT_columns - echelon_start - 1;
+    		// start at a random remaining row and scan rows for bit set at column pivotcol
+    		size_t r = echelon_start + (rndgen() % (_HT.rows() - echelon_start));
+    		for (; r < _HT.rows() && _HT(r,pivotcol)==false; ++r)
+    			;
+		// wrap around once
+		if (r == _HT.rows())
+		{
+			r = echelon_start;
+	    		for (; r < _HT.rows() && _HT(r,pivotcol)==false; ++r)
+    				;
+		}
+		// check for failure
+		if (r == _HT.rows())
+			std::runtime_error("HST_ISD_form_t::reset(): cannot bring HT in ISD form");
+		// perform swap and reduction
+		swap_echelon(echelon_start, r - echelon_rows);
+	}
     }
 
     const std::vector<uint32_t>& permutation() const { return perm; }
