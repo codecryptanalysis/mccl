@@ -29,12 +29,12 @@ int run_subISD(mat_view &H, vec_view &S, size_t w)
 }
 
 template<typename subISDT_t = ISD_API_exhaustive_transposed_sparserange_t>
-int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u)
+int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u, int updatetype)
 {
   subISDT_t subISDT;
   subISDT.configure(p);
   ISD_single_generic_transposed<subISDT_t> ISD_single(subISDT);
-  ISD_single.configure(l, u);
+  ISD_single.configure(l, u, updatetype);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
   if (!quiet)
@@ -50,6 +50,7 @@ try
     size_t trials = 1;
     size_t l = 0, p = 3;
     int n = 0, k = -1, w = -1, u = -1;
+    int updatetype = 14;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
     // These are the core commands, you need at least one of these
@@ -70,6 +71,7 @@ try
       ("l", po::value<size_t>(&l)->default_value(0), "H2 rows")
       ("p", po::value<size_t>(&p)->default_value(3), "subISD parameter p")
       ("updaterows,u", po::value<int>(&u)->default_value(-1), "Echelon column swaps per iteration ( -1 = full )")
+      ("updatetype", po::value<int>(&updatetype)->default_value(10), "Echelon/ISD column update type: 1, 2, 3, 4, 12, 13, 14, 10")
       ("quiet,q", po::bool_switch(&quiet), "Quiet: supress most output")
       ;
     allopts.add(cmdopts).add(opts);
@@ -158,9 +160,9 @@ try
       else if (algo=="LB")
         cnt_stat.add( run_subISD<subISD_LB>(H,S,w) );
       else if (algo=="TP")
-        cnt_stat.add( run_subISDT<subISDT_prange>(H,S,w,l,p,u) );
+        cnt_stat.add( run_subISDT<subISDT_prange>(H,S,w,l,p,u,updatetype) );
       else if (algo=="TLB")
-        cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u) );
+        cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u,updatetype) );
       time_trial_stat.stop();
     }
     time_total_stat.stop();

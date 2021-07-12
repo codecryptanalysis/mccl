@@ -177,10 +177,11 @@ public:
     // pass parameters to actual object
     //virtual void configure(parameters_t& params) = 0;
     // if called then it must be called before initialize
-    void configure(size_t _l = 0, int _u = -1)
+    void configure(size_t _l = 0, int _u = -1, int _update_type = 14)
     {
         l = _l;
         u = _u;
+        update_type = _update_type;
     }
 
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
@@ -268,7 +269,7 @@ public:
     {
         ++cnt;
         // swap u rows in HST & bring in echelon form
-        HST.update(u);
+        HST.update(u, update_type);
         // find all subISD solutions
         subISDT->solve();
         return !sol.empty();
@@ -323,6 +324,7 @@ private:
     // parameters
     size_t n, k, w, l;
     int u;
+    int update_type;
     
     // iteration count
     size_t cnt;
