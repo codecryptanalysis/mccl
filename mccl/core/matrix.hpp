@@ -4,6 +4,7 @@
 #include <mccl/core/matrix_base.hpp>
 #include <mccl/core/matrix_ops.hpp>
 
+#include <array>
 #include <iostream>
 #include <functional>
 #include <random>
@@ -886,8 +887,34 @@ void fillgenerator(const vec_view& m, Generator& g)
 struct mccl_base_random_generator
 {
     mccl_base_random_generator()
-        : rnd(std::random_device()())
     {
+        seed();
+    }
+    mccl_base_random_generator(uint64_t s)
+    {
+        seed(s);
+    }
+    void _reseed()
+    {
+        std::seed_seq _seed(seedarray.begin(), seedarray.end());
+        rnd.seed(_seed);
+    }
+    void seed()
+    {
+        std::random_device rnddev;
+        for (unsigned i = 0; i < seedarray.size(); ++i)
+            seedarray[i] = rnddev();
+        _reseed();
+    }
+    void seed(uint64_t s)
+    {
+        seedarray[0] = uint32_t(s);
+        seedarray[1] = uint32_t(s>>32);
+        _reseed();
+    }
+    uint64_t get_seed() const
+    {
+        return uint64_t(seedarray[0]) | (uint64_t(seedarray[1])<<32);
     }
     void operator()(uint64_t& word)
     {
@@ -897,6 +924,7 @@ struct mccl_base_random_generator
     {
         return rnd();
     }
+    std::array<uint32_t,2> seedarray;
     std::mt19937_64 rnd;
 };
 

@@ -28,23 +28,30 @@ std::vector<bool> string_to_booleans(std::string& str) {
 class Parser {
 	public:
 		bool load_file(std::string filename);
+		
+		void seed(uint64_t s) { rndgen.seed(s); }
+		uint64_t get_seed() { return rndgen.get_seed(); };
 		bool random_SD(int n, int k, int w);
 		bool regenerate();
+
 		const mat_view& get_H() { return H; }
 		const vec_view& get_S() { return S; }
 		size_t get_n() { return n; };
 		size_t get_k() { return k; };
 		size_t get_w() { return w; };
-		size_t get_seed() { return seed; };
+		int64_t get_fileseed() { return fileseed; }
+		
 		bool check_solution(const cvec_view& E);
 	private:
 		bool Nset=false, Kset=false, Wset=false, Seedset=false;
-		int64_t n, k, w, seed;
+		int64_t n, k, w, fileseed;
 		
 		std::vector<bool> ST;
 		std::vector<std::vector<bool>> HT;
 		mat H;
 		vec S;
+		
+		mccl_base_random_generator rndgen;
 };
 
 
@@ -55,7 +62,7 @@ bool Parser::load_file(std::string filename)
 		std::cerr << "File " << filename << " does not exist" << std::endl;
 		return false;
 	}
-
+	fileseed=-1;
 	Nset=false, Kset=false, Wset=false, Seedset=false;
 	std::string line;
 	std::vector<std::string> HT_string;
@@ -80,7 +87,7 @@ bool Parser::load_file(std::string filename)
 				case MARK_N: n = std::stoi(line); Nset=true; break;
 				case MARK_K: k = std::stoi(line); Kset=true; break;
 				case MARK_W: w = std::stoi(line); Wset=true; break;
-				case MARK_SEED: seed = std::stoi(line); Seedset=true; break;
+				case MARK_SEED: fileseed = std::stoi(line); Seedset=true; break;
 				case MARK_HT: HT_string.push_back(line); break;
 				case MARK_ST: ST_string=line; break;
 			}
@@ -134,20 +141,20 @@ bool Parser::random_SD(int n_, int k_, int w_) {
 	n=n_;
 	k=k_;
 	w=w_;
-	seed=0;
 
-	if(n<=0) { std::cerr << "Length not positive" << std::endl; return false; } 
-	if(k<=0 or k >= n) { std::cerr << "Dimension not in correct range" << std::endl; return false; } 
-	if(w<0 or w>n-k) { std::cerr << "Weight not in correct range [0,n-k]" << std::endl; return false; }
-	H = mat(n-k,n);
-	fillrandom(H);
-	// force identity part for comptability
-	for(size_t i = 0; i < size_t(n-k); i++) {
-		for(size_t j=0; j < size_t(n-k); j++ ) {
-			H.clearbit(i,j);
-		}
-		H.setbit(i,i);
-	}
+	if (n<=0) { std::cerr << "Length not positive" << std::endl; return false; } 
+	if (k<=0 or k >= n) { std::cerr << "Dimension not in correct range" << std::endl; return false; } 
+	if (w<0 or w>n-k) { std::cerr << "Weight not in correct range [0,n-k]" << std::endl; return false; }
+
+	// first completely fill with randomly generated bits
+	mat tmpH(n-k,n);
+	fillgenerator(tmpH, rndgen);
+	H = m_copy(tmpH);
+	// now set left n-k by n-k submatrix to the identity
+	mat_view H1(H.submatrix(0,n-k,0,n-k));
+	mat tmpI(n-k,n-k);
+	tmpI.setidentity();
+	H1 = m_copy(tmpI);
 
 	// pick random weight w vec by picking random indices 
 	// until we have sampled w distinct ones
@@ -165,8 +172,9 @@ bool Parser::random_SD(int n_, int k_, int w_) {
 	//std::cout << "Generated error:" << E << std::endl;
 
 	// compute syndrome
-	S = vec(n-k);
-	fillrandom(S);
+	vec tmpS(n-k);
+	fillgenerator(tmpS, rndgen);
+	S = v_copy(tmpS);
 	// for(size_t i =0; i < size_t(n-k); i++) {
 	// 	S.setbit(i,hammingweight_xor(E, H[i])%2);
 	// }

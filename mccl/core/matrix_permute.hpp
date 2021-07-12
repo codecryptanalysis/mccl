@@ -142,8 +142,8 @@ public:
 	size_t pivotcol = HT_columns - echelon_idx - 1;
 	vec_view pivotrow(HST[echelon_idx]);
 	pivotrow.clearbit(pivotcol);
-	auto HSTrowit = HST[0];
-	for (size_t r2 = 0; r2 < HST.rows(); ++r2,++HSTrowit)
+	auto HSTrowit = HST[echelon_start];
+	for (size_t r2 = echelon_start; r2 < HST.rows(); ++r2,++HSTrowit)
 		if (HST(r2,pivotcol))
 			HSTrowit.vxor(pivotrow, this_aligned_tag());
 	pivotrow.clear(this_aligned_tag());

@@ -51,13 +51,14 @@ try
     size_t l = 0, p = 3;
     int n = 0, k = -1, w = -1, u = -1;
     int updatetype = 14;
+    uint64_t genseed;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
     // These are the core commands, you need at least one of these
     cmdopts.add_options()
       ("help,h", "Show options")
       ("file,f", po::value<std::string>(&filepath), "Specify input file")
-      ("gen,g", "Generate random ISD instances")
+      ("generate,g", "Generate random ISD instances")
       ;
     // these are other configuration options
     opts.add_options()
@@ -65,6 +66,7 @@ try
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("genunique", "Generate unique decoding instance")
       ("genrandom", "Generate random decoding instance")
+      ("genseed", po::value<uint64_t>(&genseed), "Set instance generator random generator seed")
       ("n", po::value<int>(&n), "Code length")
       ("k", po::value<int>(&k)->default_value(-1), "Code dimension ( -1 = auto with rate 1/2 )")
       ("w", po::value<int>(&w)->default_value(-1), "Error weight ( -1 = 1.05*d_GV )")
@@ -79,7 +81,7 @@ try
     po::store(po::parse_command_line(argc, argv, allopts, false, true), vm);
     po::notify(vm);
     
-    if (vm.count("help") || vm.count("file")+vm.count("gen")==0)
+    if (vm.count("help") || vm.count("file")+vm.count("generate")==0)
     {
       std::cout << cmdopts << opts;
       return 0;
@@ -106,6 +108,8 @@ try
     }
 
     Parser parse;
+    if (vm.count("genseed"))
+      parse.seed(genseed);
     if (filepath != "")
     {
       std::cout << "Parsing instance " << filepath << '\n';
@@ -137,7 +141,10 @@ try
     if (u <= 0)
       u = -1;
 
-    std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", p=" << p << ", u=" << u << " | trials=" << trials << std::endl;
+    std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", p=" << p << ", u=" << u << " | trials=" << trials;
+    if (vm.count("generate"))
+      std::cout << ", genseed=" << parse.get_seed();
+    std::cout << std::endl;
 
     mat_view H = parse.get_H();
     vec_view S = parse.get_S();
@@ -148,7 +155,7 @@ try
     time_total_stat.start();
     for (size_t i = 0; i < trials; ++i)
     {
-      if(i > 0 && vm.count("gen"))
+      if(i > 0 && vm.count("generate"))
       {
         parse.regenerate();
         H.reset(parse.get_H());

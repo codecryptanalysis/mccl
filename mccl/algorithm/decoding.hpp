@@ -247,8 +247,8 @@ public:
                 sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
             }
 //		// TODO: make option to verify solutions
-//            if (!check_solution())
-//                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 3: solution is incorrect!");
+            if (!check_solution())
+                throw std::runtime_error("ISD_single_generic_transposed::callback: internal error 3: solution is incorrect!");
             return false;
     }
     inline bool callback(const std::vector<uint32_t>& sol, unsigned int w1partial)
