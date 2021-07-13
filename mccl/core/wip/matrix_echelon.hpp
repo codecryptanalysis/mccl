@@ -8,6 +8,8 @@ MCCL_BEGIN_NAMESPACE
 
 namespace detail {
 
+/* THIS IS WORK IN PROGRESS, NOT IN ACTUAL USE */
+
 template<unsigned int bits>
 struct bitfield_type {};
 template<> struct bitfield_type< 8> { typedef uint8_t type; }

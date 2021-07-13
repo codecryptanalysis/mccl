@@ -1,67 +1,16 @@
-#ifndef MCCL_ALGORITHM_LB_HPP
-#define MCCL_ALGORITHM_LB_HPP
+#ifndef MCCL_ALGORITHM_LEE_BRICKELL_HPP
+#define MCCL_ALGORITHM_LEE_BRICKELL_HPP
 
+#include <mccl/config/config.hpp>
 #include <mccl/algorithm/decoding.hpp>
 
 MCCL_BEGIN_NAMESPACE
 
-class subISD_LB
-    : public ISD_API_exhaustive_sparse_t
-{   
-public:
-    using ISD_API_exhaustive_sparse_t::callback_t;
-
-    void configure(size_t _p = 3)
-    {
-        p = _p;
-    }
-
-    void initialize(const mat_view& H_, const vec_view&, unsigned int, callback_t _callback, void* _ptr) final
-    {
-        callback = _callback;
-        ptr = _ptr;
-        rowenum.reset(H_, p, 1);
-        E1_sparse.resize(p);
-    }
-
-    void prepare_loop() final 
-    {
-        rowenum.reset(p, 1);
-    }
-
-    bool loop_next() final
-    {
-        rowenum.compute();
-
-        // todo: optimize and pass computed error sum
-        unsigned sz = rowenum.selectionsize();
-        if (sz != E1_sparse.size())
-            E1_sparse.resize(sz);
-        for(unsigned i = 0; i < sz; i++) E1_sparse[i] = rowenum.selection()[i];
-        (*callback)(ptr, E1_sparse, 0);
-        return rowenum.next();
-    }
-
-    void solve() final
-    {
-        prepare_loop();
-        while (loop_next())
-            ;
-    }
-private:
-    callback_t callback;
-    void* ptr;
-    matrix_enumeraterows_t rowenum;
-    size_t p = 3;
-    std::vector<uint32_t> E1_sparse;
-};
-
-
-class subISDT_LB
-    : public ISD_API_exhaustive_transposed_sparserange_t
+class subISDT_lee_brickell
+    : public subISDT_API
 {
 public:
-    using ISD_API_exhaustive_transposed_sparserange_t::callback_t;
+    using subISDT_API::callback_t;
     
     void configure(size_t _p = 3)
     {
@@ -78,13 +27,13 @@ public:
         wmax = w;
         
         if (HTpadded.columns()-columns >= 64)
-            throw std::runtime_error("LB: HTpadded must round up columns to multiple of 64");
+            throw std::runtime_error("subISDT_lee_brickell: HTpadded must round up columns to multiple of 64");
         // maybe we can generalize HTpadded.columns() not to be multiple of 64
         if (HTpadded.columns()%64 != 0)
-            throw std::runtime_error("LB: HTpadded must have columns multiple of 64");
+            throw std::runtime_error("subISDT_lee_brickell: HTpadded must have columns multiple of 64");
         // TODO: allow HTpadded.columns()>64 by prefiltering using 1 word, then computing remaining words
         if (HTpadded.columns() > 64)
-            throw std::runtime_error("LB currently doesn't support HTpadded with columns > 64");
+            throw std::runtime_error("subISDT_lee_brickell: currently doesn't support HTpadded with columns > 64");
 
         rows = HTpadded.rows();
         words = HTpadded.columns()/64;

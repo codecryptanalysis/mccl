@@ -1,6 +1,10 @@
 #include <mccl/config/config.hpp>
+
+#include <mccl/algorithm/decoding.hpp>
+#include <mccl/algorithm/isdgeneric.hpp>
 #include <mccl/algorithm/prange.hpp>
-#include <mccl/algorithm/LB.hpp>
+#include <mccl/algorithm/lee_brickell.hpp>
+
 #include <mccl/tools/parser.hpp>
 #include <mccl/tools/statistics.hpp>
 #include <mccl/tools/utils.hpp>
@@ -16,24 +20,12 @@ using namespace mccl;
 
 bool quiet = false;
 
-template<typename subISD_t = ISD_API_exhaustive_sparse_t>
-int run_subISD(mat_view &H, vec_view &S, size_t w)
-{
-  subISD_t subISD;
-  ISD_single_generic<subISD_t> ISD_single(subISD);
-  ISD_single.initialize(H, S, w);
-  ISD_single.solve();
-  if (!quiet)
-    std::cout << "Solution found:\n" << ISD_single.get_solution() << std::endl;
-  return ISD_single.get_cnt();
-}
-
-template<typename subISDT_t = ISD_API_exhaustive_transposed_sparserange_t>
+template<typename subISDT_t>
 int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u, int updatetype)
 {
   subISDT_t subISDT;
   subISDT.configure(p);
-  ISD_single_generic_transposed<subISDT_t> ISD_single(subISDT);
+  ISD_generic<subISDT_t> ISD_single(subISDT);
   ISD_single.configure(l, u, updatetype);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
@@ -47,10 +39,10 @@ int main(int argc, char *argv[])
 try
 {
     std::string filepath, algo;
-    size_t trials = 1;
-    size_t l = 0, p = 3;
-    int n = 0, k = -1, w = -1, u = -1;
-    int updatetype = 14;
+    size_t trials;
+    int n = 0, k, w, u;
+    size_t l, p;
+    int updatetype;
     uint64_t genseed;
     
     po::options_description allopts, cmdopts("Command options"), opts("Extra options");
@@ -62,7 +54,7 @@ try
       ;
     // these are other configuration options
     opts.add_options()
-      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, TP, TLB")
+      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("genunique", "Generate unique decoding instance")
       ("genrandom", "Generate random decoding instance")
@@ -86,7 +78,7 @@ try
       std::cout << cmdopts << opts;
       return 0;
     }
-    if (algo != "P" && algo != "LB" && algo != "TP" && algo != "TLB")
+    if (algo != "P" && algo != "LB")
     {
       std::cout << "Unknown algorithm: " << algo << std::endl;
       return 1;
@@ -163,13 +155,9 @@ try
       }
       time_trial_stat.start();
       if (algo=="P")
-        cnt_stat.add( run_subISD<subISD_prange>(H,S,w) );
-      else if (algo=="LB")
-        cnt_stat.add( run_subISD<subISD_LB>(H,S,w) );
-      else if (algo=="TP")
         cnt_stat.add( run_subISDT<subISDT_prange>(H,S,w,l,p,u,updatetype) );
-      else if (algo=="TLB")
-        cnt_stat.add( run_subISDT<subISDT_LB>(H,S,w,l,p,u,updatetype) );
+      else if (algo=="LB")
+        cnt_stat.add( run_subISDT<subISDT_lee_brickell>(H,S,w,l,p,u,updatetype) );
       time_trial_stat.stop();
     }
     time_total_stat.stop();
@@ -177,9 +165,9 @@ try
     double mean_cnt = cnt_stat.mean(), median_cnt = cnt_stat.median();
     double inv_mean_cnt = double(1.0) / mean_cnt, inv_median_cnt = double(1.0) / median_cnt;
     std::cout << "Time                 :   total=" << time_total_stat.total() << "s (total mean=" << time_total_stat.total()/double(trials) << ") mean=" << time_trial_stat.mean() << "s median=" << time_trial_stat.median() << "s" << std::endl;
-    std::cout << "Number of iterations :    mean=" << mean_cnt << " median=" << median_cnt << std::endl;
+    std::cout << "Number of iterations :    mean=" << mean_cnt << " median=" << median_cnt << " Q1,Q3=" << cnt_stat.Q1() << "," << cnt_stat.Q3() << std::endl;
     std::cout << "Inverse of iterations: invmean=" << inv_mean_cnt << " invmedian=" << inv_median_cnt << std::endl;
-    std::cout << "Time per iteration   :    mean=" << time_total_stat.total() / cnt_stat.total() << "s" << std::endl;
+    std::cout << "Time per iteration   :    mean=" << time_trial_stat.mean()/mean_cnt << "s" << std::endl;
     
     return 0;
 }
