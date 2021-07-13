@@ -46,7 +46,7 @@ public:
     }
     
     // retrieve solution if any
-    virtual vec get_solution() const = 0;
+    virtual cvec_view get_solution() const = 0;
 };
 
 // default callback types for subISD to the main ISD

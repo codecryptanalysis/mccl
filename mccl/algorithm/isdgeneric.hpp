@@ -62,6 +62,7 @@ public:
         C1restpadded.reset(C.subvector(HST.S2padded().columns(), HST.S1restpadded().columns()));
         
         sol.clear();
+        solution = vec();
         cnt = 0;
     }
 
@@ -109,6 +110,9 @@ public:
                     throw std::runtime_error("ISD_generic::callback: internal error 2: H2T combination non-zero!");
                 sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
             }
+            solution = vec(HST.HT().rows());
+            for (unsigned i = 0; i < sol.size(); ++i)
+                solution.setbit(sol[i]);
             // TODO: make option to verify solutions
             if (!check_solution())
                 throw std::runtime_error("ISD_generic::callback: internal error 3: solution is incorrect!");
@@ -141,22 +145,19 @@ public:
             ;
     }
 
-    vec get_solution() const final
+    cvec_view get_solution() const final
     {
-        vec ret;
-        ret.resize(HST.HT().rows());
-        for (unsigned i = 0; i < sol.size(); ++i)
-            ret.setbit(sol[i]);
-        return ret;
+        return solution;
     }
 
     bool check_solution() const
     {
-        vec E(get_solution());
+        if (solution.columns() == 0)
+            throw std::runtime_error("ISD_generic::check_solution: no solution");
         vec tmp(Sorg.columns());
         for (size_t i = 0; i < Horg.rows(); ++i)
         {
-            unsigned int b = hammingweight_and(Horg[i], E) % 2;
+            unsigned int b = hammingweight_and(Horg[i], solution) % 2;
             if (b)
                 tmp.setbit(i);
         }
@@ -171,6 +172,9 @@ private:
     // original parity check matrix H^T and syndrome S
     cmat_view Horg;
     cvec_view Sorg;
+    // solution with respect to original H
+    std::vector<uint32_t> sol;
+    vec solution;
 
     // maintains (U(H|S)P)^T in ISD form for random column permutations P
     HST_ISD_form_t<_bit_alignment> HST;
@@ -179,8 +183,6 @@ private:
     vec C;
     vec_view C2padded, C1restpadded;
     
-    // solution with respect to original H
-    std::vector<uint32_t> sol;
     
     // parameters
     size_t n, k, w, l;

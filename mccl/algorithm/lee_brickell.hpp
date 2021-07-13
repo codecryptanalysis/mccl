@@ -12,6 +12,11 @@ class subISDT_lee_brickell
 public:
     using subISDT_API::callback_t;
     
+    subISDT_lee_brickell()
+    {
+        p = 3;
+    }
+    
     void configure(size_t _p = 3)
     {
         p = _p;
