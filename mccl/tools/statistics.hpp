@@ -62,6 +62,26 @@ struct number_statistic
   }
 };
 
+struct counter_statistic
+  : public number_statistic<uint64_t>
+{
+  
+  void inc(uint64_t val=1)
+  {
+    _counter+=val;
+  }
+  void dec(uint64_t val=1)
+  {
+    _counter-=val;
+  }
+  void refresh()
+  {
+    this->add( _counter );
+    _counter = 0;
+  }
+  uint64_t _counter = 0;
+};
+
 struct time_statistic
   : public number_statistic<double>
 {
@@ -99,6 +119,27 @@ struct cpucycle_statistic
     this->add( _end - _start );
   }
   uint64_t _start;
+};
+
+struct decoding_statistics {
+  // counters
+  counter_statistic cnt_initialize;
+  counter_statistic cnt_callback;
+  counter_statistic cnt_prepare_loop;
+  counter_statistic cnt_loop_next;
+  counter_statistic cnt_solve;
+  // time
+
+  // cpucycle
+
+  // refresh counters
+  void refresh() {
+    cnt_initialize.refresh();
+    cnt_callback.refresh();
+    cnt_prepare_loop.refresh();
+    cnt_loop_next.refresh();
+    cnt_solve.refresh();
+  }
 };
 
 
