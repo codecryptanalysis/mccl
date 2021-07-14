@@ -8,16 +8,16 @@ MCCL_BEGIN_NAMESPACE
 
 namespace detail {
 
-static inline size_t hammingweight(uint64_t n)
+inline size_t hammingweight(uint64_t n)
 {
 	return _mm_popcnt_u64(n);
 }
-static inline size_t hammingweight(uint32_t n)
+inline size_t hammingweight(uint32_t n)
 {
 	return _mm_popcnt_u32(n);
 }
 template<size_t bits>
-static inline size_t hammingweight(const block_t<bits>& v)
+inline size_t hammingweight(const block_t<bits>& v)
 {
 	size_t hw = 0;
 	for (unsigned i = 0; i < v.size; ++i)
@@ -25,30 +25,30 @@ static inline size_t hammingweight(const block_t<bits>& v)
 	return hw;
 }
 
-static inline uint64_t rotate_right(uint64_t x, unsigned n)
+inline uint64_t rotate_right(uint64_t x, unsigned n)
 {
 	return (x>>n)|(x<<(64-n));
 }
-static inline uint64_t rotate_left(uint64_t x, unsigned n)
+inline uint64_t rotate_left(uint64_t x, unsigned n)
 {
 	return (x<<n)|(x>>(64-n));
 }
 
 #ifdef _MSC_VER
-static inline unsigned int trailing_zeroes(uint32_t n)
+inline unsigned int trailing_zeroes(uint32_t n)
 {
 	unsigned long ret = 0;
 	_BitScanForward(&ret, n);
 	return ret;
 }
 #else
-static inline unsigned int trailing_zeroes(uint32_t n)
+inline unsigned int trailing_zeroes(uint32_t n)
 {
 	return __builtin_ctz(n);
 }
 #endif
 
-static const uint64_t _lastwordmask[64] = {
+const uint64_t _lastwordmask[64] = {
 	~uint64_t(0), (uint64_t(1)<<1)-1, (uint64_t(1)<<2)-1, (uint64_t(1)<<3)-1, (uint64_t(1)<<4)-1, (uint64_t(1)<<5)-1, (uint64_t(1)<<6)-1, (uint64_t(1)<<7)-1, (uint64_t(1)<<8)-1, (uint64_t(1)<<9)-1,
 	(uint64_t(1)<<10)-1, (uint64_t(1)<<11)-1, (uint64_t(1)<<12)-1, (uint64_t(1)<<13)-1, (uint64_t(1)<<14)-1, (uint64_t(1)<<15)-1, (uint64_t(1)<<16)-1, (uint64_t(1)<<17)-1, (uint64_t(1)<<18)-1, (uint64_t(1)<<19)-1,
 	(uint64_t(1)<<20)-1, (uint64_t(1)<<21)-1, (uint64_t(1)<<22)-1, (uint64_t(1)<<23)-1, (uint64_t(1)<<24)-1, (uint64_t(1)<<25)-1, (uint64_t(1)<<26)-1, (uint64_t(1)<<27)-1, (uint64_t(1)<<28)-1, (uint64_t(1)<<29)-1,
@@ -57,12 +57,12 @@ static const uint64_t _lastwordmask[64] = {
 	(uint64_t(1)<<50)-1, (uint64_t(1)<<51)-1, (uint64_t(1)<<52)-1, (uint64_t(1)<<53)-1, (uint64_t(1)<<54)-1, (uint64_t(1)<<55)-1, (uint64_t(1)<<56)-1, (uint64_t(1)<<57)-1, (uint64_t(1)<<58)-1, (uint64_t(1)<<59)-1,
 	(uint64_t(1)<<60)-1, (uint64_t(1)<<61)-1, (uint64_t(1)<<62)-1, (uint64_t(1)<<63)-1
 };
-static inline uint64_t lastwordmask(size_t cols)
+inline uint64_t lastwordmask(size_t cols)
 {
 //	return (~uint64_t(0)) >> ((64-(cols%64))%64);
 	return _lastwordmask[cols%64];
 }
-static inline uint64_t firstwordmask(size_t cols)
+inline uint64_t firstwordmask(size_t cols)
 {
 	return uint64_t(0) - (uint64_t(1)<<(cols%64));
 //	return _firstwordmask[cols%64];
@@ -70,9 +70,9 @@ static inline uint64_t firstwordmask(size_t cols)
 
 // return the smallest 2^t >= n
 template<typename Int>
-static inline Int next_pow2(Int n)
+inline Int next_pow2(Int n)
 {
-	static const unsigned bits = sizeof(Int)*8;
+	const unsigned bits = sizeof(Int)*8;
 	--n;
 	n |= n >> 1;
 	n |= n >> 2;
@@ -90,7 +90,7 @@ static inline Int next_pow2(Int n)
 
 
 template<void f(uint64_t*, uint64_t*, uint64_t)>
-static inline void v_1op_f(const v_ptr& dst)
+inline void v_1op_f(const v_ptr& dst)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
 	if (dst.columns == 0)
@@ -102,7 +102,7 @@ static inline void v_1op_f(const v_ptr& dst)
 }
 
 template<void f(uint64_t*, uint64_t*, const uint64_t*, uint64_t)>
-static inline void v_2op_f(const v_ptr& dst, const cv_ptr& src)
+inline void v_2op_f(const v_ptr& dst, const cv_ptr& src)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (dst.columns != src.columns)
@@ -118,7 +118,7 @@ static inline void v_2op_f(const v_ptr& dst, const cv_ptr& src)
 }
 
 template<void f(uint64_t*, uint64_t*, const uint64_t*, const uint64_t*, uint64_t)>
-static inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2)
+inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (dst.columns != src1.columns || dst.columns != src2.columns)
@@ -136,7 +136,7 @@ static inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& s
 
 
 template<size_t bits, void f(block_t<bits>*, block_t<bits>*)>
-static inline void v_1op_f(const v_ptr& dst, aligned_tag<bits>)
+inline void v_1op_f(const v_ptr& dst, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
 	if (dst.columns == 0)
@@ -147,7 +147,7 @@ static inline void v_1op_f(const v_ptr& dst, aligned_tag<bits>)
 }
 
 template<size_t bits, void f(block_t<bits>*, block_t<bits>*, const block_t<bits>*)>
-static inline void v_2op_f(const v_ptr& dst, const cv_ptr& src, aligned_tag<bits>)
+inline void v_2op_f(const v_ptr& dst, const cv_ptr& src, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (dst.columns != src.columns)
@@ -163,7 +163,7 @@ static inline void v_2op_f(const v_ptr& dst, const cv_ptr& src, aligned_tag<bits
 }
 
 template<size_t bits, void f(block_t<bits>*, block_t<bits>*, const block_t<bits>*, const block_t<bits>*)>
-static inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2, aligned_tag<bits>)
+inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (dst.columns != src1.columns || dst.columns != src2.columns)
@@ -181,59 +181,59 @@ static inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& s
 
 
 #define MCCL_MATRIX_BASE_FUNCTION_1OP(func,expr) \
-static inline void _f1_ ## func (uint64_t* first1, uint64_t* last1, uint64_t lwm) \
+inline void _f1_ ## func (uint64_t* first1, uint64_t* last1, uint64_t lwm) \
 { \
 	for (; first1 != last1; ++first1) \
 		*first1 = expr ; \
 	*first1 = (( expr ) & lwm) | ((*first1) & ~lwm); \
 } \
 template<size_t bits> \
-static inline void _f1_ ## func (block_t<bits>* first1, block_t<bits>* last1) \
+inline void _f1_ ## func (block_t<bits>* first1, block_t<bits>* last1) \
 { \
 	for (; first1 != last1; ++first1) \
 		*first1 = expr ; \
 } \
-static inline void v_ ## func (const v_ptr& v) { v_1op_f<_f1_ ## func >(v); } \
+inline void v_ ## func (const v_ptr& v) { v_1op_f<_f1_ ## func >(v); } \
 template<size_t bits> \
-static inline void v_ ## func (const v_ptr& v, aligned_tag<bits>) { v_1op_f<bits,_f1_ ## func >(v, aligned_tag<bits>()); }
+inline void v_ ## func (const v_ptr& v, aligned_tag<bits>) { v_1op_f<bits,_f1_ ## func >(v, aligned_tag<bits>()); }
 
 
 
 #define MCCL_MATRIX_BASE_FUNCTION_2OP(func,expr) \
-static inline void _f2_ ## func (uint64_t* first1, uint64_t* last1, const uint64_t* first2, uint64_t lwm) \
+inline void _f2_ ## func (uint64_t* first1, uint64_t* last1, const uint64_t* first2, uint64_t lwm) \
 { \
 	for (; first1 != last1; ++first1,++first2) \
 		*first1 = expr ; \
 	*first1 = (( expr ) & lwm) | ((*first1) & ~lwm); \
 } \
 template<size_t bits> \
-static inline void _f2_ ## func (block_t<bits>* first1, block_t<bits>* last1, const block_t<bits>* first2) \
+inline void _f2_ ## func (block_t<bits>* first1, block_t<bits>* last1, const block_t<bits>* first2) \
 { \
 	for (; first1 != last1; ++first1,++first2) \
 		*first1 = expr ; \
 } \
-static inline void v_ ## func (const v_ptr& v1, const cv_ptr& v2) { v_2op_f<_f2_ ## func >(v1, v2); } \
+inline void v_ ## func (const v_ptr& v1, const cv_ptr& v2) { v_2op_f<_f2_ ## func >(v1, v2); } \
 template<size_t bits> \
-static inline void v_ ## func (const v_ptr& v1, const cv_ptr& v2, aligned_tag<bits>) { v_2op_f<bits,_f2_ ## func >(v1, v2, aligned_tag<bits>()); }
+inline void v_ ## func (const v_ptr& v1, const cv_ptr& v2, aligned_tag<bits>) { v_2op_f<bits,_f2_ ## func >(v1, v2, aligned_tag<bits>()); }
 
 
 
 #define MCCL_MATRIX_BASE_FUNCTION_3OP(func,expr) \
-static inline void _f3_ ## func (uint64_t* dstfirst, uint64_t* dstlast, const uint64_t* first1, const uint64_t* first2, uint64_t lwm) \
+inline void _f3_ ## func (uint64_t* dstfirst, uint64_t* dstlast, const uint64_t* first1, const uint64_t* first2, uint64_t lwm) \
 { \
 	for (; dstfirst != dstlast; ++dstfirst,++first1,++first2) \
 		*dstfirst = expr ; \
 	*dstfirst = ((*dstfirst)&~lwm) | ((  expr   )&lwm); \
 } \
 template<size_t bits> \
-static inline void _f3_ ## func (block_t<bits>* dstfirst, block_t<bits>* dstlast, const block_t<bits>* first1, const block_t<bits>* first2) \
+inline void _f3_ ## func (block_t<bits>* dstfirst, block_t<bits>* dstlast, const block_t<bits>* first1, const block_t<bits>* first2) \
 { \
 	for (; dstfirst != dstlast; ++dstfirst,++first1,++first2) \
 		*dstfirst = expr ; \
 } \
-static inline void v_ ## func (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2 ) { v_3op_f<_f3_ ## func >(dst, v1, v2); } \
+inline void v_ ## func (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2 ) { v_3op_f<_f3_ ## func >(dst, v1, v2); } \
 template<size_t bits> \
-static inline void v_ ## func (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>) { v_3op_f<bits,_f3_ ## func >(dst, v1, v2, aligned_tag<bits>()); }
+inline void v_ ## func (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>) { v_3op_f<bits,_f3_ ## func >(dst, v1, v2, aligned_tag<bits>()); }
 
 
 
@@ -267,12 +267,12 @@ MCCL_MATRIX_BASE_FUNCTION_3OP(orni ,(~*first1) | (*first2))
 
 
 
-                      static inline void v_set  (const v_ptr& v, bool b)                    { if (b) v_set(v); else v_clear(v); }
-template<size_t bits> static inline void v_set  (const v_ptr& v, bool b, aligned_tag<bits>) { if (b) v_set(v, aligned_tag<bits>()); else v_clear(v, aligned_tag<bits>()); }
+                      inline void v_set  (const v_ptr& v, bool b)                    { if (b) v_set(v); else v_clear(v); }
+template<size_t bits> inline void v_set  (const v_ptr& v, bool b, aligned_tag<bits>) { if (b) v_set(v, aligned_tag<bits>()); else v_clear(v, aligned_tag<bits>()); }
 
 
 
-static inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2)
+inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -293,7 +293,7 @@ static inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2)
 	return true;
 }
 template<size_t bits>
-static inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
+inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -315,7 +315,7 @@ static inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bit
 
 
 
-static inline void v_swap(const v_ptr& v1, const v_ptr& v2)
+inline void v_swap(const v_ptr& v1, const v_ptr& v2)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -336,7 +336,7 @@ static inline void v_swap(const v_ptr& v1, const v_ptr& v2)
 	*first2 ^= tmp;
 }
 template<size_t bits>
-static inline void v_swap(const v_ptr& v1, const v_ptr& v2, aligned_tag<bits>)
+inline void v_swap(const v_ptr& v1, const v_ptr& v2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -355,7 +355,7 @@ static inline void v_swap(const v_ptr& v1, const v_ptr& v2, aligned_tag<bits>)
 
 
 
-static inline size_t v_hw(const cv_ptr& v)
+inline size_t v_hw(const cv_ptr& v)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
 	if (v.columns == 0)
@@ -370,7 +370,7 @@ static inline size_t v_hw(const cv_ptr& v)
 	hw += hammingweight((*first1) & lwm);
 	return hw;
 }
-static inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2)
+inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -390,7 +390,7 @@ static inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2)
 	hw += hammingweight((*first1 & *first2) & lwm);
 	return hw;
 }
-static inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2)
+inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -410,7 +410,7 @@ static inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2)
 	hw += hammingweight((*first1 | *first2) & lwm);
 	return hw;
 }
-static inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2)
+inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -434,7 +434,7 @@ static inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2)
 
 
 template<size_t bits>
-static inline size_t v_hw(const cv_ptr& v, aligned_tag<bits>)
+inline size_t v_hw(const cv_ptr& v, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
 	if (v.columns == 0)
@@ -448,7 +448,7 @@ static inline size_t v_hw(const cv_ptr& v, aligned_tag<bits>)
 	return hw;
 }
 template<size_t bits>
-static inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
+inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -467,7 +467,7 @@ static inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bi
 	return hw;
 }
 template<size_t bits>
-static inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
+inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -486,7 +486,7 @@ static inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bit
 	return hw;
 }
 template<size_t bits>
-static inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
+inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 	if (v1.columns != v2.columns)
@@ -507,7 +507,7 @@ static inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bi
 
 
 
-static inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols, bool b)
+inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols, bool b)
 {
 	if (b)
 		v_setcolumns(v,coloffset,cols);
@@ -515,7 +515,7 @@ static inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols, b
 		v_clearcolumns(v,coloffset,cols);
 }
 
-static inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols)
+inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
 	if (v.columns == 0 || cols == 0)
@@ -535,7 +535,7 @@ static inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 		*first |= ~uint64_t(0);
 	*first |= lwm;
 }
-static inline void v_flipcolumns(const v_ptr& v, size_t coloffset, size_t cols)
+inline void v_flipcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
 	if (v.columns == 0 || cols == 0)
@@ -556,7 +556,7 @@ static inline void v_flipcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 		*first ^= ~uint64_t(0);
 	*first ^= lwm;
 }
-static inline void v_clearcolumns(const v_ptr& v, size_t coloffset, size_t cols)
+inline void v_clearcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
 	if (v.columns == 0 || cols == 0)

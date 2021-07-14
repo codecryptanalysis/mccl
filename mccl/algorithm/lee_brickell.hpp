@@ -3,14 +3,20 @@
 
 #include <mccl/config/config.hpp>
 #include <mccl/algorithm/decoding.hpp>
+#include <mccl/algorithm/isdgeneric.hpp>
 
 MCCL_BEGIN_NAMESPACE
 
 class subISDT_lee_brickell
-    : public subISDT_API
+    final : public subISDT_API
 {
 public:
     using subISDT_API::callback_t;
+
+    // API member function
+    ~subISDT_lee_brickell() final
+    {
+    }
     
     subISDT_lee_brickell()
     {
@@ -22,6 +28,7 @@ public:
         p = _p;
     }
     
+    // API member function
     void initialize(const cmat_view& _HTpadded, size_t _HTcolumns, const cvec_view& _Spadded, unsigned int w, callback_t _callback, void* _ptr) final
     {
         HTpadded.reset(_HTpadded);
@@ -49,6 +56,7 @@ public:
         padmask = detail::lastwordmask( HTpadded.columns() ) & ~lastwordmask;
     }
 
+    // API member function
     void solve() final
     {
         prepare_loop();
@@ -64,6 +72,7 @@ public:
         }
     }
     
+    // API member function
     void prepare_loop() final
     {
         curidx.resize(p);
@@ -81,6 +90,7 @@ public:
         }
     }
 
+    // API member function
     bool loop_next() final
     {
         if (words == 0)
@@ -163,6 +173,11 @@ private:
     
     size_t p, cp, rows;
 };
+
+template<size_t _bit_alignment = 64>
+using ISD_lee_brickell = ISD_generic<subISDT_lee_brickell,_bit_alignment>;
+
+// TODO: provide further Lee Brickell convience functions
 
 MCCL_END_NAMESPACE
 

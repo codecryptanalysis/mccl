@@ -588,71 +588,71 @@ public:
     template<typename F>       mat& operator=(matrix_result<F>&& mr)       { mr.r.resize_me(*this); mr.r(ptr); return *this; }
 };
 
-bool operator==(const cvec_view& v1, const cvec_view& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const cvec_view& v1, const cvec_view& v2) { return v1.ptr != v2.ptr; }
-bool operator==(const cvec_view& v1, const  vec_view& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const cvec_view& v1, const  vec_view& v2) { return v1.ptr != v2.ptr; }
-bool operator==(const  vec_view& v1, const cvec_view& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const  vec_view& v1, const cvec_view& v2) { return v1.ptr != v2.ptr; }
-bool operator==(const  vec_view& v1, const  vec_view& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const  vec_view& v1, const  vec_view& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const cvec_view& v1, const cvec_view& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const cvec_view& v1, const cvec_view& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const cvec_view& v1, const  vec_view& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const cvec_view& v1, const  vec_view& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const  vec_view& v1, const cvec_view& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const  vec_view& v1, const cvec_view& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const  vec_view& v1, const  vec_view& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const  vec_view& v1, const  vec_view& v2) { return v1.ptr != v2.ptr; }
 
-bool operator==(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
-bool operator==(const cvec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const cvec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
-bool operator==(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
-bool operator==(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
-bool operator!=(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const cvec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const cvec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const cvec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const  vec_view_it& v1, const cvec_view_it& v2) { return v1.ptr != v2.ptr; }
+inline bool operator==(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr == v2.ptr; }
+inline bool operator!=(const  vec_view_it& v1, const  vec_view_it& v2) { return v1.ptr != v2.ptr; }
 
-bool operator==(const vec& v1, const vec& v2)       { return v1.isequal(v2); }
-bool operator!=(const vec& v1, const vec& v2)       { return !v1.isequal(v2); }
-bool operator==(const vec_view& v1, const vec& v2) { return v1.isequal(v2); }
-bool operator!=(const vec_view& v1, const vec& v2) { return !v1.isequal(v2); }
-bool operator==(const cvec_view& v1, const vec& v2) { return v1.isequal(v2); }
-bool operator!=(const cvec_view& v1, const vec& v2) { return !v1.isequal(v2); }
-bool operator==(const vec& v1, const vec_view& v2) { return v1.isequal(v2); }
-bool operator!=(const vec& v1, const vec_view& v2) { return !v1.isequal(v2); }
-bool operator==(const vec& v1, const cvec_view& v2) { return v1.isequal(v2); }
-bool operator!=(const vec& v1, const cvec_view& v2) { return !v1.isequal(v2); }
-bool operator==(const vec_view_it& v1, const vec& v2) { return v1.isequal(v2); }
-bool operator!=(const vec_view_it& v1, const vec& v2) { return !v1.isequal(v2); }
-bool operator==(const cvec_view_it& v1, const vec& v2) { return v1.isequal(v2); }
-bool operator!=(const cvec_view_it& v1, const vec& v2) { return !v1.isequal(v2); }
-bool operator==(const vec& v1, const vec_view_it& v2) { return v1.isequal(v2); }
-bool operator!=(const vec& v1, const vec_view_it& v2) { return !v1.isequal(v2); }
-bool operator==(const vec& v1, const cvec_view_it& v2) { return v1.isequal(v2); }
-bool operator!=(const vec& v1, const cvec_view_it& v2) { return !v1.isequal(v2); }
+inline bool operator==(const vec& v1, const vec& v2)       { return v1.isequal(v2); }
+inline bool operator!=(const vec& v1, const vec& v2)       { return !v1.isequal(v2); }
+inline bool operator==(const vec_view& v1, const vec& v2) { return v1.isequal(v2); }
+inline bool operator!=(const vec_view& v1, const vec& v2) { return !v1.isequal(v2); }
+inline bool operator==(const cvec_view& v1, const vec& v2) { return v1.isequal(v2); }
+inline bool operator!=(const cvec_view& v1, const vec& v2) { return !v1.isequal(v2); }
+inline bool operator==(const vec& v1, const vec_view& v2) { return v1.isequal(v2); }
+inline bool operator!=(const vec& v1, const vec_view& v2) { return !v1.isequal(v2); }
+inline bool operator==(const vec& v1, const cvec_view& v2) { return v1.isequal(v2); }
+inline bool operator!=(const vec& v1, const cvec_view& v2) { return !v1.isequal(v2); }
+inline bool operator==(const vec_view_it& v1, const vec& v2) { return v1.isequal(v2); }
+inline bool operator!=(const vec_view_it& v1, const vec& v2) { return !v1.isequal(v2); }
+inline bool operator==(const cvec_view_it& v1, const vec& v2) { return v1.isequal(v2); }
+inline bool operator!=(const cvec_view_it& v1, const vec& v2) { return !v1.isequal(v2); }
+inline bool operator==(const vec& v1, const vec_view_it& v2) { return v1.isequal(v2); }
+inline bool operator!=(const vec& v1, const vec_view_it& v2) { return !v1.isequal(v2); }
+inline bool operator==(const vec& v1, const cvec_view_it& v2) { return v1.isequal(v2); }
+inline bool operator!=(const vec& v1, const cvec_view_it& v2) { return !v1.isequal(v2); }
 
-bool operator==(const cmat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
-bool operator!=(const cmat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
-bool operator==(const cmat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
-bool operator!=(const cmat_view& m1, const  mat_view& m2) { return m1.ptr != m2.ptr; }
-bool operator==(const  mat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
-bool operator!=(const  mat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
-bool operator==(const  mat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
-bool operator!=(const  mat_view& m1, const  mat_view& m2) { return m1.ptr != m2.ptr; }
+inline bool operator==(const cmat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
+inline bool operator!=(const cmat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
+inline bool operator==(const cmat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
+inline bool operator!=(const cmat_view& m1, const  mat_view& m2) { return m1.ptr != m2.ptr; }
+inline bool operator==(const  mat_view& m1, const cmat_view& m2) { return m1.ptr == m2.ptr; }
+inline bool operator!=(const  mat_view& m1, const cmat_view& m2) { return m1.ptr != m2.ptr; }
+inline bool operator==(const  mat_view& m1, const  mat_view& m2) { return m1.ptr == m2.ptr; }
+inline bool operator!=(const  mat_view& m1, const  mat_view& m2) { return m1.ptr != m2.ptr; }
 
-bool operator==(const mat& m1, const mat& m2)       { return m1.isequal(m2); }
-bool operator!=(const mat& m1, const mat& m2)       { return !m1.isequal(m2); }
-bool operator==(const mat_view& m1, const mat& m2) { return m1.isequal(m2); }
-bool operator!=(const mat_view& m1, const mat& m2) { return !m1.isequal(m2); }
-bool operator==(const cmat_view& m1, const mat& m2) { return m1.isequal(m2); }
-bool operator!=(const cmat_view& m1, const mat& m2) { return !m1.isequal(m2); }
-bool operator==(const mat& m1, const mat_view& m2) { return m1.isequal(m2); }
-bool operator!=(const mat& m1, const mat_view& m2) { return !m1.isequal(m2); }
-bool operator==(const mat& m1, const cmat_view& m2) { return m1.isequal(m2); }
-bool operator!=(const mat& m1, const cmat_view& m2) { return !m1.isequal(m2); }
+inline bool operator==(const mat& m1, const mat& m2)       { return m1.isequal(m2); }
+inline bool operator!=(const mat& m1, const mat& m2)       { return !m1.isequal(m2); }
+inline bool operator==(const mat_view& m1, const mat& m2) { return m1.isequal(m2); }
+inline bool operator!=(const mat_view& m1, const mat& m2) { return !m1.isequal(m2); }
+inline bool operator==(const cmat_view& m1, const mat& m2) { return m1.isequal(m2); }
+inline bool operator!=(const cmat_view& m1, const mat& m2) { return !m1.isequal(m2); }
+inline bool operator==(const mat& m1, const mat_view& m2) { return m1.isequal(m2); }
+inline bool operator!=(const mat& m1, const mat_view& m2) { return !m1.isequal(m2); }
+inline bool operator==(const mat& m1, const cmat_view& m2) { return m1.isequal(m2); }
+inline bool operator!=(const mat& m1, const cmat_view& m2) { return !m1.isequal(m2); }
 
-std::ostream& operator<<(std::ostream& o, const cvec_view& v) { v_print(o, v.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const  vec_view& v) { v_print(o, v.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const cvec_view_it& v) { v_print(o, v.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const  vec_view_it& v) { v_print(o, v.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const  vec& v) { return o << static_cast<const cvec_view&>(v); }
-std::ostream& operator<<(std::ostream& o, const cmat_view& m) { m_print(o, m.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const  mat_view& m) { m_print(o, m.ptr); return o; }
-std::ostream& operator<<(std::ostream& o, const  mat& m) { return o << static_cast<const cmat_view&>(m); }
+inline std::ostream& operator<<(std::ostream& o, const cvec_view& v) { v_print(o, v.ptr); return o; }
+inline std::ostream& operator<<(std::ostream& o, const  vec_view& v) { v_print(o, v.ptr); return o; }
+inline std::ostream& operator<<(std::ostream& o, const cvec_view_it& v) { v_print(o, v.ptr); return o; }
+inline std::ostream& operator<<(std::ostream& o, const  vec_view_it& v) { v_print(o, v.ptr); return o; }
+inline std::ostream& operator<<(std::ostream& o, const  vec& v) { return o << static_cast<const cvec_view&>(v); }
+inline std::ostream& operator<<(std::ostream& o, const cmat_view& m) { m_print(o, m.ptr); return o; }
+inline std::ostream& operator<<(std::ostream& o, const  mat_view& m) { m_print(o, m.ptr); return o; }
+inline std::ostream& operator<<(std::ostream& o, const  mat& m) { return o << static_cast<const cmat_view&>(m); }
 
 
 template<void f(const v_ptr&, const cv_ptr&)>
@@ -758,22 +758,22 @@ struct m_ptr_transpose_result
 };
 
 #define MCCL_VECTOR_RESULT_FUNCTION_OP2(func) \
-   static inline vector_result<v_ptr_op2_result<detail:: func >> func (const cvec_view& v2) \
+   inline vector_result<v_ptr_op2_result<detail:: func >> func (const cvec_view& v2) \
    { \
        return vector_result<v_ptr_op2_result<detail:: func>>(&v2.ptr); \
    } \
    template<size_t bits> \
-   static inline vector_result<v_ptr_op2a_result<bits, detail:: func >> func (const cvec_view& v2, aligned_tag<bits>) \
+   inline vector_result<v_ptr_op2a_result<bits, detail:: func >> func (const cvec_view& v2, aligned_tag<bits>) \
    { \
        return vector_result<v_ptr_op2a_result<bits, detail:: func>>(&v2.ptr, aligned_tag<bits>()); \
    }
 #define MCCL_VECTOR_RESULT_FUNCTION_OP3(func) \
-   static inline vector_result<v_ptr_op3_result<detail:: func >> func (const cvec_view& v2, const cvec_view& v3) \
+   inline vector_result<v_ptr_op3_result<detail:: func >> func (const cvec_view& v2, const cvec_view& v3) \
    { \
        return vector_result<v_ptr_op3_result<detail:: func>>(&v2.ptr, &v3.ptr); \
    } \
    template<size_t bits> \
-   static inline vector_result<v_ptr_op3a_result<bits,detail:: func >> func (const cvec_view& v2, const cvec_view& v3, aligned_tag<bits>) \
+   inline vector_result<v_ptr_op3a_result<bits,detail:: func >> func (const cvec_view& v2, const cvec_view& v3, aligned_tag<bits>) \
    { \
        return vector_result<v_ptr_op3a_result<bits, detail:: func>>(&v2.ptr, &v3.ptr, aligned_tag<bits>()); \
    }
@@ -791,33 +791,33 @@ MCCL_VECTOR_RESULT_FUNCTION_OP3(v_andni)
 MCCL_VECTOR_RESULT_FUNCTION_OP3(v_orin)
 MCCL_VECTOR_RESULT_FUNCTION_OP3(v_orni)
 
-static inline vector_result<v_ptr_op3_result<detail::v_and>> operator&(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_and>>(&v2.ptr, &v3.ptr); }
-static inline vector_result<v_ptr_op3_result<detail::v_or >> operator|(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_or >>(&v2.ptr, &v3.ptr); }
-static inline vector_result<v_ptr_op3_result<detail::v_xor>> operator^(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_xor>>(&v2.ptr, &v3.ptr); }
+inline vector_result<v_ptr_op3_result<detail::v_and>> operator&(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_and>>(&v2.ptr, &v3.ptr); }
+inline vector_result<v_ptr_op3_result<detail::v_or >> operator|(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_or >>(&v2.ptr, &v3.ptr); }
+inline vector_result<v_ptr_op3_result<detail::v_xor>> operator^(const cvec_view& v2, const cvec_view& v3) { return vector_result<v_ptr_op3_result<detail::v_xor>>(&v2.ptr, &v3.ptr); }
 
-static inline matrix_result<m_ptr_op2_result<detail::m_copy   >> m_copy     (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copy>>(&m2.ptr); }
-static inline matrix_result<m_ptr_op2_result<detail::m_copynot>> m_copynot  (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copynot>>(&m2.ptr); }
-static inline matrix_result<m_ptr_transpose_result>              m_transpose(const cmat_view& m2) { return matrix_result<m_ptr_transpose_result>(&m2.ptr); }
+inline matrix_result<m_ptr_op2_result<detail::m_copy   >> m_copy     (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copy>>(&m2.ptr); }
+inline matrix_result<m_ptr_op2_result<detail::m_copynot>> m_copynot  (const cmat_view& m2) { return matrix_result<m_ptr_op2_result<detail::m_copynot>>(&m2.ptr); }
+inline matrix_result<m_ptr_transpose_result>              m_transpose(const cmat_view& m2) { return matrix_result<m_ptr_transpose_result>(&m2.ptr); }
 
-static inline matrix_result<m_ptr_op3_result<detail::m_and>> m_and(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
-static inline matrix_result<m_ptr_op3_result<detail::m_or >> m_or (const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
-static inline matrix_result<m_ptr_op3_result<detail::m_xor>> m_xor(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
-static inline matrix_result<m_ptr_op3_result<detail::m_and>> operator&(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
-static inline matrix_result<m_ptr_op3_result<detail::m_or >> operator|(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
-static inline matrix_result<m_ptr_op3_result<detail::m_xor>> operator^(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
+inline matrix_result<m_ptr_op3_result<detail::m_and>> m_and(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
+inline matrix_result<m_ptr_op3_result<detail::m_or >> m_or (const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
+inline matrix_result<m_ptr_op3_result<detail::m_xor>> m_xor(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
+inline matrix_result<m_ptr_op3_result<detail::m_and>> operator&(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_and>>(&m2.ptr, &m3.ptr); }
+inline matrix_result<m_ptr_op3_result<detail::m_or >> operator|(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_or >>(&m2.ptr, &m3.ptr); }
+inline matrix_result<m_ptr_op3_result<detail::m_xor>> operator^(const cmat_view& m2, const cmat_view& m3) { return matrix_result<m_ptr_op3_result<detail::m_xor>>(&m2.ptr, &m3.ptr); }
 
 
-static inline size_t hammingweight(const cmat_view& m) { return m.hw(); }
+inline size_t hammingweight(const cmat_view& m) { return m.hw(); }
 
-static inline size_t hammingweight(const cvec_view& v) { return v_hw(v.ptr); }
-static inline size_t hammingweight_and(const cvec_view& v1, const cvec_view& v2) { return v_hw_and(v1.ptr, v2.ptr); }
-static inline size_t hammingweight_xor(const cvec_view& v1, const cvec_view& v2) { return v_hw_xor(v1.ptr, v2.ptr); }
-static inline size_t hammingweight_or (const cvec_view& v1, const cvec_view& v2) { return v_hw_or(v1.ptr, v2.ptr); }
+inline size_t hammingweight(const cvec_view& v) { return v_hw(v.ptr); }
+inline size_t hammingweight_and(const cvec_view& v1, const cvec_view& v2) { return v_hw_and(v1.ptr, v2.ptr); }
+inline size_t hammingweight_xor(const cvec_view& v1, const cvec_view& v2) { return v_hw_xor(v1.ptr, v2.ptr); }
+inline size_t hammingweight_or (const cvec_view& v1, const cvec_view& v2) { return v_hw_or(v1.ptr, v2.ptr); }
 
-template<size_t bits> static inline size_t hammingweight(const cvec_view& v, aligned_tag<bits>) { return v_hw(v.ptr, aligned_tag<bits>()); }
-template<size_t bits> static inline size_t hammingweight_and(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_and(v1.ptr, v2.ptr, aligned_tag<bits>()); }
-template<size_t bits> static inline size_t hammingweight_xor(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_xor(v1.ptr, v2.ptr, aligned_tag<bits>()); }
-template<size_t bits> static inline size_t hammingweight_or (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_or(v1.ptr, v2.ptr, aligned_tag<bits>()); }
+template<size_t bits> inline size_t hammingweight(const cvec_view& v, aligned_tag<bits>) { return v_hw(v.ptr, aligned_tag<bits>()); }
+template<size_t bits> inline size_t hammingweight_and(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_and(v1.ptr, v2.ptr, aligned_tag<bits>()); }
+template<size_t bits> inline size_t hammingweight_xor(const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_xor(v1.ptr, v2.ptr, aligned_tag<bits>()); }
+template<size_t bits> inline size_t hammingweight_or (const cvec_view& v1, const cvec_view& v2, aligned_tag<bits>) { return v_hw_or(v1.ptr, v2.ptr, aligned_tag<bits>()); }
 
 
 
@@ -928,13 +928,13 @@ struct mccl_base_random_generator
     std::mt19937_64 rnd;
 };
 
-void fillrandom(const mat_view& m)
+inline void fillrandom(const mat_view& m)
 {
     mccl_base_random_generator gen;
     fillgenerator(m, gen);
 }
 
-void fillrandom(const vec_view& m)
+inline void fillrandom(const vec_view& m)
 {
     mccl_base_random_generator gen;
     fillgenerator(m, gen);
@@ -943,7 +943,7 @@ void fillrandom(const vec_view& m)
 // full row reduction of matrix m over columns [column_start,column_end)
 // pivots may be selected from rows [pivot_start,rows())
 // returns pivotend = pivot_start + nrnewrowpivots
-size_t echelonize(const mat_view& m, size_t column_start = 0, size_t column_end = ~size_t(0), size_t pivot_start = 0)
+inline size_t echelonize(const mat_view& m, size_t column_start = 0, size_t column_end = ~size_t(0), size_t pivot_start = 0)
 {
     if (column_end > m.columns())
         column_end = m.columns();
@@ -1015,7 +1015,7 @@ size_t echelonize(const mat_view& m, size_t column_start, size_t column_end, siz
 // aka full column reduction of matrix m over rows [row_start,row_end)
 // pivots may be selected from columns [pivot_start,columns())
 // returns pivotend = pivot_start + nrnewcolpivots
-size_t echelonize_col(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = 0)
+inline size_t echelonize_col(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = 0)
 {
     if (row_end > m.rows())
         row_end = m.rows();
@@ -1089,7 +1089,7 @@ size_t echelonize_col(const mat_view& m, size_t row_start, size_t row_end, size_
 // full *column* reduction of matrix m over rows [row_start,row_end) with *reverse* column ordering
 // pivots may be selected from columns [0, pivot_start)
 // returns pivotend = pivot_start - nrnewcolpivots
-size_t echelonize_col_rev(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = ~size_t(0))
+inline size_t echelonize_col_rev(const mat_view& m, size_t row_start = 0, size_t row_end = ~size_t(0), size_t pivot_start = ~size_t(0))
 {
     if (row_end > m.rows())
         row_end = m.rows();

@@ -25,9 +25,13 @@ libmccl_la_SOURCES=\
 	mccl/core/matrix_isdform.hpp \
 	\
 	mccl/algorithm/decoding.hpp \
+	mccl/algorithm/decoding.cpp \
 	mccl/algorithm/isdgeneric.hpp \
+	mccl/algorithm/isdgeneric.cpp \
 	mccl/algorithm/prange.hpp \
+	mccl/algorithm/prange.cpp \
 	mccl/algorithm/lee_brickell.hpp \
+	mccl/algorithm/lee_brickell.cpp \
 	mccl/algorithm/dumer.hpp \
 	\
 	mccl/tools/parser.hpp \

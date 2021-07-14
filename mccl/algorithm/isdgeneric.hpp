@@ -36,6 +36,10 @@ public:
         u = -1; // how many rows to swap each iteration. max n - k - l
         update_type = 14;
     }
+    
+    ~ISD_generic() final
+    {
+    }
 
     // pass parameters to actual object
     // // virtual void configure(parameters_t& params) = 0;
@@ -64,59 +68,6 @@ public:
         sol.clear();
         solution = vec();
         cnt = 0;
-    }
-
-    // callback function
-    inline bool callback(const uint32_t* begin, const uint32_t* end, unsigned int w1partial)
-    {
-            // weight of solution consists of w2 (=end-begin) + w1partial (given) + w1rest (computed below)
-            size_t wsol = w1partial + (end - begin);
-            if (wsol > w)
-                return true;
-            // 1. compute w1rest
-            auto p = begin, e = end - 1;
-            if (p == end)
-            {
-                wsol += hammingweight(HST.S1restpadded(), this_aligned_tag());
-            }
-            else if (p == e)
-            {
-                wsol += hammingweight_xor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
-            }
-            else
-            {
-                C1restpadded.vxor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
-                for (++p; p != e; ++p)
-                    C1restpadded.vxor(HST.H1Trestpadded()[*p], this_aligned_tag());
-                wsol += hammingweight_xor(C1restpadded, HST.H1Trestpadded()[*e], this_aligned_tag());
-            }
-            // 2. check weight: too large => return
-            if (wsol > w)
-                return true;
-            // 3. construct full solution on E1 and E2 part
-            C.copy(HST.Spadded(), this_aligned_tag());
-            for (p = begin; p != end; ++p)
-                C.vxor(HST.H12Tpadded()[*p], this_aligned_tag());
-            if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
-                throw std::runtime_error("ISD_generic::callback: internal error 1: w1partial is not correct?");
-            sol.clear();
-            for (p = begin; p != end; ++p)
-                sol.push_back(HST.permutation( HST.echelonrows() + *p ));
-            for (size_t c = 0; c < HST.HT().columns(); ++c)
-            {
-                if (C[c] == false)
-                    continue;
-                if (c < HST.H2T().columns())
-                    throw std::runtime_error("ISD_generic::callback: internal error 2: H2T combination non-zero!");
-                sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
-            }
-            solution = vec(HST.HT().rows());
-            for (unsigned i = 0; i < sol.size(); ++i)
-                solution.setbit(sol[i]);
-            // TODO: make option to verify solutions
-            if (!check_solution())
-                throw std::runtime_error("ISD_generic::callback: internal error 3: solution is incorrect!");
-            return false;
     }
 
     // probabilistic preparation of loop invariant
@@ -150,21 +101,80 @@ public:
         return solution;
     }
 
+
+
+
+
     bool check_solution() const
     {
         if (solution.columns() == 0)
             throw std::runtime_error("ISD_generic::check_solution: no solution");
-        vec tmp(Sorg.columns());
-        for (size_t i = 0; i < Horg.rows(); ++i)
-        {
-            unsigned int b = hammingweight_and(Horg[i], solution) % 2;
-            if (b)
-                tmp.setbit(i);
-        }
-        return tmp == Sorg;
+        return check_SD_solution(Horg, Sorg, w, solution);
     }
     
     size_t get_cnt() const { return cnt; }
+
+
+
+
+    // callback function
+    inline bool callback(const uint32_t* begin, const uint32_t* end, unsigned int w1partial)
+    {
+            // weight of solution consists of w2 (=end-begin) + w1partial (given) + w1rest (computed below)
+            size_t wsol = w1partial + (end - begin);
+            if (wsol > w)
+                return true;
+
+            // 1. compute w1rest
+            auto p = begin, e = end - 1;
+            if (p == end)
+            {
+                wsol += hammingweight(HST.S1restpadded(), this_aligned_tag());
+            }
+            else if (p == e)
+            {
+                wsol += hammingweight_xor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
+            }
+            else
+            {
+                C1restpadded.vxor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
+                for (++p; p != e; ++p)
+                    C1restpadded.vxor(HST.H1Trestpadded()[*p], this_aligned_tag());
+                wsol += hammingweight_xor(C1restpadded, HST.H1Trestpadded()[*e], this_aligned_tag());
+            }
+
+            // 2. check weight: too large => return
+            if (wsol > w)
+                return true;
+                
+            // this should be a correct solution at this point
+
+            // 3. construct full solution on E1 and E2 part
+            C.copy(HST.Spadded(), this_aligned_tag());
+            for (p = begin; p != end; ++p)
+                C.vxor(HST.H12Tpadded()[*p], this_aligned_tag());
+            if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
+                throw std::runtime_error("ISD_generic::callback: internal error 1: w1partial is not correct?");
+            sol.clear();
+            for (p = begin; p != end; ++p)
+                sol.push_back(HST.permutation( HST.echelonrows() + *p ));
+            for (size_t c = 0; c < HST.HT().columns(); ++c)
+            {
+                if (C[c] == false)
+                    continue;
+                if (c < HST.H2T().columns())
+                    throw std::runtime_error("ISD_generic::callback: internal error 2: H2T combination non-zero!");
+                sol.push_back(HST.permutation( HST.HT().columns() - 1 - c ));
+            }
+            solution = vec(HST.HT().rows());
+            for (unsigned i = 0; i < sol.size(); ++i)
+                solution.setbit(sol[i]);
+
+            // TODO: make option to verify solutions
+            if (!check_solution())
+                throw std::runtime_error("ISD_generic::callback: internal error 3: solution is incorrect!");
+            return false;
+    }
     
 private:
     subISDT_t* subISDT;
@@ -182,7 +192,6 @@ private:
     // temporary vector to compute sum of syndrome and H columns
     vec C;
     vec_view C2padded, C1restpadded;
-    
     
     // parameters
     size_t n, k, w, l;

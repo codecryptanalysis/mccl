@@ -8,17 +8,30 @@
 
 MCCL_BEGIN_NAMESPACE
 
+class syndrome_decoding_API;
+
 struct syndrome_decoding_problem
 {
     mat H;
     vec S;
     unsigned int w;
+    
+    bool check_solution(const cvec_view& E) const;
+    
+    template<typename ISD_t>
+    vec solve(ISD_t& ISD);
 };
+
+bool check_SD_solution(const cmat_view& H, const cvec_view& S, unsigned int w, const cvec_view& E);
+
 
 // virtual base class: interface to find a single solution for syndrome decoding
 class syndrome_decoding_API
 {
 public:
+    // virtual destructor, so we can properly delete a derived class through its base class pointer
+    virtual ~syndrome_decoding_API() {}
+    
     // pass parameters to actual object
     // if called then it must be called before initialize
     //virtual void configure(parameters_t& params) = 0;
@@ -49,6 +62,25 @@ public:
     virtual cvec_view get_solution() const = 0;
 };
 
+template<typename ISD_t = syndrome_decoding_API>
+vec solve_syndrome_decoding(ISD_t& ISD, const cmat_view& H, const cvec_view& S, unsigned int w)
+{
+    ISD.initialize(H, S, w);
+    ISD.solve();
+    return ISD.get_solution();
+}
+
+template<typename ISD_t>
+vec syndrome_decoding_problem::solve(ISD_t& ISD)
+{
+    ISD.initialize(H, S, w);
+    ISD.solve();
+    return ISD.get_solution();
+}
+
+
+
+
 // default callback types for subISD to the main ISD
 // takes pointer to object & representation of H12T rows & and w1partial
 // returns true while enumeration should be continued, false when it should be stopped
@@ -72,6 +104,9 @@ ISD_callback_t make_ISD_callback(const subISD_t&)
 class subISDT_API
 {
 public:
+    // virtual destructor, so we can properly delete a derived class through its base class pointer
+    virtual ~subISDT_API() {}
+    
     typedef ISD_callback_t callback_t;
     // pass parameters to actual object
     // if called then it must be called before initialize
