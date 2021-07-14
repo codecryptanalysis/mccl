@@ -32,9 +32,10 @@ public:
     // virtual destructor, so we can properly delete a derived class through its base class pointer
     virtual ~syndrome_decoding_API() {}
     
-    // pass parameters to actual object
-    // if called then it must be called before initialize
-    //virtual void configure(parameters_t& params) = 0;
+    // load/save configuration from/to configmap
+    // load_config should be called before initialize
+    virtual void load_config(const configmap_t& configmap) = 0;
+    virtual void save_config(configmap_t& configmap) = 0;
 
     // deterministic initialization for given parity check matrix H and target syndrome S
     virtual void initialize(const cmat_view& H, const cvec_view& S, unsigned int w) = 0;
@@ -108,9 +109,11 @@ public:
     virtual ~subISDT_API() {}
     
     typedef ISD_callback_t callback_t;
-    // pass parameters to actual object
-    // if called then it must be called before initialize
-    //virtual void configure(parameters_t& params) = 0;
+
+    // load/save configuration from/to configmap
+    // load_config should be called before initialize
+    virtual void load_config(const configmap_t& configmap) = 0;
+    virtual void save_config(configmap_t& configmap) = 0;
 
     // deterministic initialization for given parity check matrix H and target syndrome s
     virtual void initialize(const cmat_view& H12T_padded, size_t H2T_columns, const cvec_view& S, unsigned int w, callback_t callback, void* ptr = nullptr) = 0;

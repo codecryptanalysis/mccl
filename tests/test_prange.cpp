@@ -26,7 +26,7 @@ int main(int, char**)
     size_t n = parse.get_n();
     size_t k = parse.get_k();
     size_t w = parse.get_w();
-    size_t ell = 0;
+//    size_t ell = 0;
 
     std::vector<size_t> rowweights(n-k);
     for( size_t r = 0; r < n-k; r++)

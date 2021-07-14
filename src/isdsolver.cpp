@@ -21,12 +21,10 @@ using namespace mccl;
 bool quiet = false;
 
 template<typename subISDT_t>
-int run_subISDT(mat_view& H, vec_view& S, size_t w, size_t l, size_t p, size_t u, int updatetype)
+int run_subISDT(mat_view& H, vec_view& S, size_t w)
 {
   subISDT_t subISDT;
-  subISDT.configure(p);
   ISD_generic<subISDT_t> ISD_single(subISDT);
-  ISD_single.configure(l, u, updatetype);
   ISD_single.initialize(H, S, w);
   ISD_single.solve();
   if (!quiet)
@@ -68,6 +66,7 @@ try
       ("updatetype", po::value<int>(&updatetype)->default_value(10), "Echelon/ISD column update type: 1, 2, 3, 4, 12, 13, 14, 10")
       ("quiet,q", po::bool_switch(&quiet), "Quiet: supress most output")
       ;
+    // TODO: automatically generate from *_config_default: ISD_generic_config_default, lee_brickell_config_default, etc...
     allopts.add(cmdopts).add(opts);
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, allopts, false, true), vm);
@@ -98,6 +97,7 @@ try
       std::cout << "Unknown option: " << vm.positional[5].as<std::string>() << std::endl;
       return 1;
     }
+    configmap_t configmap;
 
     Parser parse;
     if (vm.count("genseed"))
@@ -133,6 +133,18 @@ try
     if (u <= 0)
       u = -1;
 
+    // write configmap for ISD algorithms
+    configmap["l"] = detail::to_string(l);
+    configmap["u"] = detail::to_string(u);
+    configmap["updatetype"] = detail::to_string(updatetype);
+    configmap["p"] = detail::to_string(p);
+
+    // update default configurations accordingly
+    // note: prange has no configuration
+    load_config(ISD_generic_config_default, configmap);
+    load_config(lee_brickell_config_default, configmap);
+
+    // TODO: output ISD_generic / algo specific configuration
     std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << ", l=" << l << ", p=" << p << ", u=" << u << " | trials=" << trials;
     if (vm.count("generate"))
       std::cout << ", genseed=" << parse.get_seed();
@@ -155,9 +167,9 @@ try
       }
       time_trial_stat.start();
       if (algo=="P")
-        cnt_stat.add( run_subISDT<subISDT_prange>(H,S,w,l,p,u,updatetype) );
+        cnt_stat.add( run_subISDT<subISDT_prange>(H,S,w) );
       else if (algo=="LB")
-        cnt_stat.add( run_subISDT<subISDT_lee_brickell>(H,S,w,l,p,u,updatetype) );
+        cnt_stat.add( run_subISDT<subISDT_lee_brickell>(H,S,w) );
       time_trial_stat.stop();
     }
     time_total_stat.stop();

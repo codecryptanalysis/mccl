@@ -7,6 +7,26 @@
 
 MCCL_BEGIN_NAMESPACE
 
+struct lee_brickell_config_t
+{
+    const std::string modulename = "lee_brickell";
+    const std::string description = "Lee-Brickell configuration";
+    const std::string helpstring = "TODO: explanation";
+
+    unsigned int p = 3;
+
+    template<typename Container>
+    void process(Container& c)
+    {
+        c(p, "p", 3, "subISDT parameter p");
+    }
+};
+
+// global default. modifiable.
+// at construction of subISDT_lee_brickell the current global default values will be loaded
+extern lee_brickell_config_t lee_brickell_config_default;
+
+
 class subISDT_lee_brickell
     final : public subISDT_API
 {
@@ -19,18 +39,25 @@ public:
     }
     
     subISDT_lee_brickell()
+        : config(lee_brickell_config_default)
     {
-        p = 3;
     }
-    
-    void configure(size_t _p = 3)
+
+    void load_config(const configmap_t& configmap) final
     {
-        p = _p;
+        mccl::load_config(config, configmap);
     }
-    
+    void save_config(configmap_t& configmap) final
+    {
+        mccl::save_config(config, configmap);
+    }
+
     // API member function
     void initialize(const cmat_view& _HTpadded, size_t _HTcolumns, const cvec_view& _Spadded, unsigned int w, callback_t _callback, void* _ptr) final
     {
+        // copy parameters from current config
+        p = config.p;
+
         HTpadded.reset(_HTpadded);
         Spadded.reset(_Spadded);
         columns = _HTcolumns;
@@ -172,6 +199,8 @@ private:
     uint64_t lastwordmask, firstwordmask, padmask;
     
     size_t p, cp, rows;
+    
+    lee_brickell_config_t config;
 };
 
 template<size_t _bit_alignment = 64>

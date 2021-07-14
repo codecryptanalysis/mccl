@@ -9,6 +9,31 @@
 
 MCCL_BEGIN_NAMESPACE
 
+struct ISD_generic_config_t
+{
+    const std::string modulename = "isd_generic";
+    const std::string description = "ISD generic configuration";
+    const std::string helpstring = "TODO: explanation";
+
+    unsigned int l = 0;
+    unsigned int u = -1;
+    unsigned int updatetype = 14;
+
+    template<typename Container>
+    void process(Container& c)
+    {
+        c(l, "l", 0, "ISD parameter l");
+        c(u, "u", -1, "Number of columns to swap per iteration (-1=auto)");
+        c(updatetype, "updatetype", 14, "Update strategy type: 1, 2, 3, 4, 12, 13, 14, 10");
+    }
+};
+
+// global default. modifiable.
+// at construction of ISD_generic the current global default values will be loaded
+extern ISD_generic_config_t ISD_generic_config_default;
+
+
+
 // implementation of ISD_single_generic that can be instantiated with any subISD
 // based on common view on transposed H
 // will use reverse column ordering for column reduction on Htransposed (instead of row reduction on H)
@@ -24,36 +49,37 @@ class ISD_generic
 {
 public:
     typedef typename subISDT_t::callback_t callback_t;
-    
+
     static const size_t bit_alignment = _bit_alignment;
     typedef aligned_tag<bit_alignment> this_aligned_tag;
 
     ISD_generic(subISDT_t& sI)
-        : subISDT(&sI)
+        : subISDT(&sI), config(ISD_generic_config_default)
     {
         n = k = w = 0;
-        l = 0; // ISD form parameter
-        u = -1; // how many rows to swap each iteration. max n - k - l
-        update_type = 14;
     }
-    
+
     ~ISD_generic() final
     {
     }
 
-    // pass parameters to actual object
-    // // virtual void configure(parameters_t& params) = 0;
-    // if called then it must be called before initialize
-    void configure(size_t _l = 0, int _u = -1, int _update_type = 14)
+    void load_config(const configmap_t& configmap) final
     {
-        l = _l;
-        u = _u;
-        update_type = _update_type;
+        mccl::load_config(config, configmap);
+    }
+    void save_config(configmap_t& configmap) final
+    {
+        mccl::save_config(config, configmap);
     }
 
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
     void initialize(const cmat_view& _H, const cvec_view& _S, unsigned int _w) final
     {
+        // set parameters according to current config
+        l = config.l;
+        u = config.u;
+        update_type = config.updatetype;
+
         n = _H.columns();
         k = n - _H.rows();
         w = _w;
@@ -194,6 +220,8 @@ private:
     vec_view C2padded, C1restpadded;
     
     // parameters
+    ISD_generic_config_t config;
+
     size_t n, k, w, l;
     int u;
     int update_type;

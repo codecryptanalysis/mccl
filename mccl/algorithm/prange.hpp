@@ -18,10 +18,13 @@ public:
     {
     }
     
-    void configure(size_t)
+    void load_config(const configmap_t&) final
     {
     }
-
+    void save_config(configmap_t&) final
+    {
+    }
+    
     // API member function
     void initialize(const cmat_view&, size_t HTcolumns, const cvec_view&, unsigned int, callback_t _callback, void* _ptr) final
     {
