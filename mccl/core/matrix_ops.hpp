@@ -54,44 +54,44 @@ inline void v_setbit(const v_ptr& m, size_t c) { v_getword(m,c) |= uint64_t(1) <
 inline void v_setbit(const v_ptr& m, size_t c, bool b) { uint64_t x = uint64_t(1)<<(c%64); uint64_t& w = v_getword(m,c); w &= ~x; w |= b?x:0;}
 
 // matrix_ops.inl
-static inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols, bool b);
-static inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols);
-static inline void v_clearcolumns(const v_ptr& v, size_t coloffset, size_t cols);
-static inline void v_flipcolumns(const v_ptr& v, size_t coloffset, size_t cols);
-static inline void v_set(const v_ptr& v);
-static inline void v_clear(const v_ptr& v);
-static inline void v_set(const v_ptr& v, bool b);
-static inline void v_not(const v_ptr& v);
+inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2);
+inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols, bool b);
+inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols);
+inline void v_clearcolumns(const v_ptr& v, size_t coloffset, size_t cols);
+inline void v_flipcolumns(const v_ptr& v, size_t coloffset, size_t cols);
+inline void v_set(const v_ptr& v);
+inline void v_clear(const v_ptr& v);
+inline void v_set(const v_ptr& v, bool b);
+inline void v_not(const v_ptr& v);
 
-static inline void v_copy   (const v_ptr& dst, const cv_ptr& src);
-static inline void v_copynot(const v_ptr& dst, const cv_ptr& src);
-static inline void v_and    (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_or     (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_xor    (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_nand   (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_nor    (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_nxor   (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_andin  (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_andni  (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_orin   (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_orni   (const v_ptr& dst, const cv_ptr& v2);
-static inline void v_and(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_or (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_xor(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_nand(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_nor (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_nxor(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_andin(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_andni(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_orin (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
-static inline void v_orni (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_copy   (const v_ptr& dst, const cv_ptr& src);
+inline void v_copynot(const v_ptr& dst, const cv_ptr& src);
+inline void v_and    (const v_ptr& dst, const cv_ptr& v2);
+inline void v_or     (const v_ptr& dst, const cv_ptr& v2);
+inline void v_xor    (const v_ptr& dst, const cv_ptr& v2);
+inline void v_nand   (const v_ptr& dst, const cv_ptr& v2);
+inline void v_nor    (const v_ptr& dst, const cv_ptr& v2);
+inline void v_nxor   (const v_ptr& dst, const cv_ptr& v2);
+inline void v_andin  (const v_ptr& dst, const cv_ptr& v2);
+inline void v_andni  (const v_ptr& dst, const cv_ptr& v2);
+inline void v_orin   (const v_ptr& dst, const cv_ptr& v2);
+inline void v_orni   (const v_ptr& dst, const cv_ptr& v2);
+inline void v_and(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_or (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_xor(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_nand(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_nor (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_nxor(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_andin(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_andni(const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_orin (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
+inline void v_orni (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2);
 
-static inline void v_swap(const v_ptr& v1, const v_ptr& v2);
-static inline size_t v_hw(const cv_ptr& v);
-static inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2);
-static inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2);
-static inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2);
+inline void v_swap(const v_ptr& v1, const v_ptr& v2);
+inline size_t v_hw(const cv_ptr& v);
+inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2);
+inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2);
+inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2);
 
 // matrix_ops.cpp
 void v_print(std::ostream& o, const cv_ptr& v);

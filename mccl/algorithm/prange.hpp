@@ -1,44 +1,31 @@
 #ifndef MCCL_ALGORITHM_PRANGE_HPP
 #define MCCL_ALGORITHM_PRANGE_HPP
 
+#include <mccl/config/config.hpp>
 #include <mccl/algorithm/decoding.hpp>
+#include <mccl/algorithm/isdgeneric.hpp>
 
 MCCL_BEGIN_NAMESPACE
 
-class subISD_prange
-    : public ISD_API_exhaustive_sparse_t
-{   
-public:        
-    using ISD_API_exhaustive_sparse_t::callback_t;
-
-    void initialize(const mat_view&, const vec_view&, unsigned int, callback_t _callback, void* _ptr)
-    {
-        callback = _callback;
-        ptr = _ptr;
-    }
-
-    bool loop_next()
-    {
-        (*callback)(ptr,E1_sparse, 0);
-        return false;
-    }
-private:
-    callback_t callback;
-    void* ptr;
-    std::vector<uint32_t> E1_sparse;
-};
-
-
 class subISDT_prange
-    : public ISD_API_exhaustive_transposed_sparserange_t
+    final : public subISDT_API
 {
 public:
-    using ISD_API_exhaustive_transposed_sparserange_t::callback_t;
+    using subISDT_API::callback_t;
 
-    void configure(size_t)
+    // API member function
+    ~subISDT_prange() final
     {
     }
     
+    void load_config(const configmap_t&) final
+    {
+    }
+    void save_config(configmap_t&) final
+    {
+    }
+    
+    // API member function
     void initialize(const cmat_view&, size_t HTcolumns, const cvec_view&, unsigned int, callback_t _callback, void* _ptr) final
     {
         // should only be used with l=0
@@ -48,16 +35,19 @@ public:
         ptr = _ptr;
     }
     
+    // API member function
     void prepare_loop() final
     {
     }
     
+    // API member function
     bool loop_next() final
     {
         (*callback)(ptr, nullptr, nullptr, 0);
         return false;
     }
     
+    // API member function
     void solve() final
     {
         loop_next();
@@ -67,6 +57,21 @@ private:
     callback_t callback;
     void* ptr;
 };
+
+template<size_t _bit_alignment = 64>
+using ISD_prange = ISD_generic<subISDT_prange,_bit_alignment>;
+
+vec solve_SD_prange(const cmat_view& H, const cvec_view& S, unsigned int w);
+vec solve_SD_prange(const syndrome_decoding_problem& SD)
+{
+    return solve_SD_prange(SD.H, SD.S, SD.w);
+}
+
+vec solve_SD_prange(const cmat_view& H, const cvec_view& S, unsigned int w, const configmap_t& configmap);
+vec solve_SD_prange(const syndrome_decoding_problem& SD, const configmap_t& configmap)
+{
+    return solve_SD_prange(SD.H, SD.S, SD.w, configmap);
+}
 
 MCCL_END_NAMESPACE
 

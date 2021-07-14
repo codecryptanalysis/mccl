@@ -47,18 +47,29 @@ struct number_statistic
       throw std::runtime_error("number_statistic::mean(): no samples!");
     return total()/double(size());
   }
+  double _mid(size_t b, size_t e)
+  {
+    if (e-b == 0)
+      throw std::runtime_error("number_statistic::_mid(): no samples!");
+    if (e-b == 1)
+      return samples[b];
+    if (!std::is_sorted(samples.begin(), samples.end()))
+      std::sort(samples.begin(), samples.end());
+    if ((e-b)%2 == 0)
+      return double(samples[b + (e-b)/2 - 1] + samples[b + (e-b)/2])/double(2.0);
+    return samples[b + (e-b)/2];
+  }
   double median()
   {
-    if (size() == 0)
-      throw std::runtime_error("number_statistic::median(): no samples!");
-    if (size() == 1)
-      return samples[0];
-    std::sort(samples.begin(), samples.end());
-    if (samples.size()%2 == 0)
-    {
-      return double(samples[size()/2 - 1] + samples[size()/2])/double(2.0);
-    }
-    return samples[samples.size()];
+    return _mid(0, size());
+  }
+  double Q1()
+  {
+    return _mid(0, size()/2);
+  }
+  double Q3()
+  {
+    return _mid(size()/2, size());
   }
 };
 

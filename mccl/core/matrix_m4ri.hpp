@@ -48,63 +48,63 @@ struct m4ri_data_helper_t
 };
 
 /* m4ri functions taking mccl matrix_ref_t, which create temporary m4ri handles */
-static inline void m4ri_transpose(const mat_view& dst, const mat_view& src)
+inline void m4ri_transpose(const mat_view& dst, const mat_view& src)
 {
     m4ri_data_helper_t h_dst(dst), h_src(src);
     m4ri_transpose(h_dst, h_src);
 }
-static inline void m4ri_add(const mat_view& dst, const mat_view& A, const mat_view& B)
+inline void m4ri_add(const mat_view& dst, const mat_view& A, const mat_view& B)
 {
     m4ri_data_helper_t h_dst(dst), h_A(A), h_B(B);
     m4ri_add(h_dst, h_A, h_B);
 }
-static inline void m4ri_mul_naive(const mat_view& dst, const mat_view& A, const mat_view& B)
+inline void m4ri_mul_naive(const mat_view& dst, const mat_view& A, const mat_view& B)
 {
     m4ri_data_helper_t h_dst(dst), h_A(A), h_B(B);
     m4ri_mul_naive(h_dst, h_A, h_B);
 }
-static inline void m4ri_addmul_naive(const mat_view& dst, const mat_view& A, const mat_view& B)
+inline void m4ri_addmul_naive(const mat_view& dst, const mat_view& A, const mat_view& B)
 {
     m4ri_data_helper_t h_dst(dst), h_A(A), h_B(B);
     m4ri_addmul_naive(h_dst, h_A, h_B);
 }
-static inline void m4ri_gauss_delayed(const mat_view& M, unsigned int startcol = 0, bool full = false)
+inline void m4ri_gauss_delayed(const mat_view& M, unsigned int startcol = 0, bool full = false)
 {
     m4ri_data_helper_t h(M);
     m4ri_gauss_delayed(M, startcol, full);
 }
-static inline void m4ri_echelonize_naive(const mat_view& M, bool full = false)
+inline void m4ri_echelonize_naive(const mat_view& M, bool full = false)
 {
     m4ri_data_helper_t h(M);
     m4ri_echelonize_naive(M, full);
 }
-static inline void m4ri_invert_naive(const mat_view& dst, const mat_view& src, const mat_view& I)
+inline void m4ri_invert_naive(const mat_view& dst, const mat_view& src, const mat_view& I)
 {
     m4ri_data_helper_t h_dst(dst), h_src(src), h_I(I);
     m4ri_invert_naive(h_dst, h_src, h_I);
 }
 
-static inline void m4ri_echelonize(const mat_view& M, bool full = false)
+inline void m4ri_echelonize(const mat_view& M, bool full = false)
 {
     m4ri_data_helper_t h(M);
     m4ri_echelonize(h, full);
 }
-static inline void m4ri_echelonize_pluq(const mat_view& M, bool full = false)
+inline void m4ri_echelonize_pluq(const mat_view& M, bool full = false)
 {
     m4ri_data_helper_t h(M);
     m4ri_echelonize_pluq(h, full);
 }
-static inline void m4ri_echelonize_m4ri(const mat_view& M, bool full = false, int k = 0)
+inline void m4ri_echelonize_m4ri(const mat_view& M, bool full = false, int k = 0)
 {
     m4ri_data_helper_t h(M);
     m4ri_echelonize_m4ri(h, full, k);
 }
-static inline void m4ri_mul(const mat_view& dst, const mat_view& A, const mat_view& B)
+inline void m4ri_mul(const mat_view& dst, const mat_view& A, const mat_view& B)
 {
     m4ri_data_helper_t h_dst(dst), h_A(A), h_B(B);
     m4ri_mul(h_dst, h_A, h_B);
 }
-static inline void m4ri_addmul(const mat_view& dst, const mat_view& A, const mat_view& B)
+inline void m4ri_addmul(const mat_view& dst, const mat_view& A, const mat_view& B)
 {
     m4ri_data_helper_t h_dst(dst), h_A(A), h_B(B);
     m4ri_addmul(h_dst, h_A, h_B);

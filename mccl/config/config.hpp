@@ -2,6 +2,10 @@
 #define MCCL_CONFIG_CONFIG_H
 
 #include <mccl/config/config.h>
+
+#include <sstream>
+#include <string>
+#include <map>
 #include <cstdint>
 
 #ifndef MCCL_NAMESPACE
@@ -49,6 +53,91 @@ using std::uint_fast64_t;
 using std::intptr_t;
 using std::uintptr_t;
 using std::size_t;
+
+typedef std::map<std::string,std::string> configmap_t;
+
+namespace detail
+{
+
+    // convert any type to/from std::string
+    template<typename Type>
+    std::string to_string(const Type& val)
+    {
+        std::stringstream strstr;
+        strstr << val;
+        return strstr.str();
+    }
+    template<typename Type>
+    void from_string(const std::string& str, Type& ret)
+    {
+        std::stringstream strstr(str);
+        strstr >> ret;
+        if (!strstr)
+            throw std::runtime_error("from_string(): could not parse string: " + str);
+        // retrieving one more char should lead to EOF and failbit set
+        strstr.get();
+        if (!!strstr)
+            throw std::runtime_error("from_string(): could not fully parse string: " + str);
+    }
+
+    // optimizations for std::string itself
+    template<>
+    inline std::string to_string(const std::string& str)
+    {
+        return str;
+    }
+    template<>
+    inline void from_string(const std::string& str, std::string& ret)
+    {
+        ret = str;
+    }
+
+    struct load_configmap_helper
+    {
+        const configmap_t& configmap;
+        load_configmap_helper(const configmap_t& _configmap)
+            : configmap(_configmap)
+        {}
+        
+        template<typename T, typename T2>
+        void operator()(T& val, const std::string& valname, const T2& defaultval, const std::string&) const
+        {
+            auto it = configmap.find(valname);
+            if (it == configmap.end())
+                val = defaultval;
+            else
+                from_string(it->second, val);
+        }
+    };
+    
+    struct save_configmap_helper
+    {
+        configmap_t& configmap;
+        save_configmap_helper(configmap_t& _configmap)
+            : configmap(_configmap)
+        {}
+        
+        template<typename T, typename T2>
+        void operator()(const T& val, const std::string& valname, const T2&, const std::string&)
+        {
+            configmap[valname] = to_string(val);
+        }
+    };
+}
+
+template<typename ConfigT>
+void load_config(ConfigT& config, const configmap_t& configmap)
+{
+    detail::load_configmap_helper helper(configmap);
+    config.process( helper );
+}
+
+template<typename ConfigT>
+void save_config(ConfigT& config, configmap_t& configmap)
+{
+    detail::save_configmap_helper helper(configmap);
+    config.process( helper );
+}
 
 MCCL_END_NAMESPACE
 

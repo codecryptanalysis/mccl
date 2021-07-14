@@ -338,32 +338,32 @@ struct m_ptr {
 	}
 };
 
-static inline bool operator==(const cv_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-static inline bool operator!=(const cv_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
-static inline bool operator==(const cv_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-static inline bool operator!=(const cv_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
-static inline bool operator==(const v_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-static inline bool operator!=(const v_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
-static inline bool operator==(const v_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
-static inline bool operator!=(const v_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const cv_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+inline bool operator!=(const cv_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const cv_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+inline bool operator!=(const cv_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const v_ptr& v1, const cv_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+inline bool operator!=(const v_ptr& v1, const cv_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const v_ptr& v1, const v_ptr& v2) { return (v1.ptr == v2.ptr) && (v1.columns == v2.columns); }
+inline bool operator!=(const v_ptr& v1, const v_ptr& v2) { return !(v1 == v2); }
 
-static inline bool operator==(const cvi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-static inline bool operator!=(const cvi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
-static inline bool operator==(const cvi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-static inline bool operator!=(const cvi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
-static inline bool operator==(const vi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-static inline bool operator!=(const vi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
-static inline bool operator==(const vi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
-static inline bool operator!=(const vi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const cvi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+inline bool operator!=(const cvi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const cvi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+inline bool operator!=(const cvi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const vi_ptr& v1, const cvi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+inline bool operator!=(const vi_ptr& v1, const cvi_ptr& v2) { return !(v1 == v2); }
+inline bool operator==(const vi_ptr& v1, const vi_ptr& v2) { return (v1.ptr == v2.ptr) && ((v1.columns == v2.columns) & (v1.stride == v2.stride)); }
+inline bool operator!=(const vi_ptr& v1, const vi_ptr& v2) { return !(v1 == v2); }
 
-static inline bool operator==(const cm_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-static inline bool operator!=(const cm_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
-static inline bool operator==(const cm_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-static inline bool operator!=(const cm_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
-static inline bool operator==(const m_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-static inline bool operator!=(const m_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
-static inline bool operator==(const m_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
-static inline bool operator!=(const m_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
+inline bool operator==(const cm_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+inline bool operator!=(const cm_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
+inline bool operator==(const cm_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+inline bool operator!=(const cm_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
+inline bool operator==(const m_ptr& m1, const cm_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+inline bool operator!=(const m_ptr& m1, const cm_ptr& m2) { return !(m1 == m2); }
+inline bool operator==(const m_ptr& m1, const m_ptr& m2) { return (m1.ptr == m2.ptr) && ((m1.columns == m2.columns) & (m1.stride == m2.stride) & (m1.rows == m2.rows)); }
+inline bool operator!=(const m_ptr& m1, const m_ptr& m2) { return !(m1 == m2); }
 
 
 MCCL_END_NAMESPACE

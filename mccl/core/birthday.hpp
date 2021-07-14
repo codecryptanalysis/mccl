@@ -1,1 +1,0 @@
-// birthday algorithm API
