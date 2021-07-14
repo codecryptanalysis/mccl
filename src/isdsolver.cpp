@@ -101,7 +101,7 @@ void show_manual(Configuration& conf)
 {
   std::string manualstr = conf.manualstring;
   sa::replace_all(manualstr, std::string("\t"), std::string("  "));
-  std::cout << "\n\n" << manualstr;
+  std::cout << "\n" << manualstr << "\n\n";
 }
 
 int main(int argc, char *argv[])
@@ -175,7 +175,12 @@ try
     // store configuration in configmap
     configmap_t configmap;
     for (auto& o : vm)
-      configmap[o.first] = o.second.as<std::string>();
+    {
+      if (o.second.empty())
+        configmap[o.first];
+      else
+        configmap[o.first] = o.second.as<std::string>();
+    }
 
     // update default configurations accordingly
     // note: prange has no configuration
@@ -195,7 +200,7 @@ try
 
       if (vm.count("manual"))
       {
-        std::cout << "\n\n === ISD solver manual ===";
+        std::cout << "\n\n === ISD solver manual ===\n";
         
         show_manual(ISD_generic_config_default);
         show_manual(lee_brickell_config_default);
