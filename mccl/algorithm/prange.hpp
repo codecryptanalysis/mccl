@@ -61,7 +61,17 @@ private:
 template<size_t _bit_alignment = 64>
 using ISD_prange = ISD_generic<subISDT_prange,_bit_alignment>;
 
-// TODO: provide further Prange convience functions
+vec solve_SD_prange(const cmat_view& H, const cvec_view& S, unsigned int w);
+vec solve_SD_prange(const syndrome_decoding_problem& SD)
+{
+    return solve_SD_prange(SD.H, SD.S, SD.w);
+}
+
+vec solve_SD_prange(const cmat_view& H, const cvec_view& S, unsigned int w, const configmap_t& configmap);
+vec solve_SD_prange(const syndrome_decoding_problem& SD, const configmap_t& configmap)
+{
+    return solve_SD_prange(SD.H, SD.S, SD.w, configmap);
+}
 
 MCCL_END_NAMESPACE
 

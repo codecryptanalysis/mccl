@@ -13,10 +13,35 @@ struct ISD_generic_config_t
 {
     const std::string modulename = "isd_generic";
     const std::string description = "ISD generic configuration";
-    const std::string helpstring = "TODO: explanation";
+    const std::string manualstring =
+        "ISD generic:\n"
+        "\tInput: (n-k) x n matrix H, (n-k) vector S, max error weight w, subISD\n"
+        "\tParameters:\n"
+        "\t\tl: determines the number of rows of H2 and S2\n"
+        "\t\tu: the number of echelon columns and ISD columns to swap per iteration\n"
+        "\t\tupdatetype: the swap strategy:\n"
+        "\t\t\t1: u times: swap random echelon & ISD column\n"
+        "\t\t\t2: swap u random distinct echelon cols with u random (non-distinct) ISD cols\n"
+        "\t\t\t3: swap u random distinct echelon cols with u random distinct ISD cols\n"
+        "\t\t\t4: like 3, ensure further distinctness per batch of (n-k)*k/n choices\n"
+        "\t\t\t12: like 2, but use round-robin echelon column selection\n"
+        "\t\t\t13: like 3, but use round-robin echelon column selection\n"
+        "\t\t\t14: like 4, but use round-robin echelon column selection\n"
+        "\t\t\t10: use round-robin echelon column selection & round-robin scanning for ISD column with pivot bit set\n"
+        "\tAlgorithm:\n"
+        "\t\tApply random column permutation of H\n"
+        "\t\tPerform echelonization on (H|S) over (n-k-l) rows:\n"
+        "\t\t\tH|S = (I H1 S1)\n"
+        "\t\t\t      (0 H2 S2)\n"
+        "\t\tRepeatedly:\n"
+        "\t\t\tCall subISD(H2, S2, w)\n"
+        "\t\t\tCheck every output solution and quit when a proper solution is found\n"
+        "\t\t\tRandomly swap u echelon columns with u ISD columns\n"
+        "\t\t\tPerform echelonization over (n-k-l) rows\n"
+        ;
 
     unsigned int l = 0;
-    unsigned int u = -1;
+    int u = -1;
     unsigned int updatetype = 14;
 
     template<typename Container>
@@ -222,9 +247,10 @@ private:
     // parameters
     ISD_generic_config_t config;
 
-    size_t n, k, w, l;
+    size_t n, k, w;
+    unsigned int l;
     int u;
-    int update_type;
+    unsigned int update_type;
     
     // iteration count
     size_t cnt;

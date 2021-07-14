@@ -11,7 +11,12 @@ struct lee_brickell_config_t
 {
     const std::string modulename = "lee_brickell";
     const std::string description = "Lee-Brickell configuration";
-    const std::string helpstring = "TODO: explanation";
+    const std::string manualstring = 
+        "Lee-Brickell:\n"
+        "\tParameters: p\n"
+        "\tAlgorithm:\n"
+        "\t\tReturns all sets of at most p column indices of H2 that sum up to S2\n"
+        ;
 
     unsigned int p = 3;
 
@@ -206,7 +211,19 @@ private:
 template<size_t _bit_alignment = 64>
 using ISD_lee_brickell = ISD_generic<subISDT_lee_brickell,_bit_alignment>;
 
-// TODO: provide further Lee Brickell convience functions
+vec solve_SD_lee_brickell(const cmat_view& H, const cvec_view& S, unsigned int w);
+vec solve_SD_lee_brickell(const syndrome_decoding_problem& SD)
+{
+    return solve_SD_lee_brickell(SD.H, SD.S, SD.w);
+}
+
+vec solve_SD_lee_brickell(const cmat_view& H, const cvec_view& S, unsigned int w, const configmap_t& configmap);
+vec solve_SD_lee_brickell(const syndrome_decoding_problem& SD, const configmap_t& configmap)
+{
+    return solve_SD_lee_brickell(SD.H, SD.S, SD.w, configmap);
+}
+
+
 
 MCCL_END_NAMESPACE
 
