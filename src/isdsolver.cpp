@@ -177,6 +177,11 @@ try
     for (auto& o : vm)
       configmap[o.first] = o.second.as<std::string>();
 
+    // update default configurations accordingly
+    // note: prange has no configuration
+    load_config(ISD_generic_config_default, configmap);
+    load_config(lee_brickell_config_default, configmap);
+
 
     // show help and/or manual if requested or if no command was given
     if (vm.count("help") || vm.count("manual") ||
@@ -240,10 +245,6 @@ try
     }
 
 
-    // update default configurations accordingly
-    // note: prange has no configuration
-    load_config(ISD_generic_config_default, configmap);
-    load_config(lee_brickell_config_default, configmap);
 
     // TODO: output ISD_generic / algo specific configuration
     std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << " | trials=" << trials;
