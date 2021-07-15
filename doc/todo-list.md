@@ -146,9 +146,9 @@ Discussion
 - [ ] compute success probablity for LB with `l`>0
 - [x] improve the `update` (column swap), add an option (`u=-1`?) for full random permutation
 - [ ] compute success probability with optimized column permutation using Markov chain (see if it matches the observations)
-- [ ] add an option to stop the algorithm after a fixed number of iterations (and/or time limit)  
+- [x] add a benchmark option with iteration and/or time limit
 - [ ] statistics: count number of calls to each function
-- [x] store a table giving the value `w` in terms of `n` for the SD challenge and make this the default value of `w`
+- [x] for `w=-1` automatically set the value `w` based on Gilbert-Varshamov bound for n, k
 - [x] `isdsolver.cpp` check that the solution is correct
 - [ ] add a test for `isdsolver.cpp`
 - [ ] documentation of the new HST setting
