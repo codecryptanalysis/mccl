@@ -178,6 +178,10 @@ public:
 
   // print
   void print(std::ostream& o = std::cerr) {
+    if(cnt_solve.size()==0) {
+      o << "No statistics " << name << std::endl;
+      return;
+    }
     o << "Decoder: " << name << std::endl;
     o << std::setw(15+17) << "total count," << std::setw(16) << "mean count," << std::setw(16) << "median count," << std::endl;
     cnt_initialize.print("Initialize", o);
