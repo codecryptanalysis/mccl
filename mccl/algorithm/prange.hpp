@@ -13,6 +13,11 @@ class subISDT_prange
 public:
     using subISDT_API::callback_t;
 
+    subISDT_prange() : stats("Prange")
+    {
+
+    } 
+
     // API member function
     ~subISDT_prange() final
     {
@@ -52,10 +57,11 @@ public:
     {
         loop_next();
     }
-    
+    decoding_statistics get_stats() const { return stats; };
 private:
     callback_t callback;
     void* ptr;
+    decoding_statistics stats;
 };
 
 template<size_t _bit_alignment = 64>

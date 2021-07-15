@@ -6,6 +6,7 @@
 #include <mccl/config/config.hpp>
 #include <mccl/algorithm/decoding.hpp>
 #include <mccl/core/matrix_isdform.hpp>
+#include <mccl/tools/statistics.hpp>
 
 MCCL_BEGIN_NAMESPACE
 
@@ -83,7 +84,7 @@ public:
     typedef aligned_tag<bit_alignment> this_aligned_tag;
 
     ISD_generic(subISDT_t& sI)
-        : subISDT(&sI), config(ISD_generic_config_default)
+        : subISDT(&sI), config(ISD_generic_config_default), stats("ISD_generic")
     {
         n = k = w = 0;
     }
@@ -104,6 +105,7 @@ public:
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
     void initialize(const cmat_view& _H, const cvec_view& _S, unsigned int _w) final
     {
+        stats.cnt_initialize.inc();
         // set parameters according to current config
         l = config.l;
         u = config.u;
@@ -132,12 +134,14 @@ public:
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
+        stats.cnt_prepare_loop.inc();
         subISDT->initialize(HST.H12T(), HST.H2T().columns(), HST.S2(), w, make_ISD_callback(*this), this);
     }
 
     // perform one loop iteration, return true if successful and store result in e
     bool loop_next() final
     {
+        stats.cnt_loop_next.inc();
         ++cnt;
         // swap u rows in HST & bring in echelon form
         HST.update(u, update_type);
@@ -149,9 +153,11 @@ public:
     // run loop until a solution is found
     void solve() final
     {
+        stats.cnt_solve.inc();
         prepare_loop();
         while (!loop_next())
             ;
+        stats.refresh();
     }
 
     cvec_view get_solution() const final
@@ -163,8 +169,9 @@ public:
 
 
 
-    bool check_solution() const
+    bool check_solution()
     {
+        stats.cnt_check_solution.inc();
         if (solution.columns() == 0)
             throw std::runtime_error("ISD_generic::check_solution: no solution");
         return check_SD_solution(Horg, Sorg, w, solution);
@@ -172,12 +179,10 @@ public:
     
     size_t get_cnt() const { return cnt; }
 
-
-
-
     // callback function
     inline bool callback(const uint32_t* begin, const uint32_t* end, unsigned int w1partial)
     {
+            stats.cnt_callback.inc();
             // weight of solution consists of w2 (=end-begin) + w1partial (given) + w1rest (computed below)
             size_t wsol = w1partial + (end - begin);
             if (wsol > w)
@@ -250,7 +255,7 @@ public:
                 throw std::runtime_error("ISD_generic::callback: internal error 3: solution is incorrect!");
             return false;
     }
-    
+    decoding_statistics get_stats() const { return stats; };
 private:
     subISDT_t* subISDT;
 
@@ -284,6 +289,7 @@ private:
     
     // iteration count
     size_t cnt;
+    decoding_statistics stats;
 };
 
 MCCL_END_NAMESPACE

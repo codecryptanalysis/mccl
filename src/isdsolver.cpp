@@ -32,6 +32,8 @@ int run_subISDT(mat_view& H, vec_view& S, size_t w)
   ISD_single.solve();
   if (!quiet)
     std::cout << "Solution found:\n" << ISD_single.get_solution() << std::endl;
+  ISD_single.get_stats().print();
+  subISDT.get_stats().print();
   return ISD_single.get_cnt();
 }
 

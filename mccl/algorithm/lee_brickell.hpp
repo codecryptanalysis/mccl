@@ -44,7 +44,7 @@ public:
     }
     
     subISDT_lee_brickell()
-        : config(lee_brickell_config_default)
+        : config(lee_brickell_config_default), stats("Lee-Brickell")
     {
     }
 
@@ -60,6 +60,7 @@ public:
     // API member function
     void initialize(const cmat_view& _H12T, size_t _H2Tcolumns, const cvec_view& _S, unsigned int w, callback_t _callback, void* _ptr) final
     {
+        stats.cnt_initialize.inc();
         // copy parameters from current config
         p = config.p;
 
@@ -83,6 +84,7 @@ public:
     // API member function
     void solve() final
     {
+        stats.cnt_solve.inc();
         prepare_loop();
         if (words == 0)
         {
@@ -94,11 +96,13 @@ public:
             while (_loop_next<true>())
                 ;
         }
+        stats.refresh();
     }
     
     // API member function
     void prepare_loop() final
     {
+        stats.cnt_prepare_loop.inc();
         curidx.resize(p);
         curpath.resize(p+1, 0);
             
@@ -126,6 +130,7 @@ public:
     template<bool use_curpath>
     bool _loop_next()
     {
+        stats.cnt_loop_next.inc();
         if (use_curpath)
         {
             if ((curpath[cp] & firstwordmask) == 0) // unlikely
@@ -180,7 +185,7 @@ public:
         }
         return true;
     }
-    
+    decoding_statistics get_stats() const { return stats; };
 private:
     callback_t callback;
     void* ptr;
@@ -198,6 +203,7 @@ private:
     size_t p, cp, rows;
     
     lee_brickell_config_t config;
+    decoding_statistics stats;
 };
 
 template<size_t _bit_alignment = 64>

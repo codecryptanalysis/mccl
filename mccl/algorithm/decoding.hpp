@@ -5,6 +5,7 @@
 
 #include <mccl/config/config.hpp>
 #include <mccl/core/matrix.hpp>
+#include <mccl/tools/statistics.hpp>
 
 MCCL_BEGIN_NAMESPACE
 

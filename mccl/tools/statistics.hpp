@@ -6,6 +6,7 @@
 #include <chrono>
 #include <algorithm>
 #include <stdexcept>
+#include <iomanip>
 
 #ifdef MCCL_HAVE_CPU_COUNTERS
 #ifdef _WIN32
@@ -79,11 +80,11 @@ struct counter_statistic
   : public number_statistic<uint64_t>
 {
   
-  void inc(uint64_t val=1)
+  inline void inc(uint64_t val=1)
   {
     _counter+=val;
   }
-  void dec(uint64_t val=1)
+  inline void dec(uint64_t val=1)
   {
     _counter-=val;
   }
@@ -91,6 +92,12 @@ struct counter_statistic
   {
     this->add( _counter );
     _counter = 0;
+  }
+  void print(std::string name) {
+    std::cerr << std::setw(15) << name << ":";
+    std::cerr << std::setw(15) << this->total() << ",";
+    std::cerr << std::setw(15) << this->mean() << ",";
+    std::cerr << std::setw(15) << this->median() << std::endl; 
   }
   uint64_t _counter = 0;
 };
@@ -134,24 +141,46 @@ struct cpucycle_statistic
   uint64_t _start;
 };
 
-struct decoding_statistics {
+class decoding_statistics {
+public:
+  std::string name;
+  decoding_statistics(std::string _name) : name(_name) {}
+
   // counters
   counter_statistic cnt_initialize;
   counter_statistic cnt_callback;
   counter_statistic cnt_prepare_loop;
   counter_statistic cnt_loop_next;
   counter_statistic cnt_solve;
+  counter_statistic cnt_check_solution;
   // time
 
   // cpucycle
 
   // refresh counters
+  // bool first_refresh = true;
   void refresh() {
+    // if(first_refresh){ // don't refresh the first time
+    //   first_refresh=false;
+    //   return;
+    // }
     cnt_initialize.refresh();
     cnt_callback.refresh();
     cnt_prepare_loop.refresh();
     cnt_loop_next.refresh();
     cnt_solve.refresh();
+    cnt_check_solution.refresh();
+  }
+
+  // print
+  void print() {
+    std::cerr << std::setw(15) << name << std::setw(17) << "total," << std::setw(16) << "mean," << std::setw(16) << "median," << std::endl;
+    cnt_initialize.print("Initialize");
+    cnt_callback.print("Callback");
+    cnt_prepare_loop.print("Prepare loop");
+    cnt_loop_next.print("Loop next");
+    cnt_solve.print("Solve");
+    cnt_check_solution.print("Check solution");
   }
 };
 
