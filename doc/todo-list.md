@@ -142,14 +142,14 @@ Discussion
 - improved column permutation by swaping a small number of columns. How to compute the success probability? Using Markov chains, see [BLP08](https://eprint.iacr.org/2008/318.pdf) (and associated code [here](https://github.com/christianepeters/isdf2/)).
 
 ## TODO for next session
-- [ ] delete the code related to the non-transposed setting
+- [x] delete the code related to the non-transposed setting
 - [ ] compute success probablity for LB with `l`>0
-- [ ] improve the `update` (column swap), add an option (`u=-1`?) for full random permutation
+- [x] improve the `update` (column swap), add an option (`u=-1`?) for full random permutation
 - [ ] compute success probability with optimized column permutation using Markov chain (see if it matches the observations)
 - [ ] add an option to stop the algorithm after a fixed number of iterations (and/or time limit)  
 - [ ] statistics: count number of calls to each function
-- [ ] store a table giving the value `w` in terms of `n` for the SD challenge and make this the default value of `w`
-- [ ] `isdsolver.cpp` check that the solution is correct
+- [x] store a table giving the value `w` in terms of `n` for the SD challenge and make this the default value of `w`
+- [x] `isdsolver.cpp` check that the solution is correct
 - [ ] add a test for `isdsolver.cpp`
 - [ ] documentation of the new HST setting
 
