@@ -65,7 +65,7 @@ class mat;
 
 // common class members for: cvec_view, vec_view, vec_view_it, cvec_view_it, vec
 #define CONST_VECTOR_CLASS_MEMBERS \
-    const uint64_t* data() const { return ptr.ptr; } \
+    auto data() const -> decltype(ptr.ptr) { return ptr.ptr; } \
     size_t columns() const { return ptr.columns; } \
     size_t rowwords() const { return (ptr.columns+63)/64; } \
     size_t hw() const { return v_hw(ptr); } \
@@ -77,7 +77,7 @@ class mat;
 
 // common class members for: vec_view, vec_view_it, vec
 // cnst = '' / 'const' to allow for const and non-const versions
-// vec_view & vec_view have both const and non-const versions
+// vec_view & vec_view_it have both const and non-const versions
 // vec only has non-const versions
 #define VECTOR_CLASS_MEMBERS(vectype,cnst) \
     cnst vectype& clearbit(size_t c)              cnst { v_clearbit(ptr, c); return *this; } \

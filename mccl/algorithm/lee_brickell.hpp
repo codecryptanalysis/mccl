@@ -58,34 +58,26 @@ public:
     }
 
     // API member function
-    void initialize(const cmat_view& _HTpadded, size_t _HTcolumns, const cvec_view& _Spadded, unsigned int w, callback_t _callback, void* _ptr) final
+    void initialize(const cmat_view& _H12T, size_t _H2Tcolumns, const cvec_view& _S, unsigned int w, callback_t _callback, void* _ptr) final
     {
         // copy parameters from current config
         p = config.p;
 
-        HTpadded.reset(_HTpadded);
-        Spadded.reset(_Spadded);
-        columns = _HTcolumns;
+        H12T.reset(_H12T);
+        S.reset(_S);
+        columns = _H2Tcolumns;
         callback = _callback;
         ptr = _ptr;
         wmax = w;
         
-        if (HTpadded.columns()-columns >= 64)
-            throw std::runtime_error("subISDT_lee_brickell: HTpadded must round up columns to multiple of 64");
-        // maybe we can generalize HTpadded.columns() not to be multiple of 64
-        if (HTpadded.columns()%64 != 0)
-            throw std::runtime_error("subISDT_lee_brickell: HTpadded must have columns multiple of 64");
-        // TODO: allow HTpadded.columns()>64 by prefiltering using 1 word, then computing remaining words
-        if (HTpadded.columns() > 64)
-            throw std::runtime_error("subISDT_lee_brickell: currently doesn't support HTpadded with columns > 64");
+        rows = H12T.rows();
+        words = (columns+63)/64;
 
-        rows = HTpadded.rows();
-        words = HTpadded.columns()/64;
+        if (words > 1)
+            throw std::runtime_error("subISDT_lee_brickell::initialize(): Lee Brickell does not support l > 64");
 
-        // need to check these are correct in all cases!
-        lastwordmask = detail::lastwordmask( columns );
-        firstwordmask = ((words == 1) ? lastwordmask : ~uint64_t(0));
-        padmask = detail::lastwordmask( HTpadded.columns() ) & ~lastwordmask;
+        firstwordmask = lastwordmask(columns);
+        padmask = ~firstwordmask;
     }
 
     // API member function
@@ -116,8 +108,8 @@ public:
         {
             firstwords.resize(rows);
             for (unsigned i = 0; i < rows; ++i)
-                firstwords[i] = *HTpadded.data(i);
-            curpath[0] = *Spadded.data();
+                firstwords[i] = *H12T.data(i);
+            curpath[0] = *S.data();
             curpath[1] = curpath[0] ^ firstwords[0];
         }
     }
@@ -192,8 +184,8 @@ public:
 private:
     callback_t callback;
     void* ptr;
-    cmat_view HTpadded;
-    cvec_view Spadded;
+    cmat_view H12T;
+    cvec_view S;
     size_t columns, words;
     unsigned int wmax;
     
@@ -201,7 +193,7 @@ private:
     std::vector<uint64_t> curpath;
     std::vector<uint64_t> firstwords;
     
-    uint64_t lastwordmask, firstwordmask, padmask;
+    uint64_t firstwordmask, padmask;
     
     size_t p, cp, rows;
     

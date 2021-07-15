@@ -76,6 +76,8 @@ public:
     typedef typename subISDT_t::callback_t callback_t;
 
     static const size_t bit_alignment = _bit_alignment;
+    
+    typedef block_t<bit_alignment>     this_block_t;
     typedef aligned_tag<bit_alignment> this_aligned_tag;
 
     ISD_generic(subISDT_t& sI)
@@ -113,8 +115,12 @@ public:
         HST.reset(_H, _S, l);
 
         C.resize(HST.Spadded().columns());
-        C2padded.reset(C.subvector(0, HST.S2padded().columns()));
-        C1restpadded.reset(C.subvector(HST.S2padded().columns(), HST.S1restpadded().columns()));
+        
+        blocks_per_row = HST.Spadded().columns() / bit_alignment;
+        block_stride = (HST.H12T().stride() * sizeof(uint64_t)) / sizeof(this_block_t);
+        H12T_blockptr = reinterpret_cast<const this_block_t*>( HST.H12Tpadded().data() );
+        S_blockptr = reinterpret_cast<const this_block_t*>( HST.Spadded().data() );
+        C_blockptr = reinterpret_cast<this_block_t*>( C.data() );
         
         sol.clear();
         solution = vec();
@@ -124,8 +130,7 @@ public:
     // probabilistic preparation of loop invariant
     void prepare_loop() final
     {
-        subISDT->initialize(HST.H2Tpadded(), HST.H2T().columns(), HST.S2padded(), w, 
-            make_ISD_callback(*this), this);
+        subISDT->initialize(HST.H12T(), HST.H2T().columns(), HST.S2(), w, make_ISD_callback(*this), this);
     }
 
     // perform one loop iteration, return true if successful and store result in e
@@ -176,38 +181,56 @@ public:
             if (wsol > w)
                 return true;
 
-            // 1. compute w1rest
-            auto p = begin, e = end - 1;
-            if (p == end)
+            wsol = end - begin;
+            const uint32_t* e = end-1;
+            if (begin == end)
             {
-                wsol += hammingweight(HST.S1restpadded(), this_aligned_tag());
-            }
-            else if (p == e)
+                // case selection size 0
+                auto Sptr = S_blockptr;
+                auto Cptr = C_blockptr;
+                for (unsigned i = 0; i < blocks_per_row; ++i,++Sptr,++Cptr)
+                {
+                    wsol += hammingweight( *Cptr = *Sptr );
+                    if (wsol > w)
+                        return true;
+                }
+            } else if (begin == e)
             {
-                wsol += hammingweight_xor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
-            }
-            else
-            {
-                C1restpadded.vxor(HST.S1restpadded(), HST.H1Trestpadded()[*p], this_aligned_tag());
-                for (++p; p != e; ++p)
-                    C1restpadded.vxor(HST.H1Trestpadded()[*p], this_aligned_tag());
-                wsol += hammingweight_xor(C1restpadded, HST.H1Trestpadded()[*e], this_aligned_tag());
+                // case selection size 1
+                auto Sptr = S_blockptr;
+                auto Cptr = C_blockptr;
+                auto HTrowptr = H12T_blockptr + block_stride*(*begin);
+                for (unsigned i = 0; i < blocks_per_row; ++Cptr,++Sptr,++HTrowptr)
+                {
+                    wsol += hammingweight( *Cptr = *Sptr ^ *HTrowptr );
+                    if (wsol > w)
+                        return true;
+                }
+            } else {
+                // case selection size >= 2
+                auto Cptr = C_blockptr;
+                auto Sptr = S_blockptr;
+                for (unsigned i = 0; i < blocks_per_row; ++i,++Cptr,++Sptr)
+                {
+                    const uint32_t* p = begin;
+                    *Cptr = *Sptr ^ *(H12T_blockptr + block_stride*(*p) + i);
+                    for (++p; p != e; ++p)
+                    {
+                        *Cptr = *Cptr ^ *(H12T_blockptr + block_stride*(*p) + i);
+                    }
+                    wsol += hammingweight( *Cptr = *Cptr ^ *(H12T_blockptr + block_stride*(*p) + i) );
+                    if (wsol > w)
+                        return true;
+                }
             }
 
-            // 2. check weight: too large => return
-            if (wsol > w)
-                return true;
-                
             // this should be a correct solution at this point
 
-            // 3. construct full solution on E1 and E2 part
-            C.copy(HST.Spadded(), this_aligned_tag());
-            for (p = begin; p != end; ++p)
-                C.vxor(HST.H12Tpadded()[*p], this_aligned_tag());
+            // 3. construct full solution on echelon and ISD part
             if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
                 throw std::runtime_error("ISD_generic::callback: internal error 1: w1partial is not correct?");
             sol.clear();
-            for (p = begin; p != end; ++p)
+            for (auto p = begin; p != end; ++p)
                 sol.push_back(HST.permutation( HST.echelonrows() + *p ));
             for (size_t c = 0; c < HST.HT().columns(); ++c)
             {
@@ -242,7 +265,13 @@ private:
 
     // temporary vector to compute sum of syndrome and H columns
     vec C;
-    vec_view C2padded, C1restpadded;
+    
+    // block pointers to H12T, S and C
+    size_t block_stride, blocks_per_row;
+    const this_block_t* H12T_blockptr;
+    const this_block_t* S_blockptr;
+    this_block_t* C_blockptr;
+    
     
     // parameters
     ISD_generic_config_t config;

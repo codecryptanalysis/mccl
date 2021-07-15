@@ -92,17 +92,17 @@ vec syndrome_decoding_problem::solve(ISD_t& ISD)
 // returns true while enumeration should be continued, false when it should be stopped
 typedef bool (*ISD_callback_t)(void*, const uint32_t*, const uint32_t*, unsigned int);
 
-// generic callback functions that can be instantiated for any subISD class
-template<typename subISD_t>
+// generic callback functions that can be instantiated for any ISD class
+template<typename ISD_t>
 bool ISD_callback(void* ptr, const uint32_t* begin, const uint32_t* end, unsigned int w)
 {
-    return reinterpret_cast<subISD_t*>(ptr)->callback(begin, end, w);
+    return reinterpret_cast<ISD_t*>(ptr)->callback(begin, end, w);
 }
 
-template<typename subISD_t>
-ISD_callback_t make_ISD_callback(const subISD_t&)
+template<typename ISD_t>
+ISD_callback_t make_ISD_callback(const ISD_t&)
 {
-    return ISD_callback<subISD_t>;
+    return ISD_callback<ISD_t>;
 }
 
 // virtual base class: interface for 'exhaustive' subISD returning as many solutions as efficiently as possible
