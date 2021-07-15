@@ -209,7 +209,7 @@ public:
                 auto Sptr = S_blockptr;
                 auto Cptr = C_blockptr;
                 auto HTrowptr = H12T_blockptr + block_stride*(*begin);
-                for (unsigned i = 0; i < blocks_per_row; ++Cptr,++Sptr,++HTrowptr)
+                for (unsigned i = 0; i < blocks_per_row; ++i,++Cptr,++Sptr,++HTrowptr)
                 {
                     wsol += hammingweight( *Cptr = *Sptr ^ *HTrowptr );
                     if (wsol > w)

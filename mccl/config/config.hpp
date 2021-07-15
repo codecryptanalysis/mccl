@@ -24,6 +24,9 @@
 #define MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
 #define MCCL_VECTOR_ASSUME_NONEMPTY
 
+// assumption. TODO: detect in configure
+//#define MCCL_HAVE_CPU_COUNTERS
+
 MCCL_BEGIN_NAMESPACE
 
 using std::int8_t;

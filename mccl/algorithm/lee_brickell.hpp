@@ -41,6 +41,15 @@ public:
     // API member function
     ~subISDT_lee_brickell() final
     {
+        cpu_prepareloop.refresh();
+        cpu_loopnext.refresh();
+        cpu_callback.refresh();
+        if (cpu_loopnext.total() > 0)
+        {
+            std::cerr << "prepare : " << cpu_prepareloop.total() << std::endl;
+            std::cerr << "nextloop: " << cpu_loopnext.total() - cpu_callback.total() << std::endl;
+            std::cerr << "callback: " << cpu_callback.total() << std::endl;
+        }
     }
     
     subISDT_lee_brickell()
@@ -60,6 +69,8 @@ public:
     // API member function
     void initialize(const cmat_view& _H12T, size_t _H2Tcolumns, const cvec_view& _S, unsigned int w, callback_t _callback, void* _ptr) final
     {
+        if (stats.cnt_initialize._counter != 0)
+            stats.refresh();
         stats.cnt_initialize.inc();
         // copy parameters from current config
         p = config.p;
@@ -96,13 +107,14 @@ public:
             while (_loop_next<true>())
                 ;
         }
-        stats.refresh();
     }
     
     // API member function
     void prepare_loop() final
     {
         stats.cnt_prepare_loop.inc();
+        MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_prepareloop);
+        
         curidx.resize(p);
         curpath.resize(p+1, 0);
             
@@ -131,19 +143,27 @@ public:
     bool _loop_next()
     {
         stats.cnt_loop_next.inc();
+        MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
+        
         if (use_curpath)
         {
             if ((curpath[cp] & firstwordmask) == 0) // unlikely
             {
                 unsigned int w = hammingweight(curpath[cp] & padmask);
                 if (cp + w <= wmax)
+                {
+                    MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
                     if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, w))
                         return false;
+                }
             }
         }
         else
+        {
+            MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
             if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, 0))
                 return false;
+        }
         return next<use_curpath>();
     }
 
@@ -159,7 +179,7 @@ public:
         unsigned i = cp - 1;
         while (i >= 1)
         {
-            if (++curidx[i-1] >= rows - (cp-i)) // likely
+            if (++curidx[i-1] >= rows - (cp-i)) // unlikely
                 --i;
             else
             {
@@ -205,6 +225,7 @@ private:
     
     lee_brickell_config_t config;
     decoding_statistics stats;
+    cpucycle_statistic cpu_prepareloop, cpu_loopnext, cpu_callback;
 };
 
 template<size_t _bit_alignment = 64>

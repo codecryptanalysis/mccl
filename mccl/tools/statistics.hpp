@@ -101,6 +101,18 @@ struct time_statistic
   time_point _start;
 };
 
+template<typename T>
+struct cpucycle_helper {
+  T& stat;
+  cpucycle_helper(T& _stat): stat(_stat)
+  {
+    stat.start();
+  }
+  ~cpucycle_helper()
+  {
+    stat.stop();
+  }
+};
 struct cpucycle_statistic
   : public number_statistic<uint64_t>
 {
@@ -109,6 +121,9 @@ struct cpucycle_statistic
 #else
   static inline uint64_t clock() { return 0; }
 #endif
+  cpucycle_statistic()
+    : _total(0)
+  {}
   void start()
   {
     _start = clock();
@@ -116,11 +131,20 @@ struct cpucycle_statistic
   void stop()
   {
     uint64_t _end = clock();
-    this->add( _end - _start );
+    _total += (_end - _start);
   }
-  uint64_t _start;
+  void refresh()
+  {
+    this->add(_total);
+    _total = 0;
+  }
+  uint64_t _start, _total;
 };
-
+#ifdef MCCL_HAVE_CPU_COUNTERS
+#define MCCL_CPUCYCLE_STATISTIC_BLOCK(s) cpucycle_helper<cpucycle_statistic> _mccl_cpucycle_guard(s);
+#else
+#define MCCL_CPUCYCLE_STATISTIC_BLOCK(s)
+#endif
 
 
 struct counter_statistic
