@@ -46,7 +46,8 @@ public:
     }
 
     // probabilistic preparation of loop invariant
-    virtual void prepare_loop() = 0;
+    // when benchmark = true: should not early abort internal loops and skip internal processing of final solution
+    virtual void prepare_loop(bool benchmark = false) = 0;
 
     // perform one loop iteration
     // return true to continue loop (no solution has been found yet)
@@ -59,9 +60,12 @@ public:
         while (loop_next())
             ;
     }
+
+    virtual size_t get_loop_cnt() const = 0;
     
     // retrieve solution if any
     virtual cvec_view get_solution() const = 0;
+    virtual decoding_statistics get_stats() const = 0;
 };
 
 template<typename ISD_t = syndrome_decoding_API>
@@ -139,6 +143,8 @@ public:
         while (loop_next())
             ;
     }
+
+    virtual decoding_statistics get_stats() const = 0;
 };
 
 MCCL_END_NAMESPACE

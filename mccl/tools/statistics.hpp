@@ -118,6 +118,11 @@ struct time_statistic
     time_point _end = clock_t::now();
     this->add( duration_t(_end - _start).count() );
   }
+  double elapsed_time()
+  {
+    time_point _end = clock_t::now();
+    return duration_t(_end - _start).count();
+  }
   time_point _start;
 };
 
