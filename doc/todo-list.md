@@ -147,7 +147,8 @@ Discussion
 - [x] improve the `update` (column swap), add an option (`u=-1`?) for full random permutation
 - [ ] compute success probability with optimized column permutation using Markov chain (see if it matches the observations)
 - [x] add a benchmark option with iteration and/or time limit
-- [ ] statistics: count number of calls to each function
+- [x] statistics: count number of calls to each function
+- [x] statistics: cpu cycle counters for functions (done for lee-brickell)
 - [x] for `w=-1` automatically set the value `w` based on Gilbert-Varshamov bound for n, k
 - [x] `isdsolver.cpp` check that the solution is correct
 - [ ] add a test for `isdsolver.cpp`
