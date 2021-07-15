@@ -84,7 +84,7 @@ public:
     typedef aligned_tag<bit_alignment> this_aligned_tag;
 
     ISD_generic(subISDT_t& sI)
-        : subISDT(&sI), config(ISD_generic_config_default), stats("ISD_generic")
+        : subISDT(&sI), config(ISD_generic_config_default), stats("ISD-generic")
     {
         n = k = w = 0;
     }

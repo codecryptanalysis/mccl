@@ -93,11 +93,12 @@ struct counter_statistic
     this->add( _counter );
     _counter = 0;
   }
-  void print(std::string name) {
-    std::cerr << std::setw(15) << name << ":";
-    std::cerr << std::setw(15) << this->total() << ",";
-    std::cerr << std::setw(15) << this->mean() << ",";
-    std::cerr << std::setw(15) << this->median() << std::endl; 
+  void print(std::string name, std::ostream& o = std::cerr)
+  {
+    o << std::setw(15) << name << ":";
+    o << std::setw(15) << this->total() << ",";
+    o << std::setw(15) << this->mean() << ",";
+    o << std::setw(15) << this->median() << std::endl; 
   }
   uint64_t _counter = 0;
 };
@@ -178,14 +179,16 @@ public:
   }
 
   // print
-  void print() {
-    std::cerr << std::setw(15) << name << std::setw(17) << "total," << std::setw(16) << "mean," << std::setw(16) << "median," << std::endl;
-    cnt_initialize.print("Initialize");
-    cnt_callback.print("Callback");
-    cnt_prepare_loop.print("Prepare loop");
-    cnt_loop_next.print("Loop next");
-    cnt_solve.print("Solve");
-    cnt_check_solution.print("Check solution");
+  void print(std::ostream& o = std::cerr) {
+    o << "Decoder: " << name << std::endl;
+    o << std::setw(15+17) << "total count," << std::setw(16) << "mean count," << std::setw(16) << "median count," << std::endl;
+    cnt_initialize.print("Initialize", o);
+    cnt_callback.print("Callback", o);
+    cnt_prepare_loop.print("Prepare loop", o);
+    cnt_loop_next.print("Loop next", o);
+    cnt_solve.print("Solve", o);
+    cnt_check_solution.print("Check solution", o);
+    o << std::endl;
   }
 };
 

@@ -186,6 +186,7 @@ public:
         return true;
     }
     decoding_statistics get_stats() const { return stats; };
+
 private:
     callback_t callback;
     void* ptr;

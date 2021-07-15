@@ -141,6 +141,7 @@ try
 {
     std::string filepath, algo;
     size_t trials;
+    bool print_stats = false;
     
     // generator options
     int n = 0, k, w;
@@ -174,7 +175,8 @@ try
     auxopts.add_options()
       ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
-      ("quiet,q", po::bool_switch(&quiet), "Quiet: supress most output")
+      ("quiet,q", po::bool_switch(&quiet), "Quiet: reduce verbosity of trials")
+      ("printstats", po::bool_switch(&print_stats), "Print ISD function call statistics")
       ;
     // options for the generator
     genopts.add_options()
@@ -273,7 +275,7 @@ try
       subISD_ptr.reset( ptr );
       ISD_ptr.reset( new ISD_generic<subISDT_prange>(*ptr) );
     }
-    else if (algo == "L" || algo == "LEEBRICKELL" || algo == "LEE-BRICKELL")
+    else if (algo == "LB" || algo == "LEEBRICKELL" || algo == "LEE-BRICKELL")
     {
       auto ptr = new subISDT_lee_brickell();
       subISD_ptr.reset( ptr );
@@ -352,15 +354,24 @@ try
     }
     time_total_stat.stop();
 
-    ISD_ptr->get_stats().print();
-    subISD_ptr->get_stats().print();
-    
-    //double mean_cnt = cnt_stat.mean(), median_cnt = cnt_stat.median();
-    //double inv_mean_cnt = double(1.0) / mean_cnt, inv_median_cnt = double(1.0) / median_cnt;
-    std::cout << "Time                 :   total=" << time_total_stat.total() << "s (total mean=" << time_total_stat.total()/double(trials) << ") mean=" << time_trial_stat.mean() << "s median=" << time_trial_stat.median() << "s" << std::endl;
-    //std::cout << "Number of iterations :    mean=" << mean_cnt << " median=" << median_cnt << " Q1,Q3=" << cnt_stat.Q1() << "," << cnt_stat.Q3() << std::endl;
-    //std::cout << "Inverse of iterations: invmean=" << inv_mean_cnt << " invmedian=" << inv_median_cnt << std::endl;
-    //std::cout << "Time per iteration   :    mean=" << time_trial_stat.mean()/mean_cnt << "s" << std::endl;
+    // print basic overall statistics
+    double total_time = time_total_stat.total(), avg_time = time_trial_stat.mean();
+    double avg_loop_cnt = ISD_ptr->get_stats().cnt_loop_next.mean(),
+           total_loop_cnt = ISD_ptr->get_stats().cnt_loop_next.total();
+
+    std::cout << "=== Basic statistics ===" << std::endl;
+    std::cout << "  Time                 : mean= " << std::setw(10) << avg_time     << "s  total= " << std::setw(10) << total_time << "s" << std::endl;
+    std::cout << "  Number of iterations : mean= " << std::setw(10) << avg_loop_cnt << "   total= " << std::setw(10) << total_loop_cnt << std::endl;
+    std::cout << "  Inverse of iterations: mean= " << std::setw(10) << 1.0/avg_loop_cnt << std::endl;
+    std::cout << "  Time per iteration   : mean= " << std::setw(10) << avg_time/avg_loop_cnt << "s" << std::endl;
+
+    // print detailed statistics
+    if (print_stats)
+    {
+      std::cout << "\n=== Detailed statistics ===" << std::endl;
+      ISD_ptr->get_stats().print(std::cout);
+      subISD_ptr->get_stats().print(std::cout);
+    }
     
     return 0;
 }
