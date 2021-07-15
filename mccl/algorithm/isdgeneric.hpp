@@ -51,7 +51,7 @@ struct ISD_generic_config_t
         c(l, "l", 0, "ISD parameter l");
         c(u, "u", -1, "Number of columns to swap per iteration (-1=auto)");
         c(updatetype, "updatetype", 14, "Update strategy type: 1, 2, 3, 4, 12, 13, 14, 10");
-        c(verify_solution, "verifysolution", false, "Verify solutions (0=false, 1=true)");
+        c(verify_solution, "verifysolution", true, "Verify solutions (0=false, 1=true)");
     }
 };
 
@@ -126,19 +126,20 @@ public:
         
         sol.clear();
         solution = vec();
-        cnt = 0;
+        loop_cnt = 0;
     }
 
     // probabilistic preparation of loop invariant
-    void prepare_loop() final
+    void prepare_loop(bool _benchmark = false) final
     {
+        benchmark = _benchmark;
         subISDT->initialize(HST.H12T(), HST.H2T().columns(), HST.S2(), w, make_ISD_callback(*this), this);
     }
 
     // perform one loop iteration, return true if successful and store result in e
     bool loop_next() final
     {
-        ++cnt;
+        ++loop_cnt;
         // swap u rows in HST & bring in echelon form
         HST.update(u, update_type);
         // find all subISD solutions
@@ -159,6 +160,10 @@ public:
         return solution;
     }
 
+    size_t get_loop_cnt() const final
+    {
+        return loop_cnt;
+    }
 
 
 
@@ -170,7 +175,6 @@ public:
         return check_SD_solution(Horg, Sorg, w, solution);
     }
     
-    size_t get_cnt() const { return cnt; }
 
 
 
@@ -227,6 +231,8 @@ public:
             }
 
             // this should be a correct solution at this point
+            if (benchmark)
+                return true;
 
             // 3. construct full solution on echelon and ISD part
             if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
@@ -281,9 +287,10 @@ private:
     unsigned int l;
     int u;
     unsigned int update_type;
+    bool benchmark;
     
     // iteration count
-    size_t cnt;
+    size_t loop_cnt;
 };
 
 MCCL_END_NAMESPACE
