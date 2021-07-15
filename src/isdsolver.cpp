@@ -55,7 +55,7 @@ void add_program_options(po::options_description& opts, Configuration& conf)
 }
 
 /* Helpers to print submodule parameters as program options */
-struct show_program_options_helper
+struct get_program_options_helper
 {
     po::options_description* opts;
     template<typename T, typename T2>
@@ -76,13 +76,13 @@ struct show_program_options_helper
     }
 };
 template<typename Configuration>
-void show_program_options(Configuration& conf, unsigned line_length)
+po::options_description get_program_options(Configuration& conf, unsigned line_length)
 {
   po::options_description opts(conf.description, line_length, line_length/2);
-  show_program_options_helper helper;
+  get_program_options_helper helper;
   helper.opts = &opts;
   conf.process(helper);
-  std::cout << opts;
+  return opts;
 }
 
 /* Helpers to print manual of submodules */
@@ -293,10 +293,11 @@ try
         vm.count("file")+vm.count("generate")==0
         )
     {
-      std::cout << cmdopts << auxopts << genopts << benchopts;
-      
-      show_program_options(ISD_generic_config_default, line_length);
-      show_program_options(lee_brickell_config_default, line_length);
+      po::print_options_description(
+        { cmdopts, auxopts, genopts, benchopts,
+          get_program_options(ISD_generic_config_default, line_length),
+          get_program_options(lee_brickell_config_default, line_length)
+        });
 
       if (vm.count("manual"))
       {
