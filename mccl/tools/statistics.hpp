@@ -76,32 +76,6 @@ struct number_statistic
   }
 };
 
-struct counter_statistic
-  : public number_statistic<uint64_t>
-{
-  
-  inline void inc(uint64_t val=1)
-  {
-    _counter+=val;
-  }
-  inline void dec(uint64_t val=1)
-  {
-    _counter-=val;
-  }
-  void refresh()
-  {
-    this->add( _counter );
-    _counter = 0;
-  }
-  void print(std::string name, std::ostream& o = std::cerr)
-  {
-    o << std::setw(15) << name << ":";
-    o << std::setw(15) << this->total() << ",";
-    o << std::setw(15) << this->mean() << ",";
-    o << std::setw(15) << this->median() << std::endl; 
-  }
-  uint64_t _counter = 0;
-};
 
 struct time_statistic
   : public number_statistic<double>
@@ -147,6 +121,35 @@ struct cpucycle_statistic
   uint64_t _start;
 };
 
+
+
+struct counter_statistic
+  : public number_statistic<uint64_t>
+{
+  
+  inline void inc(uint64_t val=1)
+  {
+    _counter+=val;
+  }
+  inline void dec(uint64_t val=1)
+  {
+    _counter-=val;
+  }
+  void refresh()
+  {
+    this->add( _counter );
+    _counter = 0;
+  }
+  void print(std::string name, std::ostream& o = std::cerr)
+  {
+    o << std::setw(15) << name << ":";
+    o << std::setw(15) << this->total() << ",";
+    o << std::setw(15) << this->mean() << ",";
+    o << std::setw(15) << this->median() << std::endl; 
+  }
+  uint64_t _counter = 0;
+};
+
 class decoding_statistics {
 public:
   std::string name;
@@ -164,12 +167,7 @@ public:
   // cpucycle
 
   // refresh counters
-  // bool first_refresh = true;
   void refresh() {
-    // if(first_refresh){ // don't refresh the first time
-    //   first_refresh=false;
-    //   return;
-    // }
     cnt_initialize.refresh();
     cnt_callback.refresh();
     cnt_prepare_loop.refresh();

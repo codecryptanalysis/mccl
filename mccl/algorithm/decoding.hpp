@@ -61,10 +61,10 @@ public:
             ;
     }
 
-    virtual size_t get_loop_cnt() const = 0;
-    
     // retrieve solution if any
     virtual cvec_view get_solution() const = 0;
+    
+    // retrieve statistics
     virtual decoding_statistics get_stats() const = 0;
 };
 
@@ -144,6 +144,7 @@ public:
             ;
     }
 
+    // retrieve statistics
     virtual decoding_statistics get_stats() const = 0;
 };
 

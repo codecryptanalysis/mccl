@@ -128,7 +128,6 @@ public:
         
         sol.clear();
         solution = vec();
-        loop_cnt = 0;
     }
 
     // probabilistic preparation of loop invariant
@@ -143,7 +142,6 @@ public:
     bool loop_next() final
     {
         stats.cnt_loop_next.inc();
-        ++loop_cnt;
         // swap u rows in HST & bring in echelon form
         HST.update(u, update_type);
         // find all subISD solutions
@@ -166,11 +164,11 @@ public:
         return solution;
     }
 
-    size_t get_loop_cnt() const final
+    // retrieve statistics
+    decoding_statistics get_stats() const final
     {
-        return loop_cnt;
-    }
-
+        return stats;
+    };
 
 
 
@@ -261,7 +259,8 @@ public:
                 throw std::runtime_error("ISD_generic::callback: internal error 3: solution is incorrect!");
             return false;
     }
-    decoding_statistics get_stats() const { return stats; };
+    
+    
 private:
     subISDT_t* subISDT;
 
@@ -296,7 +295,6 @@ private:
     
     // iteration count
     decoding_statistics stats;
-    size_t loop_cnt;
 };
 
 MCCL_END_NAMESPACE
