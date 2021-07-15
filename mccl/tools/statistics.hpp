@@ -65,6 +65,8 @@ struct number_statistic
   }
   double Q1()
   {
+    if (size() == 1)
+      return samples[0];
     return _mid(0, size()/2);
   }
   double Q3()

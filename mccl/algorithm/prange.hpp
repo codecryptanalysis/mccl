@@ -26,10 +26,10 @@ public:
     }
     
     // API member function
-    void initialize(const cmat_view&, size_t HTcolumns, const cvec_view&, unsigned int, callback_t _callback, void* _ptr) final
+    void initialize(const cmat_view&, size_t H2Tcolumns, const cvec_view&, unsigned int, callback_t _callback, void* _ptr) final
     {
         // should only be used with l=0
-        if (HTcolumns != 0)
+        if (H2Tcolumns != 0)
             throw std::runtime_error("subISDT_prange::initialize(): Prange doesn't support l>0");
         callback = _callback;
         ptr = _ptr;
