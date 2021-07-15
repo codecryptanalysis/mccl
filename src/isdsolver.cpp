@@ -110,6 +110,39 @@ void run_ISD(syndrome_decoding_API& ISD, cmat_view& H, cvec_view& S, size_t w, b
     std::cout << "Solution found:\n" << ISD.get_solution() << std::endl;
 }
 
+void runtrials_ISD(syndrome_decoding_API& ISD, cmat_view& H, cvec_view& S, size_t w, size_t trials, bool quiet, bool generate, Parser& parse)
+{
+  // run trials
+  time_statistic time_trial_stat, time_total_stat;
+
+  time_total_stat.start();
+  for (size_t i = 0; i < trials; ++i)
+  {
+    if(i > 0 && generate)
+    {
+      parse.regenerate();
+      H.reset(parse.get_H());
+      S.reset(parse.get_S());
+    }
+    time_trial_stat.start();
+    run_ISD(ISD, H,S,w, quiet);
+    time_trial_stat.stop();
+  }
+  time_total_stat.stop();
+
+  /* print basic overall statistics */
+  double total_time = time_total_stat.total(), avg_time = time_trial_stat.mean();
+  double avg_loop_cnt = ISD.get_stats().cnt_loop_next.mean(),
+         total_loop_cnt = ISD.get_stats().cnt_loop_next.total();
+
+  std::cout << "=== Basic statistics ===" << std::endl;
+  std::cout << "  Time                 : mean= " << std::setw(10) << avg_time     << "s  total= " << std::setw(10) << total_time << "s" << std::endl;
+  std::cout << "  Number of iterations : mean= " << std::setw(10) << avg_loop_cnt << "   total= " << std::setw(10) << total_loop_cnt << std::endl;
+  std::cout << "  Inverse of iterations: mean= " << std::setw(10) << 1.0/avg_loop_cnt << std::endl;
+  std::cout << "  Time per iteration   : mean= " << std::setw(10) << avg_time/avg_loop_cnt << "s" << std::endl;
+}
+
+
 
 /* run Benchmark */
 
@@ -354,34 +387,7 @@ try
     }
     else
     {
-      // run trials
-      time_statistic time_trial_stat, time_total_stat;
-
-      time_total_stat.start();
-      for (size_t i = 0; i < trials; ++i)
-      {
-        if(i > 0 && vm.count("generate"))
-        {
-          parse.regenerate();
-          H.reset(parse.get_H());
-          S.reset(parse.get_S());
-        }
-        time_trial_stat.start();
-        run_ISD(*ISD_ptr, H,S,w, quiet);
-        time_trial_stat.stop();
-      }
-      time_total_stat.stop();
-
-      /* print basic overall statistics */
-      double total_time = time_total_stat.total(), avg_time = time_trial_stat.mean();
-      double avg_loop_cnt = ISD_ptr->get_stats().cnt_loop_next.mean(),
-             total_loop_cnt = ISD_ptr->get_stats().cnt_loop_next.total();
-
-      std::cout << "=== Basic statistics ===" << std::endl;
-      std::cout << "  Time                 : mean= " << std::setw(10) << avg_time     << "s  total= " << std::setw(10) << total_time << "s" << std::endl;
-      std::cout << "  Number of iterations : mean= " << std::setw(10) << avg_loop_cnt << "   total= " << std::setw(10) << total_loop_cnt << std::endl;
-      std::cout << "  Inverse of iterations: mean= " << std::setw(10) << 1.0/avg_loop_cnt << std::endl;
-      std::cout << "  Time per iteration   : mean= " << std::setw(10) << avg_time/avg_loop_cnt << "s" << std::endl;
+      runtrials_ISD(*ISD_ptr, H,S,w, trials, quiet, vm.count("generate"), parse);
     }
 
     /* print detailed statistics */
