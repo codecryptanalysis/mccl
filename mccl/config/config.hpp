@@ -111,6 +111,30 @@ namespace detail
             else
                 from_string(it->second, val);
         }
+        // special case for bool
+        void operator()(bool& val, const std::string& valname, bool defaultval, const std::string&) const
+        {
+            val = defaultval;
+            auto it = configmap.find("no-"+valname);
+            if (it != configmap.end())
+            {
+                if (it->second.empty())
+                    val = false;
+                else
+                {
+                    from_string(it->second, val);
+                    val = !val;
+                }
+            }
+            it = configmap.find(valname);
+            if (it != configmap.end())
+            {
+                if (it->second.empty())
+                    val = true;
+                else
+                    from_string(it->second, val);
+            }
+        }
     };
     
     struct save_configmap_helper

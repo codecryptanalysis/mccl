@@ -45,6 +45,26 @@ struct add_program_options_helper
         (valname, po::value<T>(), description)
         ;
     }
+    // special case for boolean
+    void operator()(bool&, const std::string& valname, bool, const std::string& description)
+    {
+      std::string optname = valname;
+      // first check if option already exists (some subISDs have a common parameter name like 'p')
+      for (auto& option: opts->_options)
+      {
+        if (optname.size() == 1 && option->shortopt == optname)
+          return;
+        if (option->longopt == optname)
+          return;
+      }
+      // otherwise add option
+      opts->add_options()
+        (optname, po::bool_switch(), description)
+        ;
+      opts->add_options()
+        ("no-"+optname, po::bool_switch(), description)
+        ;
+    }
 };
 template<typename Configuration>
 void add_program_options(po::options_description& opts, Configuration& conf)
@@ -61,18 +81,33 @@ struct get_program_options_helper
     template<typename T, typename T2>
     void operator()(T&, const std::string& valname, const T2& defaultval, const std::string& description)
     {
-      // first check if option already exists (some subISDs have a common parameter name like 'p')
-      for (auto& option: opts->_options)
-      {
-        if (valname.size() == 1 && option->shortopt == valname)
-          return;
-        if (option->longopt == valname)
-          return;
-      }
-      // otherwise add option
       opts->add_options()
         (valname, po::value<T>()->default_value(defaultval), description)
         ;
+    }
+    // special case for boolean
+    void operator()(bool&, const std::string& valname, bool defaultval, const std::string& description)
+    {
+      std::string optname = valname;
+      // if defaultval = true then first show the "no-<valname>" option
+      if (defaultval)
+      {
+        opts->add_options()
+          ("no-"+optname, po::bool_switch(), description)
+          ;
+        opts->add_options()
+          (optname, po::bool_switch(), "   (default)")
+          ;
+      }
+      else
+      {
+        opts->add_options()
+          (optname, po::bool_switch(), description)
+          ;
+        opts->add_options()
+          ("no-"+optname, po::bool_switch(), "   (default)")
+          ;
+      }
     }
 };
 template<typename Configuration>

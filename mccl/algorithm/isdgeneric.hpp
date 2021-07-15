@@ -52,7 +52,7 @@ struct ISD_generic_config_t
         c(l, "l", 0, "ISD parameter l");
         c(u, "u", -1, "Number of columns to swap per iteration (-1=auto)");
         c(updatetype, "updatetype", 14, "Update strategy type: 1, 2, 3, 4, 12, 13, 14, 10");
-        c(verify_solution, "verifysolution", true, "Verify solutions (0=false, 1=true)");
+        c(verify_solution, "verifysolution", true, "Set verification of solutions");
     }
 };
 
