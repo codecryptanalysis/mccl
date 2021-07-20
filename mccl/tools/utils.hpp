@@ -2,7 +2,6 @@
 #define MCCL_TOOLS_UTILS_HPP
 
 #include <mccl/config/config.hpp>
-#include <mccl/contrib/BigInt.hpp>
 
 #include <math.h>
 
@@ -32,12 +31,12 @@ namespace detail
 
 size_t d_gilbert_varshamov(size_t n, size_t k)
 {
-  BigInt minballsize = pow(BigInt(2), n-k);
-  BigInt ballsize = 1;
+  bigint_t minballsize = bigint_t(2) << (n-k);
+  bigint_t ballsize = 1;
   size_t d = 1;
   while (ballsize < minballsize)
   {
-    ballsize += detail::binomial<BigInt>(n, d);
+    ballsize += detail::binomial<bigint_t>(n, d);
     ++d;
   }
   return d;

@@ -38,6 +38,25 @@ AX_PTHREAD()
 
 CHECK_ATOMIC()
 
+AC_ARG_WITH(gmp,
+   AS_HELP_STRING([--with-gmp=@<:@=DIR@:>@], [GMP install directory]),
+   [
+      CPPFLAGS="$CPPFLAGS -I$withval/include"
+      LDFLAGS="$LDFLAGS -L$withval/lib"
+   ])
+AC_CHECK_LIB(gmp, __gmp_get_memory_functions, , [AC_MSG_ERROR([GMP version >= 4.2.0 needed, see http://gmplib.org])])
+AC_CHECK_HEADERS(gmp.h, , AC_MSG_ERROR([GMP is required]))
+AC_CHECK_LIB(gmpxx, __gmpz_init, , [AC_MSG_ERROR([GMPXX GMP C++ wrapper library needed])])
+AC_CHECK_HEADERS(gmpxx.h, , AC_MSG_ERROR([GMPxx is required]))
+
+#AC_ARG_WITH(mpfr,
+#   AS_HELP_STRING([--with-mpfr=@<:@=DIR@:>@], [MPFR install directory]),
+#   [
+#      CPPFLAGS="$CPPFLAGS -I$withval/include"
+#       LDFLAGS="$LDFLAGS -L$withval/lib"
+#   ])
+#AC_CHECK_LIB(mpfr, mpfr_fms, , [AC_MSG_ERROR([MPFR version >= 2.3.0 needed, see http://www.mpfr.org])])
+
 
 AC_ARG_WITH([m4ri],
     AS_HELP_STRING([--with-m4ri@<:@=VALUE@:>@], [Optional prefix for M4RI library]),

@@ -7,6 +7,7 @@
 #include <string>
 #include <map>
 #include <cstdint>
+#include <gmpxx.h>
 
 #ifndef MCCL_NAMESPACE
 #define MCCL_NAMESPACE mccl
@@ -56,6 +57,9 @@ using std::uint_fast64_t;
 using std::intptr_t;
 using std::uintptr_t;
 using std::size_t;
+
+using bigint_t = ::mpz_class;
+using bigfloat_t = ::mpf_class;
 
 typedef std::map<std::string,std::string> configmap_t;
 
