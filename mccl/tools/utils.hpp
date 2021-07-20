@@ -31,13 +31,14 @@ namespace detail
 
 size_t d_gilbert_varshamov(size_t n, size_t k)
 {
-  bigint_t minballsize = bigint_t(2) << (n-k);
-  bigint_t ballsize = 1;
-  size_t d = 1;
-  while (ballsize < minballsize)
-  {
-    ballsize += detail::binomial<bigint_t>(n, d);
-    ++d;
+  size_t d = 0;
+  bigint_t aux = bigint_t(1) << (n-k);
+  bigint_t b = 1;
+  while(aux >= 0) {
+    aux -= b;
+    d++;
+    b *= (n-d+1);
+    b /= d;
   }
   return d;
 }
