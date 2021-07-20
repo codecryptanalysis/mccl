@@ -129,7 +129,20 @@ void show_manual(Configuration& conf)
   std::cout << "\n" << manualstr << "\n\n";
 }
 
-
+template<typename Module>
+std::string get_configuration_str(Module& m)
+{
+  configmap_t configmap;
+  m.save_config(configmap);
+  std::string ret;
+  for (auto& pv : configmap)
+  {
+    if (!ret.empty())
+      ret.push_back(' ');
+    ret.append(pv.first).append("=").append(pv.second);
+  }
+  return ret;
+}
 
 
 
@@ -349,19 +362,28 @@ try
     /* Create the corresponding syndrome decoding object */
     std::unique_ptr<syndrome_decoding_API> ISD_ptr;
     std::unique_ptr<subISDT_API> subISD_ptr;
+    std::string ISD_conf_str, subISD_conf_str;
 
     sa::to_upper(algo);
     if (algo == "P" || algo == "PRANGE")
     {
-      auto ptr = new subISDT_prange();
-      subISD_ptr.reset( ptr );
-      ISD_ptr.reset( new ISD_generic<subISDT_prange>(*ptr) );
+      algo = "Prange";
+      auto _subISD = new subISDT_prange();
+      auto _ISD = new ISD_generic<subISDT_prange>(*_subISD);
+      subISD_ptr.reset( _subISD );
+      ISD_ptr.reset( _ISD );
+      subISD_conf_str = get_configuration_str(*_subISD);
+      ISD_conf_str = get_configuration_str(*_ISD);
     }
     else if (algo == "LB" || algo == "LEEBRICKELL" || algo == "LEE-BRICKELL")
     {
-      auto ptr = new subISDT_lee_brickell();
-      subISD_ptr.reset( ptr );
-      ISD_ptr.reset( new ISD_generic<subISDT_lee_brickell>(*ptr) );
+      algo = "Lee-Brickell";
+      auto _subISD = new subISDT_lee_brickell();
+      auto _ISD = new ISD_generic<subISDT_lee_brickell>(*_subISD);
+      subISD_ptr.reset( _subISD );
+      ISD_ptr.reset( _ISD );
+      subISD_conf_str = get_configuration_str(*_subISD);
+      ISD_conf_str = get_configuration_str(*_ISD);
     }
     else
     {
@@ -402,11 +424,12 @@ try
     }
 
 
-    std::cout << "n=" << n << ", k=" << k << ", w=" << w << " | algo=" << algo << " | trials=" << trials;
+    std::cout << "Run settings       : n=" << n << " k=" << k << " w=" << w << " trials=" << trials;
     if (vm.count("generate"))
-      std::cout << ", genseed=" << parse.get_seed();
+      std::cout << " genseed=" << parse.get_seed();
     std::cout << std::endl;
-
+    std::cout << " -     ISD generic : " << ISD_conf_str << std::endl;
+    std::cout << " - " << std::setw(15) << algo << " : " << subISD_conf_str << std::endl;
 
     /* run all trials / benchmark */
     cmat_view H = parse.get_H();
