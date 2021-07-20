@@ -74,6 +74,8 @@ public:
         stats.cnt_initialize.inc();
         // copy parameters from current config
         p = config.p;
+        if (p == 0)
+            throw std::runtime_error("subISDT_lee_brickell::initialize: Lee Brickell does not support p = 0");
 
         H12T.reset(_H12T);
         S.reset(_S);
