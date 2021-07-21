@@ -556,14 +556,24 @@ namespace program_options {
 		unsigned _linelength, _mindesclength;
 	};
 	// print multiple options_description in two aligned columns
-	inline void print_options_description(std::ostream& o, std::initializer_list<options_description> il)
+	template<typename Iterator>
+	inline void print_options_description(std::ostream& o, Iterator begin, Iterator end)
 	{
 		size_t maxleft = 0;
 		std::stringstream nullstream;
-		for (auto& opts : il)
-			maxleft = opts._print(nullstream, maxleft);
-		for (auto& opts : il)
-			opts._print(o, maxleft);
+		for (Iterator it = begin; it != end; ++it)
+			maxleft = it->_print(nullstream, maxleft);
+		for (Iterator it = begin; it != end; ++it)
+			it->_print(o, maxleft);
+	}
+	template<typename Iterator>
+	inline void print_options_description(Iterator begin, Iterator end)
+	{
+		print_options_description(std::cout, begin, end);
+	}
+	inline void print_options_description(std::ostream& o, std::initializer_list<options_description> il)
+	{
+		print_options_description(o, il.begin(), il.end());
 	}
 	inline void print_options_description(std::initializer_list<options_description> il)
 	{

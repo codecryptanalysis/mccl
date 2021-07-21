@@ -144,8 +144,61 @@ std::string get_configuration_str(Module& m)
   return ret;
 }
 
+/* Helper API that does it all */
+struct module_parameter_API
+{
+  virtual ~module_parameter_API() {}
+  
+  virtual void add_program_options(po::options_description&) {}
+  
+  virtual void load_config(const configmap_t&) {}
+  
+  virtual po::options_description get_program_options(size_t line_length) { return po::options_description("", line_length, line_length/2); }
+  
+  virtual void show_manual() {}
+};
 
+template<typename config_t>
+struct module_parameter_t final
+  : public module_parameter_API
+{
+  config_t& config;
+  
+  module_parameter_t(config_t& _config)
+    : config(_config)
+  {
+  }
+  
+  ~module_parameter_t()
+  {
+  }
+  
+  void add_program_options(po::options_description& opts)
+  {
+    ::add_program_options(opts, config);
+  }
+  
+  void load_config(const configmap_t& configmap)
+  {
+    ::load_config(config, configmap);
+  }
+  
+  po::options_description get_program_options(size_t line_length)
+  {
+    return ::get_program_options(config, line_length);
+  }
+  
+  void show_manual()
+  {
+    ::show_manual(config);
+  }
+};
 
+template<typename config_t>
+module_parameter_t<config_t>* make_module_parameter(config_t& _config)
+{
+  return new module_parameter_t<config_t>(_config);
+}
 
 
 /* run Trials */
@@ -293,11 +346,17 @@ try
       ;
 
     /* Collect submodule program options */
+    std::vector< std::unique_ptr<module_parameter_API> > modules;
+    
+    // ========== ADD MODULE DEFAULT CONFIGURATIONS HERE ===============
+    modules.emplace_back( make_module_parameter( ISD_generic_config_default ) );
+    modules.emplace_back( make_module_parameter( lee_brickell_config_default ) );
+    // =================================================================
+    
     //  if there are common options then only the first description is used
     //  any default values are ignored, so if no value is passed each algorithm can use its own default value
-
-    add_program_options(isdopts, ISD_generic_config_default);
-    add_program_options(isdopts, lee_brickell_config_default);
+    for (auto& ptr : modules)
+      ptr->add_program_options(isdopts);
 
     /* Parse all program options */
     allopts.add(cmdopts).add(auxopts).add(genopts).add(benchopts).add(isdopts);
@@ -331,30 +390,27 @@ try
     }
 
     // pass configmap to submodules
-    // note: prange has no configuration
-    load_config(ISD_generic_config_default, configmap);
-    load_config(lee_brickell_config_default, configmap);
-
+    for (auto& ptr : modules)
+      ptr->load_config(configmap);
 
     /* show help and/or manual if requested or if no command was given */
     if (vm.count("help") || vm.count("manual") ||
         vm.count("file")+vm.count("generate")==0
         )
     {
-      po::print_options_description(
-        { cmdopts, auxopts, genopts, benchopts,
-          get_program_options(ISD_generic_config_default, line_length),
-          get_program_options(lee_brickell_config_default, line_length)
-        });
+      std::vector<po::options_description> vec_opts({ cmdopts, auxopts, genopts, benchopts });
+      for (auto& ptr : modules)
+        vec_opts.emplace_back(ptr->get_program_options(line_length));
+      po::print_options_description(vec_opts.begin(), vec_opts.end());
 
       if (vm.count("manual"))
       {
         std::cout << "\n\n === ISD solver manual ===\n";
         
-        show_manual(ISD_generic_config_default);
-        show_manual(lee_brickell_config_default);
-        
+        for (auto& ptr: modules)
+          ptr->show_manual();
       }
+
       return 0;
     }
 
@@ -363,34 +419,37 @@ try
     std::unique_ptr<syndrome_decoding_API> ISD_ptr;
     std::unique_ptr<subISDT_API> subISD_ptr;
     std::string ISD_conf_str, subISD_conf_str;
+    
 
-    sa::to_upper(algo);
+#define INITIALIZE_ALGO(subISDT_type) \
+    auto _subISD = new subISDT_type(); \
+    auto _ISD = new ISD_generic<subISDT_type>(*_subISD); \
+    subISD_ptr.reset(_subISD); \
+    ISD_ptr.reset(_ISD); \
+    subISD_conf_str = get_configuration_str(*_subISD); \
+    ISD_conf_str = get_configuration_str(*_ISD);
+
+
+    // ==================== ADD NEW ALGORITHMS HERE ====================
+    // NOTE: algorithms default configuration needs to be added above in 'modules'
+    // initialize chosen algorithm and set pretty print name of algorithm
+    sa::to_upper(algo); // make input algo entirely upper-case
     if (algo == "P" || algo == "PRANGE")
     {
       algo = "Prange";
-      auto _subISD = new subISDT_prange();
-      auto _ISD = new ISD_generic<subISDT_prange>(*_subISD);
-      subISD_ptr.reset( _subISD );
-      ISD_ptr.reset( _ISD );
-      subISD_conf_str = get_configuration_str(*_subISD);
-      ISD_conf_str = get_configuration_str(*_ISD);
+      INITIALIZE_ALGO( subISDT_prange );
     }
     else if (algo == "LB" || algo == "LEEBRICKELL" || algo == "LEE-BRICKELL")
     {
       algo = "Lee-Brickell";
-      auto _subISD = new subISDT_lee_brickell();
-      auto _ISD = new ISD_generic<subISDT_lee_brickell>(*_subISD);
-      subISD_ptr.reset( _subISD );
-      ISD_ptr.reset( _ISD );
-      subISD_conf_str = get_configuration_str(*_subISD);
-      ISD_conf_str = get_configuration_str(*_ISD);
+      INITIALIZE_ALGO( subISDT_lee_brickell );
     }
     else
     {
       std::cout << "Unknown algorithm: " << algo << std::endl;
       return 1;
     }
-
+    // =================================================================
 
     /* parse or generate instances */
     Parser parse;
