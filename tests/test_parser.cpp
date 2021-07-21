@@ -15,14 +15,14 @@ int main(int, char**)
 {
     int status = 0;
 
-    Parser parse;
-    status |= !parse.load_file("./tests/data/Goppa_1101.txt");
+    file_parser parse;
+    status |= !parse.parse_file("./tests/data/Goppa_1101.txt");
 
-    auto H = parse.get_H();
-    auto S = parse.get_S();
-    size_t n = parse.get_n();
-    size_t k = parse.get_k();
-    size_t w = parse.get_w();
+    auto H = parse.H();
+    auto S = parse.S();
+    size_t n = parse.n();
+    size_t k = parse.k();
+    size_t w = parse.w();
   	
   	// check n,k,w
   	status |= (n!=1101);

@@ -139,13 +139,7 @@ mat file_parser::_dual_matrix(const cmat_view& m) const
 	{
 		auto pc = columnswaps.back();
 		columnswaps.pop_back();
-		for (size_t r = 0; r < dual.rows(); ++r)
-		{
-			bool col1 = dual(r, pc.first), col2 = dual(r, pc.second);
-			dual.setbit(r, pc.first, col2);
-			dual.setbit(r, pc.second, col1);
-		}
-//		dual.swapcolumns(pc.first, pc.second);
+		dual.swapcolumns(pc.first, pc.second);
 	}
 	return dual;
 }

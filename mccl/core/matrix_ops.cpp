@@ -76,7 +76,7 @@ void m_swapcolumns(const m_ptr& m, size_t c1, size_t c2)
 		{
 			uint64_t x1 = *w1ptr;
 			uint64_t tmp = (x1^rotate_left(x1,r2)) & w1mask;
-			*w1ptr = x1 ^ tmp ^ rotate_left(tmp,r2);
+			*w1ptr = x1 ^ tmp ^ rotate_right(tmp,r2);
 		}
 	}
 	else
@@ -88,7 +88,7 @@ void m_swapcolumns(const m_ptr& m, size_t c1, size_t c2)
 			uint64_t x1 = *w1ptr, x2 = *w2ptr;
 			uint64_t tmp = (x1^rotate_left(x2,r2)) & w1mask;
 			*w1ptr = x1 ^ tmp;
-			*w2ptr = x2 ^ rotate_left(tmp,r2);
+			*w2ptr = x2 ^ rotate_right(tmp,r2);
 		}
 	}
 }

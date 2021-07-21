@@ -21,7 +21,6 @@ int test_bool(bool val, const std::string& errmsg = "error")
 
 int test_transpose(size_t r = 512, size_t c = 512)
 {
-
     mat m1(r , c+1);
 
     fillrandom(m1);
@@ -31,6 +30,33 @@ int test_transpose(size_t r = 512, size_t c = 512)
     for (size_t i = 0; i < m1.rows() && status == 0; ++i)
         for (size_t j = 0; j < m1.columns() && status == 0; ++j)
             status |= test_bool(m1(i,j) == m2(j,i), "transpose failed");
+    return status;
+}
+    
+int test_swapcolumns(size_t r, size_t c)
+{
+    mat m1(r, c);
+    
+    fillrandom(m1);
+
+    mat m3;
+    mat m4;
+    
+    int status = 0;
+    for (size_t i = 0; i < 64 && i < m1.columns(); i += 3)
+        for (size_t j = 0; j < 128 && j  < m1.columns(); j += 5)
+        {
+            m3 = m_copy(m1);
+            m4 = m_copy(m1);
+            m4.swapcolumns(i, j);
+            for (size_t r = 0; r < m3.rows(); ++r)
+            {
+                bool col1 = m3(r, i), col2 = m3(r, j);
+                m3.setbit(r, i, col2);
+                m3.setbit(r, j, col1);
+            }
+            status |= test_bool(m3.isequal(m4), "swap columns failed");
+        }
     return status;
 }
 
@@ -83,7 +109,8 @@ int main(int, char**)
 
     for (size_t i = 4; i <= 512; ++i)
         status |= test_matrixref(i,i);
-    for (size_t i = 0; i <= 4*64; ++i)
+        
+    for (size_t i = 1; i <= 4*64; ++i)
     {
         status |= test_transpose(i,i);
         status |= test_transpose(i,i+32);
@@ -91,6 +118,8 @@ int main(int, char**)
         status |= test_transpose(i,i+128);
     }
 
+    status |= test_swapcolumns(1024, 256);
+    
     if (status == 0)
     {
         LOG_CERR("All tests passed.");

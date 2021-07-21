@@ -18,14 +18,14 @@ int main(int, char**)
 {
     int status = 0;
 
-    Parser parse;
-    status |= !parse.load_file("./tests/data/SD_100_0");
+    file_parser parse;
+    status |= !parse.parse_file("./tests/data/SD_100_0");
 
-    auto Hraw = parse.get_H();
-    auto S = parse.get_S();
-    size_t n = parse.get_n();
-    size_t k = parse.get_k();
-    size_t w = parse.get_w();
+    auto Hraw = parse.H();
+    auto S = parse.S();
+    size_t n = parse.n();
+    size_t k = parse.k();
+    size_t w = parse.w();
 //    size_t ell = 0;
 
     std::vector<size_t> rowweights(n-k);
