@@ -127,35 +127,35 @@ mat file_parser::_dual_matrix(const cmat_view& m) const
 		msfT[c] ^= tmp;
 	}
 	// we should now have a identity matrix as left submatrix
-	for (size_t r = 0; r < rows; ++r)
-		for (size_t c = 0; c < rows; ++c)
-			if (msfT(c,r) != (r == c))
-				throw std::runtime_error("Parser::_dual_matrix(): internal error 2");
-				
 	// msf = (I_n | P), so msfdual = ( P^T | I_(n-k) )
 	mat dual(columns - rows, columns);
 	// write P^T, m_transpose doesn't work
 	dual.submatrix(0, dual.rows(), 0, msf.rows()) = m_copy( msfT.submatrix(msf.rows(), dual.rows(), 0, msf.rows()));
 	// write I_(n-k)
 	for (size_t r = 0; r < dual.rows(); ++r)
-		dual.setbit(r, columns-1 - r, true);
+		dual.setbit(r, rows + r, true);
 	// undo column swaps
 	while (!columnswaps.empty())
 	{
 		auto pc = columnswaps.back();
 		columnswaps.pop_back();
-		dual.swapcolumns(pc.first, pc.second);
+		for (size_t r = 0; r < dual.rows(); ++r)
+		{
+			bool col1 = dual(r, pc.first), col2 = dual(r, pc.second);
+			dual.setbit(r, pc.first, col2);
+			dual.setbit(r, pc.second, col1);
+		}
+//		dual.swapcolumns(pc.first, pc.second);
 	}
 	return dual;
 }
 
 mat file_parser::_prepend_identity(const cmat_view& m) const
 {
-	mat ret(m.rows(), m.rows() + m.columns());
-	ret.submatrix(0, m.rows(), 0, m.rows()).setidentity();
-	for (size_t r = 0; r < m.rows(); ++r)
-		for (size_t c = 0; c < m.columns(); ++c)
-			ret.setbit(r, m.rows() + c, m(r,c));
+	mat retT(m.rows() + m.columns(), m.rows());
+	retT.setidentity();
+	retT.submatrix(m.rows(), m.columns(), 0, m.rows()) = m_transpose(m);
+	mat ret = m_transpose(retT);
 	return ret;
 }
 
@@ -405,6 +405,7 @@ bool file_parser::_parse_file_auto(const std::string& filename)
 		throw std::runtime_error("Parser::_load_file_auto(): H doesn't have the right dimensions");
 	if (!(_S.columns() == 0 || _S.columns() == _H.rows()))
 		throw std::runtime_error("Parser::_load_file_auto(): S doesn't have the right dimensions");
+
 	return true;
 }
 
