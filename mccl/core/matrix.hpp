@@ -1,6 +1,7 @@
 #ifndef MCCL_CORE_MATRIX_HPP
 #define MCCL_CORE_MATRIX_HPP
 
+#include <mccl/config/config.hpp>
 #include <mccl/core/matrix_base.hpp>
 #include <mccl/core/matrix_ops.hpp>
 

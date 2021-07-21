@@ -1,6 +1,7 @@
 #ifndef MCCL_CORE_MATRIX_ISDFORM_HPP
 #define MCCL_CORE_MATRIX_ISDFORM_HPP
 
+#include <mccl/config/config.hpp>
 #include <mccl/core/matrix.hpp>
 
 #include <iostream>

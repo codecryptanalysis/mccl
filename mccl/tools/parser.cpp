@@ -9,6 +9,10 @@ namespace sa = string_algo;
 
 MCCL_BEGIN_NAMESPACE
 
+enum Marker {
+        MARK_NONE, MARK_N, MARK_K, MARK_W, MARK_SEED, MARK_G, MARK_H, MARK_S, MARK_GT, MARK_HT, MARK_ST
+};
+
 void file_parser::reset()
 {
 	_n = _k = _w = _fileseed = -1;
@@ -39,7 +43,7 @@ void file_parser::_parse_integer(const std::string& line, int64_t& n, bool throw
 }
 
 // parse and return a binary vector
-parser_binary_vector_t file_parser::_parse_vector(const std::string& line) const
+file_parser::parser_binary_vector_t file_parser::_parse_vector(const std::string& line) const
 {
 	parser_binary_vector_t ret;
 	uint64_t lastword = 0;

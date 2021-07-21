@@ -1,6 +1,7 @@
 #ifndef MCCL_TOOLS_GENERATOR_HPP
 #define MCCL_TOOLS_GENERATOR_HPP
 
+#include <mccl/core/config.hpp>
 #include <mccl/core/matrix.hpp>
 
 MCCL_BEGIN_NAMESPACE

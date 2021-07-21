@@ -1,5 +1,5 @@
-#ifndef MCCL_TESTS_TEST_UTILS_H
-#define MCCL_TESTS_TEST_UTILS_H
+#ifndef MCCL_TESTS_TEST_UTILS_HPP
+#define MCCL_TESTS_TEST_UTILS_HPP
 
 #include <iostream>
 

@@ -1,5 +1,5 @@
-#ifndef MCCL_CONFIG_CONFIG_H
-#define MCCL_CONFIG_CONFIG_H
+#ifndef MCCL_CONFIG_CONFIG_HPP
+#define MCCL_CONFIG_CONFIG_HPP
 
 #include <mccl/config/config.h>
 

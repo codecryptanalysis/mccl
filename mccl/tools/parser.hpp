@@ -1,15 +1,10 @@
-#ifndef MCCL_TOOLS_PARSER_H
-#define MCCL_TOOLS_PARSER_H
+#ifndef MCCL_TOOLS_PARSER_HPP
+#define MCCL_TOOLS_PARSER_HPP
 
+#include <mccl/config/config.hpp>
 #include <mccl/core/matrix.hpp>
 
 MCCL_BEGIN_NAMESPACE
-
-enum Marker {
-	MARK_NONE, MARK_N, MARK_K, MARK_W, MARK_SEED, MARK_G, MARK_H, MARK_S, MARK_GT, MARK_HT, MARK_ST
-};
-
-typedef std::pair<std::vector<uint64_t>, size_t> parser_binary_vector_t;
 
 class file_parser
 {
@@ -36,6 +31,7 @@ private:
 	bool omitted_identity_G;
 	bool omitted_identity_GT;
 
+	typedef std::pair<std::vector<uint64_t>, size_t> parser_binary_vector_t;
 	std::vector< parser_binary_vector_t > _Sparsed, _STparsed;
 	std::vector< parser_binary_vector_t > _Hparsed, _HTparsed;
 	std::vector< parser_binary_vector_t > _Gparsed, _GTparsed;
@@ -52,6 +48,7 @@ private:
 	mat _dual_matrix(const cmat_view& m) const;
 	mat _prepend_identity(const cmat_view& m) const;
 
+	// take one of G, G^T, H, H^T, h (quasi-cyclic generator vector) and generate G and H accordingly (prepending identity where needed, etc)
 	void _postprocess_matrices();
 };
 
