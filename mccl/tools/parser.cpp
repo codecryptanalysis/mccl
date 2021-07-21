@@ -189,7 +189,7 @@ void file_parser::_postprocess_matrices()
 		_H.resize(_H.columns(), _H.columns());
 		for (size_t r = 1; r < _H.rows(); ++r)
 			for (size_t c = 0; c < _H.columns(); ++c)
-				_H.setbit(r, c, _H(0, (r-c)%_H.columns() ));
+				_H.setbit(r, c, _H(0, (c+r)%_H.columns() ));
 		// transpose M
 		mat _Htmp = m_transpose(_H);
 		_H.swap(_Htmp);
