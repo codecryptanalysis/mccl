@@ -29,7 +29,7 @@ namespace detail
 
 }
 
-size_t d_gilbert_varshamov(size_t n, size_t k)
+inline size_t d_gilbert_varshamov(size_t n, size_t k)
 {
   size_t d = 0;
   bigint_t aux = bigint_t(1) << (n-k);
@@ -44,7 +44,7 @@ size_t d_gilbert_varshamov(size_t n, size_t k)
 }
 
 
-int get_cryptographic_w(size_t n, size_t k)
+inline int get_cryptographic_w(size_t n, size_t k)
 {
   return ceil( 1.05 * double(d_gilbert_varshamov(n, k)) );
 }

@@ -35,6 +35,9 @@ libmccl_la_SOURCES=\
 	mccl/algorithm/dumer.hpp \
 	\
 	mccl/tools/parser.hpp \
+	mccl/tools/parser.cpp \
+	mccl/tools/generator.hpp \
+	mccl/tools/generator.cpp \
 	mccl/tools/statistics.hpp \
 	mccl/tools/utils.hpp
 

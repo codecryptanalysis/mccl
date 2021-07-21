@@ -6,6 +6,7 @@
 #include <mccl/algorithm/lee_brickell.hpp>
 
 #include <mccl/tools/parser.hpp>
+#include <mccl/tools/generator.hpp>
 #include <mccl/tools/statistics.hpp>
 #include <mccl/tools/utils.hpp>
 
@@ -211,7 +212,7 @@ void run_ISD(syndrome_decoding_API& ISD, cmat_view& H, cvec_view& S, size_t w, b
     std::cout << "Solution found:\n" << ISD.get_solution() << std::endl;
 }
 
-void runtrials_ISD(syndrome_decoding_API& ISD, cmat_view& H, cvec_view& S, size_t w, size_t trials, bool quiet, bool generate, Parser& parse)
+void runtrials_ISD(syndrome_decoding_API& ISD, cmat_view& H, cvec_view& S, size_t w, size_t trials, bool quiet, bool generate, SDP_generator& generator)
 {
   // run trials
   time_statistic time_trial_stat, time_total_stat;
@@ -221,9 +222,9 @@ void runtrials_ISD(syndrome_decoding_API& ISD, cmat_view& H, cvec_view& S, size_
   {
     if(i > 0 && generate)
     {
-      parse.regenerate();
-      H.reset(parse.get_H());
-      S.reset(parse.get_S());
+      generator.generate(H.columns(), H.columns()-H.rows(), w);
+      H.reset(generator.H());
+      S.reset(generator.S());
     }
     time_trial_stat.start();
     run_ISD(ISD, H,S,w, quiet);
@@ -292,6 +293,7 @@ try
     size_t trials;
     bool quiet = false;
     bool print_stats = false;
+    bool print_input = false;
     
     // generator options
     int n = 0, k, w;
@@ -328,6 +330,7 @@ try
       ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("quiet,q", po::bool_switch(&quiet), "Quiet: reduce verbosity of trials")
+      ("printinput", po::bool_switch(&print_input), "Print input H & S")
       ("printstats", po::bool_switch(&print_stats), "Print ISD function call statistics")
       ;
     // options for the generator
@@ -452,48 +455,55 @@ try
     // =================================================================
 
     /* parse or generate instances */
-    Parser parse;
+    cmat_view H;
+    cvec_view S;
+
+    file_parser parser;
+    SDP_generator generator;
     if (vm.count("genseed"))
-      parse.seed(genseed);
-    if (filepath != "")
+      generator.seed(genseed);
+
+    if (!filepath.empty())
     {
-      std::cout << "Parsing instance " << filepath << '\n';
-      bool b = parse.load_file(filepath);
-      if (!b) {
-        std::cout << "Parsing instance failed" << '\n';
-        return 1;
-      }
-      n = parse.get_n();
-      k = parse.get_k();
-      w = parse.get_w();
-    } else
+      std::cout << "Loading file: " << filepath << "..." << std::flush;
+      parser.parse_file(filepath);
+      std::cout << "done." << std::endl;
+      n = parser.n();
+      k = parser.k();
+      w = parser.w();
+      H.reset(parser.H());
+      S.reset(parser.S());
+    }
+    else
     {
-      // automatic choice of k is using rate 1/2
-      if (k == -1)
-        k = n / 2;
-      // automatic choice of w is based on GV-bound: w = ceil(1.05 * d_GV)
-      if (w == -1)
+      if (k < 0)
+        k = n>>1;
+      if (w <= 0)
         w = get_cryptographic_w(n, k);
       if (n <= 0 || k >= n || w >= n)
       {
         std::cout << "Bad input parameters: n=" << n << ", k=" << k << ", w=" << w << std::endl;
         return 1;
       }
-      parse.random_SD(n, k, w);
+      generator.generate(n, k, w);
+      H.reset(generator.H());
+      S.reset(generator.S());
     }
-
-
+    
     std::cout << "Run settings       : n=" << n << " k=" << k << " w=" << w << " trials=" << trials;
     if (vm.count("generate"))
-      std::cout << " genseed=" << parse.get_seed();
+      std::cout << " genseed=" << generator.get_seed();
     std::cout << std::endl;
     std::cout << " -     ISD generic : " << ISD_conf_str << std::endl;
     std::cout << " - " << std::setw(15) << algo << " : " << subISD_conf_str << std::endl;
+    
+    if (print_input)
+    {
+      std::cout << "H = \n" << H << std::endl;
+      std::cout << "S = " << S << std::endl;
+    }
 
     /* run all trials / benchmark */
-    cmat_view H = parse.get_H();
-    cvec_view S = parse.get_S();
-
     if (benchmark)
     {
       // run benchmark
@@ -505,7 +515,7 @@ try
     }
     else
     {
-      runtrials_ISD(*ISD_ptr, H,S,w, trials, quiet, vm.count("generate"), parse);
+      runtrials_ISD(*ISD_ptr, H,S,w, trials, quiet, vm.count("generate"), generator);
     }
 
     /* print detailed statistics */
