@@ -189,7 +189,7 @@ void file_parser::_postprocess_matrices()
 		_H.resize(_H.columns(), _H.columns());
 		for (size_t r = 1; r < _H.rows(); ++r)
 			for (size_t c = 0; c < _H.columns(); ++c)
-				_H.setbit(r, c, _H(0, (c+r)%_H.columns() ));
+				_H.setbit(r, c, _H(0, (r-c)%_H.columns() ));
 		// transpose M
 		mat _Htmp = m_transpose(_H);
 		_H.swap(_Htmp);
@@ -202,7 +202,7 @@ void file_parser::_postprocess_matrices()
 	// generate G
 	_H.resize( echelonize(_H), _H.columns() );
 	_G = _dual_matrix(_H);
-	return;	
+	return;
 }
 
 
@@ -221,14 +221,14 @@ bool file_parser::parse_file(const std::string& filename, std::string fileformat
 bool file_parser::_parse_file_auto(const std::string& filename)
 {
 	reset();
-	
+
 	std::ifstream ifs(filename);
 	if (!ifs)
 		throw std::runtime_error("Parser::_load_file_auto(): could not open file: " + filename);
 
 	// keep history of markers to help in format detection
 	std::vector<Marker> markers({MARK_NONE});
-	
+
 	std::string line;
 	size_t linenr = 1;
 	for (; std::getline(ifs, line); ++linenr)
@@ -348,7 +348,7 @@ bool file_parser::_parse_file_auto(const std::string& filename)
 		throw std::runtime_error("Parser::_load_file_auto(): no input generator or parity-check matrix found");
 	if (matrix_count > 1)
 		throw std::runtime_error("Parser::_load_file_auto(): multiple input generator or parity-check matrices found!");
-	
+
 	/* detect setting and potentially set post-processing flags */
 	// decodingchallenge formats already have proper flags set:
 	// - standard syndrome decoding: n, seed, w, HT (omitted identity), ST
@@ -356,7 +356,7 @@ bool file_parser::_parse_file_auto(const std::string& filename)
 	// - large weight decoding: n, seed, k, w, HT (omitted identity)
 	// - Goppa syndrome decoding: n, k, w, HT (omitted identity), ST
 	// - Quasi-cyclic syndrome decoding: n, w, HT (single vector), ST
-	
+
 	// unknown setting
 	if (!_Munknown.empty())
 	{
@@ -365,12 +365,12 @@ bool file_parser::_parse_file_auto(const std::string& filename)
 		_STparsed.emplace_back(_HTparsed.back());
 		_HTparsed.pop_back();
 	}
-	
+
 	/* post-processing */
-	
+
 	// from single input matrix generate all other matrices
 	_postprocess_matrices();
-	
+
 	// process syndrome
 	if (!_STparsed.empty() && !_Sparsed.empty())
 		throw std::runtime_error("Parser::_load_file_auto(): multiple syndrome formats found");
@@ -387,7 +387,7 @@ bool file_parser::_parse_file_auto(const std::string& filename)
 		throw std::runtime_error("Parser::_load_file_auto(): multiple syndromes found");
 	if (Stmp.rows() == 1)
 		_S = v_copy(Stmp[0]);
-	
+
 	/* sanity checks */
 	if (_n < 0)
 		_n = int64_t(_G.columns());
