@@ -3,6 +3,7 @@
 
 #include <mccl/config/config.hpp>
 #include <mccl/core/matrix.hpp>
+#include <mccl/core/random.hpp>
 
 MCCL_BEGIN_NAMESPACE
 

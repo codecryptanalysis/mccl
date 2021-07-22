@@ -1,4 +1,5 @@
 #include <mccl/tools/generator.hpp>
+#include <mccl/core/matrix_algorithms.hpp>
 #include <mccl/tools/utils.hpp>
 
 MCCL_BEGIN_NAMESPACE

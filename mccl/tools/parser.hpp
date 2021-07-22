@@ -43,10 +43,7 @@ private:
 	// helper functions
 	void _parse_integer(const std::string& line, int64_t& n, bool throw_on_duplicate = false) const;
 	parser_binary_vector_t _parse_vector(const std::string& line) const;
-
 	mat _parse_matrix(const std::vector<parser_binary_vector_t>& Mparsed) const;
-	mat _dual_matrix(const cmat_view& m) const;
-	mat _prepend_identity(const cmat_view& m) const;
 
 	// take one of G, G^T, H, H^T, h (quasi-cyclic generator vector) and generate G and H accordingly (prepending identity where needed, etc)
 	void _postprocess_matrices();

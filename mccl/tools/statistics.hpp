@@ -3,8 +3,10 @@
 
 #include <mccl/config/config.hpp>
 
+#include <vector>
 #include <chrono>
 #include <algorithm>
+#include <numeric>
 #include <stdexcept>
 #include <iomanip>
 

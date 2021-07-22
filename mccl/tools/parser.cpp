@@ -1,13 +1,15 @@
 #include <mccl/tools/parser.hpp>
+#include <mccl/core/matrix_algorithms.hpp>
 
 #include <mccl/contrib/string_algo.hpp>
-namespace sa = string_algo;
 
 #include <string>
 #include <fstream>
 #include <iostream>
 
 MCCL_BEGIN_NAMESPACE
+
+namespace sa = string_algo;
 
 enum Marker {
         MARK_NONE, MARK_N, MARK_K, MARK_W, MARK_SEED, MARK_G, MARK_H, MARK_S, MARK_GT, MARK_HT, MARK_ST
@@ -93,66 +95,6 @@ mat file_parser::_parse_matrix(const std::vector<parser_binary_vector_t>& Mparse
 	return ret;
 }
 
-// generalized dual matrix computation, where the nxn left submatrix may be non-invertible
-mat file_parser::_dual_matrix(const cmat_view& m) const
-{
-	mat msf(m);
-	// echelonize msf
-	size_t pr = echelonize(msf);
-	// remove zero rows
-	msf.resize( pr, msf.columns() );
-	// compute transpose over which we'll compute
-	mat msfT = m_transpose(msf);
-
-	size_t rows = msf.rows(), columns = msf.columns();
-
-	// swap columns such that msf = ( I_n | P ) / rows such that msfT = (I_n | P)^T
-	std::vector< std::pair<size_t,size_t> > columnswaps;
-	vec tmp;
-	for (size_t p = 0; p < rows; ++p)
-	{
-		// find msf column = msfT row with single bit set at position p
-		size_t c = p;
-		for (; c < columns; ++c)
-			if (hammingweight(msfT[c]) == 1 || msfT(c,p) == true)
-				break;
-		if (c == p)
-			continue;
-		if (c == columns)
-			throw std::runtime_error("Parser::_dual_matrix(): internal error 1");
-		// swap columns
-		columnswaps.emplace_back(p, c);
-		tmp = msfT[p] ^ msfT[c];
-		msfT[p] ^= tmp;
-		msfT[c] ^= tmp;
-	}
-	// we should now have a identity matrix as left submatrix
-	// msf = (I_n | P), so msfdual = ( P^T | I_(n-k) )
-	mat dual(columns - rows, columns);
-	// write P^T, m_transpose doesn't work
-	dual.submatrix(0, dual.rows(), 0, msf.rows()) = m_copy( msfT.submatrix(msf.rows(), dual.rows(), 0, msf.rows()));
-	// write I_(n-k)
-	for (size_t r = 0; r < dual.rows(); ++r)
-		dual.setbit(r, rows + r, true);
-	// undo column swaps
-	while (!columnswaps.empty())
-	{
-		auto pc = columnswaps.back();
-		columnswaps.pop_back();
-		dual.swapcolumns(pc.first, pc.second);
-	}
-	return dual;
-}
-
-mat file_parser::_prepend_identity(const cmat_view& m) const
-{
-	mat retT(m.rows() + m.columns(), m.rows());
-	retT.setidentity();
-	retT.submatrix(m.rows(), m.columns(), 0, m.rows()) = m_transpose(m);
-	mat ret = m_transpose(retT);
-	return ret;
-}
-
 void file_parser::_postprocess_matrices()
 {
 	int matrix_count = (int(!_Gparsed.empty()) + int(!_GTparsed.empty()) + int(!_Hparsed.empty()) + int(!_HTparsed.empty()));
@@ -168,14 +110,14 @@ void file_parser::_postprocess_matrices()
 		_G = m_transpose(_parse_matrix(_GTparsed));
 	// optionally prepend identity
 	if ((!_Gparsed.empty()  && omitted_identity_G ) || (!_GTparsed.empty() && omitted_identity_GT))
-		_G = _prepend_identity(_G);
+		_G = prepend_identity(_G);
 	// if G is non-empty then generate H
 	if (_G.rows() != 0 || _G.columns() != 0)
 	{
 		// bring in echelon form
 		_G.resize( echelonize(_G), _G.columns() );
 		// generate H
-		_H = _dual_matrix(_G);
+		_H = dual_matrix(_G);
 		return;
 	}
 	if (!_Hparsed.empty())
@@ -198,10 +140,10 @@ void file_parser::_postprocess_matrices()
 	}
 	// optionally prepend identity
 	if ((!_Hparsed.empty()  && omitted_identity_H ) || (!_HTparsed.empty() && omitted_identity_HT))
-		_H = _prepend_identity(_H);
+		_H = prepend_identity(_H);
 	// generate G
 	_H.resize( echelonize(_H), _H.columns() );
-	_G = _dual_matrix(_H);
+	_G = dual_matrix(_H);
 	return;
 }
 

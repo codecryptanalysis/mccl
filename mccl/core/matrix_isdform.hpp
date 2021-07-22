@@ -3,12 +3,10 @@
 
 #include <mccl/config/config.hpp>
 #include <mccl/core/matrix.hpp>
+#include <mccl/core/random.hpp>
 
-#include <iostream>
-#include <functional>
-#include <random>
+#include <algorithm>
 #include <numeric>
-#include <utility>
 
 MCCL_BEGIN_NAMESPACE
 
