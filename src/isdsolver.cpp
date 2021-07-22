@@ -1,4 +1,5 @@
 #include <mccl/config/config.hpp>
+#include <mccl/config/utils.hpp>
 
 #include <mccl/algorithm/decoding.hpp>
 #include <mccl/algorithm/isdgeneric.hpp>
@@ -18,188 +19,10 @@
 #include <cstdlib>
 #include <memory>
 
-namespace po = program_options;
-namespace sa = string_algo;
-
 using namespace mccl;
 
-
-/* Helper structs and functions for configuration of submodules */
-
-/* Helpers to collect submodule parameters into program options to parse */
-struct add_program_options_helper
-{
-    po::options_description* opts;
-    template<typename T, typename T2>
-    void operator()(T&, const std::string& valname, const T2&, const std::string& description)
-    {
-      // first check if option already exists (some subISDs have a common parameter name like 'p')
-      for (auto& option: opts->_options)
-      {
-        if (valname.size() == 1 && option->shortopt == valname)
-          return;
-        if (option->longopt == valname)
-          return;
-      }
-      // otherwise add option
-      opts->add_options()
-        (valname, po::value<T>(), description)
-        ;
-    }
-    // special case for boolean
-    void operator()(bool&, const std::string& valname, bool, const std::string& description)
-    {
-      std::string optname = valname;
-      // first check if option already exists (some subISDs have a common parameter name like 'p')
-      for (auto& option: opts->_options)
-      {
-        if (optname.size() == 1 && option->shortopt == optname)
-          return;
-        if (option->longopt == optname)
-          return;
-      }
-      // otherwise add option
-      opts->add_options()
-        (optname, po::bool_switch(), description)
-        ;
-      opts->add_options()
-        ("no-"+optname, po::bool_switch(), description)
-        ;
-    }
-};
-template<typename Configuration>
-void add_program_options(po::options_description& opts, Configuration& conf)
-{
-  add_program_options_helper helper;
-  helper.opts = &opts;
-  conf.process(helper);
-}
-
-/* Helpers to print submodule parameters as program options */
-struct get_program_options_helper
-{
-    po::options_description* opts;
-    template<typename T, typename T2>
-    void operator()(T&, const std::string& valname, const T2& defaultval, const std::string& description)
-    {
-      opts->add_options()
-        (valname, po::value<T>()->default_value(defaultval), description)
-        ;
-    }
-    // special case for boolean
-    void operator()(bool&, const std::string& valname, bool defaultval, const std::string& description)
-    {
-      std::string optname = valname;
-      // if defaultval = true then first show the "no-<valname>" option
-      if (defaultval)
-      {
-        opts->add_options()
-          ("no-"+optname, po::bool_switch(), description)
-          ;
-        opts->add_options()
-          (optname, po::bool_switch(), "   (default)")
-          ;
-      }
-      else
-      {
-        opts->add_options()
-          (optname, po::bool_switch(), description)
-          ;
-        opts->add_options()
-          ("no-"+optname, po::bool_switch(), "   (default)")
-          ;
-      }
-    }
-};
-template<typename Configuration>
-po::options_description get_program_options(Configuration& conf, unsigned line_length)
-{
-  po::options_description opts(conf.description, line_length, line_length/2);
-  get_program_options_helper helper;
-  helper.opts = &opts;
-  conf.process(helper);
-  return opts;
-}
-
-/* Helpers to print manual of submodules */
-template<typename Configuration>
-void show_manual(Configuration& conf)
-{
-  std::string manualstr = conf.manualstring;
-  sa::replace_all(manualstr, std::string("\t"), std::string("  "));
-  std::cout << "\n" << manualstr << "\n\n";
-}
-
-template<typename Module>
-std::string get_configuration_str(Module& m)
-{
-  configmap_t configmap;
-  m.save_config(configmap);
-  std::string ret;
-  for (auto& pv : configmap)
-  {
-    if (!ret.empty())
-      ret.push_back(' ');
-    ret.append(pv.first).append("=").append(pv.second);
-  }
-  return ret;
-}
-
-/* Helper API that does it all */
-struct module_parameter_API
-{
-  virtual ~module_parameter_API() {}
-  
-  virtual void add_program_options(po::options_description&) {}
-  
-  virtual void load_config(const configmap_t&) {}
-  
-  virtual po::options_description get_program_options(size_t line_length) { return po::options_description("", line_length, line_length/2); }
-  
-  virtual void show_manual() {}
-};
-
-template<typename config_t>
-struct module_parameter_t final
-  : public module_parameter_API
-{
-  config_t& config;
-  
-  module_parameter_t(config_t& _config)
-    : config(_config)
-  {
-  }
-  
-  ~module_parameter_t()
-  {
-  }
-  
-  void add_program_options(po::options_description& opts)
-  {
-    ::add_program_options(opts, config);
-  }
-  
-  void load_config(const configmap_t& configmap)
-  {
-    ::load_config(config, configmap);
-  }
-  
-  po::options_description get_program_options(size_t line_length)
-  {
-    return ::get_program_options(config, line_length);
-  }
-  
-  void show_manual()
-  {
-    ::show_manual(config);
-  }
-};
-
-template<typename config_t>
-module_parameter_t<config_t>* make_module_parameter(config_t& _config)
-{
-  return new module_parameter_t<config_t>(_config);
-}
+namespace po = program_options;
+namespace sa = string_algo;
 
 
 /* run Trials */
@@ -349,17 +172,17 @@ try
       ;
 
     /* Collect submodule program options */
-    std::vector< std::unique_ptr<module_parameter_API> > modules;
+    std::vector< std::unique_ptr<module_configuration_API> > modules;
     
     // ========== ADD MODULE DEFAULT CONFIGURATIONS HERE ===============
-    modules.emplace_back( make_module_parameter( ISD_generic_config_default ) );
-    modules.emplace_back( make_module_parameter( lee_brickell_config_default ) );
+    modules.emplace_back( make_module_configuration( ISD_generic_config_default ) );
+    modules.emplace_back( make_module_configuration( lee_brickell_config_default ) );
     // =================================================================
     
     //  if there are common options then only the first description is used
     //  any default values are ignored, so if no value is passed each algorithm can use its own default value
     for (auto& ptr : modules)
-      ptr->add_program_options(isdopts);
+      ptr->options_description_insert(isdopts);
 
     /* Parse all program options */
     allopts.add(cmdopts).add(auxopts).add(genopts).add(benchopts).add(isdopts);
@@ -403,7 +226,7 @@ try
     {
       std::vector<po::options_description> vec_opts({ cmdopts, auxopts, genopts, benchopts });
       for (auto& ptr : modules)
-        vec_opts.emplace_back(ptr->get_program_options(line_length));
+        vec_opts.emplace_back(ptr->get_options_description(line_length));
       po::print_options_description(vec_opts.begin(), vec_opts.end());
 
       if (vm.count("manual"))
@@ -411,7 +234,7 @@ try
         std::cout << "\n\n === ISD solver manual ===\n";
         
         for (auto& ptr: modules)
-          ptr->show_manual();
+          ptr->print_manual();
       }
 
       return 0;
@@ -462,6 +285,7 @@ try
     SDP_generator generator;
     if (vm.count("genseed"))
       generator.seed(genseed);
+    genseed = generator.get_seed();
 
     if (!filepath.empty())
     {
@@ -470,7 +294,11 @@ try
       std::cout << "done." << std::endl;
       n = parser.n();
       k = parser.k();
-      w = parser.w();
+      // allow for manual override of w and for missing w
+      if (w < 0)
+        w = parser.w();
+      if (w < 0)
+        w = get_cryptographic_w(n, k);
       H.reset(parser.H());
       S.reset(parser.S());
     }
@@ -478,7 +306,7 @@ try
     {
       if (k < 0)
         k = n>>1;
-      if (w <= 0)
+      if (w < 0)
         w = get_cryptographic_w(n, k);
       if (n <= 0 || k >= n || w >= n)
       {
@@ -492,7 +320,7 @@ try
     
     std::cout << "Run settings       : n=" << n << " k=" << k << " w=" << w << " trials=" << trials;
     if (vm.count("generate"))
-      std::cout << " genseed=" << generator.get_seed();
+      std::cout << " genseed=" << genseed;
     std::cout << std::endl;
     std::cout << " -     ISD generic : " << ISD_conf_str << std::endl;
     std::cout << " - " << std::setw(15) << algo << " : " << subISD_conf_str << std::endl;
