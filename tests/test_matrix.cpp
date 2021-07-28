@@ -1,6 +1,7 @@
 #include <mccl/config/config.hpp>
 
 #include <mccl/core/matrix.hpp>
+#include <mccl/core/matrix_algorithms.hpp>
 
 #include <iostream>
 #include <vector>
