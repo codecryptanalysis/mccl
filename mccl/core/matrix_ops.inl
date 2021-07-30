@@ -8,16 +8,18 @@ MCCL_BEGIN_NAMESPACE
 
 namespace detail {
 
+/*
 inline size_t hammingweight(uint64_t n)
 {
 	return _mm_popcnt_u64(n);
 }
+*/
 inline size_t hammingweight(uint32_t n)
 {
 	return _mm_popcnt_u32(n);
 }
 template<size_t bits>
-inline size_t hammingweight(const block_t<bits>& v)
+inline size_t hammingweight(const uint64_block_t<bits>& v)
 {
 	size_t hw = 0;
 	for (unsigned i = 0; i < v.size; ++i)
@@ -135,7 +137,7 @@ inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2)
 
 
 
-template<size_t bits, void f(block_t<bits>*, block_t<bits>*)>
+template<size_t bits, void f(uint64_block_t<bits>*, uint64_block_t<bits>*)>
 inline void v_1op_f(const v_ptr& dst, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_NONEMPTY
@@ -143,10 +145,10 @@ inline void v_1op_f(const v_ptr& dst, aligned_tag<bits>)
 		return;
 #endif
 	const size_t words = dst.columns/64;
-	f(reinterpret_cast<block_t<bits>*>(dst.data()), reinterpret_cast<block_t<bits>*>(dst.data()+words));
+	f(reinterpret_cast<uint64_block_t<bits>*>(dst.data()), reinterpret_cast<uint64_block_t<bits>*>(dst.data()+words));
 }
 
-template<size_t bits, void f(block_t<bits>*, block_t<bits>*, const block_t<bits>*)>
+template<size_t bits, void f(uint64_block_t<bits>*, uint64_block_t<bits>*, const uint64_block_t<bits>*)>
 inline void v_2op_f(const v_ptr& dst, const cv_ptr& src, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
@@ -158,11 +160,11 @@ inline void v_2op_f(const v_ptr& dst, const cv_ptr& src, aligned_tag<bits>)
 		return;
 #endif
 	const size_t words = src.columns/64;
-	f(reinterpret_cast<block_t<bits>*>(dst.data()), reinterpret_cast<block_t<bits>*>(dst.data()+words),
-	  reinterpret_cast<const block_t<bits>*>(src.data()));
+	f(reinterpret_cast<uint64_block_t<bits>*>(dst.data()), reinterpret_cast<uint64_block_t<bits>*>(dst.data()+words),
+	  reinterpret_cast<const uint64_block_t<bits>*>(src.data()));
 }
 
-template<size_t bits, void f(block_t<bits>*, block_t<bits>*, const block_t<bits>*, const block_t<bits>*)>
+template<size_t bits, void f(uint64_block_t<bits>*, uint64_block_t<bits>*, const uint64_block_t<bits>*, const uint64_block_t<bits>*)>
 inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2, aligned_tag<bits>)
 {
 #ifndef MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS
@@ -174,8 +176,8 @@ inline void v_3op_f(const v_ptr& dst, const cv_ptr& src1, const cv_ptr& src2, al
 		return;
 #endif
 	const size_t words = dst.columns / 64;
-	f(reinterpret_cast<block_t<bits>*>(dst.data()), reinterpret_cast<block_t<bits>*>(dst.data()+words), 
-	  reinterpret_cast<const block_t<bits>*>(src1.data()), reinterpret_cast<const block_t<bits>*>(src2.data()));
+	f(reinterpret_cast<uint64_block_t<bits>*>(dst.data()), reinterpret_cast<uint64_block_t<bits>*>(dst.data()+words), 
+	  reinterpret_cast<const uint64_block_t<bits>*>(src1.data()), reinterpret_cast<const uint64_block_t<bits>*>(src2.data()));
 }
 
 
@@ -188,7 +190,7 @@ inline void _f1_ ## func (uint64_t* first1, uint64_t* last1, uint64_t lwm) \
 	*first1 = (( expr ) & lwm) | ((*first1) & ~lwm); \
 } \
 template<size_t bits> \
-inline void _f1_ ## func (block_t<bits>* first1, block_t<bits>* last1) \
+inline void _f1_ ## func (uint64_block_t<bits>* first1, uint64_block_t<bits>* last1) \
 { \
 	for (; first1 != last1; ++first1) \
 		*first1 = expr ; \
@@ -207,7 +209,7 @@ inline void _f2_ ## func (uint64_t* first1, uint64_t* last1, const uint64_t* fir
 	*first1 = (( expr ) & lwm) | ((*first1) & ~lwm); \
 } \
 template<size_t bits> \
-inline void _f2_ ## func (block_t<bits>* first1, block_t<bits>* last1, const block_t<bits>* first2) \
+inline void _f2_ ## func (uint64_block_t<bits>* first1, uint64_block_t<bits>* last1, const uint64_block_t<bits>* first2) \
 { \
 	for (; first1 != last1; ++first1,++first2) \
 		*first1 = expr ; \
@@ -226,7 +228,7 @@ inline void _f3_ ## func (uint64_t* dstfirst, uint64_t* dstlast, const uint64_t*
 	*dstfirst = ((*dstfirst)&~lwm) | ((  expr   )&lwm); \
 } \
 template<size_t bits> \
-inline void _f3_ ## func (block_t<bits>* dstfirst, block_t<bits>* dstlast, const block_t<bits>* first1, const block_t<bits>* first2) \
+inline void _f3_ ## func (uint64_block_t<bits>* dstfirst, uint64_block_t<bits>* dstlast, const uint64_block_t<bits>* first1, const uint64_block_t<bits>* first2) \
 { \
 	for (; dstfirst != dstlast; ++dstfirst,++first1,++first2) \
 		*dstfirst = expr ; \
@@ -304,10 +306,10 @@ inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 		return true;
 #endif
 	const size_t words = v1.columns / 64;
-	auto first1 = reinterpret_cast<const block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const block_t<bits>*>(v1.data() + words);
-	auto first2 = reinterpret_cast<const block_t<bits>*>(v2.data());
-	block_t<bits> zero; zero ^= zero;
-	block_t<bits> acc(zero);
+	auto first1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data() + words);
+	auto first2 = reinterpret_cast<const uint64_block_t<bits>*>(v2.data());
+	uint64_block_t<bits> zero; zero ^= zero;
+	uint64_block_t<bits> acc(zero);
 	for (; first1 != last1; ++first1, ++first2)
 		acc |= *first1 ^ *first2;
 	return acc == zero;
@@ -347,8 +349,8 @@ inline void v_swap(const v_ptr& v1, const v_ptr& v2, aligned_tag<bits>)
 		return;
 #endif
 	const size_t words = v1.columns / 64;
-	auto first1 = reinterpret_cast<block_t<bits>*>(v1.data()), last1 = reinterpret_cast<block_t<bits>*>(v1.data() + words);
-	auto first2 = reinterpret_cast<block_t<bits>*>(v2.data());
+	auto first1 = reinterpret_cast<uint64_block_t<bits>*>(v1.data()), last1 = reinterpret_cast<uint64_block_t<bits>*>(v1.data() + words);
+	auto first2 = reinterpret_cast<uint64_block_t<bits>*>(v2.data());
 	for (; first1 != last1; ++first1,++first2)
 		std::swap(*first1, *first2);
 }
@@ -442,7 +444,7 @@ inline size_t v_hw(const cv_ptr& v, aligned_tag<bits>)
 #endif
 	size_t words = v.columns/64;
 	size_t hw = 0;
-	auto first1 = reinterpret_cast<const block_t<bits>*>(v.data()), last1 = reinterpret_cast<const block_t<bits>*>(v.data() + words);
+	auto first1 = reinterpret_cast<const uint64_block_t<bits>*>(v.data()), last1 = reinterpret_cast<const uint64_block_t<bits>*>(v.data() + words);
 	for (; first1 != last1; ++first1)
 		hw += hammingweight(*first1);
 	return hw;
@@ -459,8 +461,8 @@ inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 		return 0;
 #endif
 	const size_t words = v1.columns / 64;
-	auto first1 = reinterpret_cast<const block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const block_t<bits>*>(v1.data() + words);
-	auto first2 = reinterpret_cast<const block_t<bits>*>(v2.data());
+	auto first1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data() + words);
+	auto first2 = reinterpret_cast<const uint64_block_t<bits>*>(v2.data());
 	size_t hw = 0;
 	for (; first1 != last1; ++first1,++first2)
 		hw += hammingweight(*first1 & *first2);
@@ -478,8 +480,8 @@ inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 		return 0;
 #endif
 	const size_t words = v1.columns / 64;
-	auto first1 = reinterpret_cast<const block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const block_t<bits>*>(v1.data() + words);
-	auto first2 = reinterpret_cast<const block_t<bits>*>(v2.data());
+	auto first1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data() + words);
+	auto first2 = reinterpret_cast<const uint64_block_t<bits>*>(v2.data());
 	size_t hw = 0;
 	for (; first1 != last1; ++first1,++first2)
 		hw += hammingweight(*first1 | *first2);
@@ -497,8 +499,8 @@ inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2, aligned_tag<bits>)
 		return 0;
 #endif
 	const size_t words = v1.columns / 64;
-	auto first1 = reinterpret_cast<const block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const block_t<bits>*>(v1.data() + words);
-	auto first2 = reinterpret_cast<const block_t<bits>*>(v2.data());
+	auto first1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data()), last1 = reinterpret_cast<const uint64_block_t<bits>*>(v1.data() + words);
+	auto first2 = reinterpret_cast<const uint64_block_t<bits>*>(v2.data());
 	size_t hw = 0;
 	for (; first1 != last1; ++first1,++first2)
 		hw += hammingweight(*first1 ^ *first2);

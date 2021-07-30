@@ -71,7 +71,7 @@ extern ISD_generic_config_t ISD_generic_config_default;
 //
 // this makes it easy to include additional columns of H1T together with H2T to subISD
 
-template<typename subISDT_t = subISDT_API, size_t _bit_alignment = 64>
+template<typename subISDT_t = subISDT_API, size_t _bit_alignment = 256>
 class ISD_generic
     : public syndrome_decoding_API
 {
@@ -80,7 +80,7 @@ public:
 
     static const size_t bit_alignment = _bit_alignment;
     
-    typedef block_t<bit_alignment>     this_block_t;
+    typedef uint64_block_t<bit_alignment>     this_block_t;
     typedef aligned_tag<bit_alignment> this_aligned_tag;
 
     ISD_generic(subISDT_t& sI)
@@ -122,9 +122,9 @@ public:
         
         blocks_per_row = HST.Spadded().columns() / bit_alignment;
         block_stride = (HST.H12T().stride() * sizeof(uint64_t)) / sizeof(this_block_t);
-        H12T_blockptr = reinterpret_cast<const this_block_t*>( HST.H12Tpadded().data() );
-        S_blockptr = reinterpret_cast<const this_block_t*>( HST.Spadded().data() );
-        C_blockptr = reinterpret_cast<this_block_t*>( C.data() );
+        H12T_blockptr = HST.H12Tpadded().data(this_aligned_tag());
+        S_blockptr = HST.Spadded().data(this_aligned_tag());
+        C_blockptr = C.data(this_aligned_tag());
         
         sol.clear();
         solution = vec();

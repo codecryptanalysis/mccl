@@ -67,6 +67,9 @@ class mat;
 // common class members for: cvec_view, vec_view, vec_view_it, cvec_view_it, vec
 #define CONST_VECTOR_CLASS_MEMBERS \
     auto data() const -> decltype(ptr.ptr) { return ptr.ptr; } \
+    template<size_t bits> auto data(aligned_tag<bits>) const \
+      -> decltype(make_block_ptr(ptr.ptr, aligned_tag<bits>())) \
+      { return    make_block_ptr(ptr.ptr, aligned_tag<bits>()); } \
     size_t columns() const { return ptr.columns; } \
     size_t rowwords() const { return (ptr.columns+63)/64; } \
     size_t hw() const { return v_hw(ptr); } \
@@ -163,6 +166,12 @@ class mat;
 #define CONST_MATRIX_CLASS_MEMBERS \
     auto data() const -> decltype(ptr.ptr) { return ptr.ptr; } \
     auto data(size_t r) const -> decltype(ptr.ptr) { return ptr.ptr + r*ptr.stride; } \
+    template<size_t bits> auto data(aligned_tag<bits>) const \
+      -> decltype(make_block_ptr(ptr.ptr, aligned_tag<bits>())) \
+      { return    make_block_ptr(ptr.ptr, aligned_tag<bits>()); } \
+    template<size_t bits> auto data(size_t r, aligned_tag<bits>) const \
+      -> decltype(make_block_ptr(ptr.ptr + r*ptr.stride, aligned_tag<bits>())) \
+      { return    make_block_ptr(ptr.ptr + r*ptr.stride, aligned_tag<bits>()); } \
     size_t columns() const { return ptr.columns; } \
     size_t rowwords() const { return (ptr.columns+63)/64; } \
     size_t rows() const { return ptr.rows; } \
