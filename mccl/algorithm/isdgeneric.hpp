@@ -80,8 +80,8 @@ public:
 
     static const size_t bit_alignment = _bit_alignment;
     
-    typedef uint64_block_t<bit_alignment>     this_block_t;
-    typedef aligned_tag<bit_alignment> this_aligned_tag;
+    typedef uint64_block_t<bit_alignment>  this_block_t;
+    typedef block_tag<bit_alignment,false> this_block_tag;
 
     ISD_generic(subISDT_t& sI)
         : subISDT(&sI), config(ISD_generic_config_default), stats("ISD-generic")
@@ -120,11 +120,11 @@ public:
 
         C.resize(HST.Spadded().columns());
         
-        blocks_per_row = HST.Spadded().columns() / bit_alignment;
-        block_stride = (HST.H12T().stride() * sizeof(uint64_t)) / sizeof(this_block_t);
-        H12T_blockptr = HST.H12Tpadded().data(this_aligned_tag());
-        S_blockptr = HST.Spadded().data(this_aligned_tag());
-        C_blockptr = C.data(this_aligned_tag());
+        blocks_per_row = HST.Spadded().rowblocks(this_block_tag());
+        block_stride = HST.H12T().blockstride(this_block_tag());
+        H12T_blockptr = HST.H12Tpadded().blockptr(this_block_tag());
+        S_blockptr = HST.Spadded().blockptr(this_block_tag());
+        C_blockptr = C.blockptr(this_block_tag());
         
         sol.clear();
         solution = vec();
@@ -238,7 +238,7 @@ public:
                 return true;
 
             // 3. construct full solution on echelon and ISD part
-            if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
+            if (wsol != (end-begin) + hammingweight(C))
                 throw std::runtime_error("ISD_generic::callback: internal error 1: w1partial is not correct?");
             sol.clear();
             for (auto p = begin; p != end; ++p)

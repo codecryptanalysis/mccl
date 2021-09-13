@@ -37,10 +37,11 @@ class HST_ISD_form_t
 {
 public:
     static const size_t bit_alignment = _bit_alignment;
-    typedef aligned_tag<bit_alignment> this_aligned_tag;
+    typedef block_tag<bit_alignment, false> this_block_tag;
     
     HST_ISD_form_t() {}
     HST_ISD_form_t(const cmat_view& H_, const cvec_view& S_, size_t l_) { reset(H_, S_, l_); }
+    
     void reset(const cmat_view& H_, const cvec_view& S_, size_t l_)
     {
     	assert( l_ < H_.rows() );
@@ -153,17 +154,17 @@ public:
     		throw std::runtime_error("HST_ISD_form_t::swap_echelon(): bad input index");
 	// swap rows
 	std::swap(perm[echelon_idx], perm[echelon_rows + ISD_idx]);
-	HST[echelon_idx].swap(HST[echelon_rows + ISD_idx], this_aligned_tag());
+	HST[echelon_idx].swap(HST[echelon_rows + ISD_idx]);
 
 	// bring HST back in echelon form
 	size_t pivotcol = HT_columns - echelon_idx - 1;
-	vec_view pivotrow(HST[echelon_idx]);
+	auto pivotrow = HST[echelon_idx];
 	pivotrow.clearbit(pivotcol);
 	auto HSTrowit = HST[echelon_start];
 	for (size_t r2 = echelon_start; r2 < HST.rows(); ++r2,++HSTrowit)
 		if (HST(r2,pivotcol))
-			HSTrowit.vxor(pivotrow, this_aligned_tag());
-	pivotrow.clear(this_aligned_tag());
+			HSTrowit.vxor(pivotrow);
+	pivotrow.clear();
 	pivotrow.setbit(pivotcol);
     }
     // update 1 echelon row

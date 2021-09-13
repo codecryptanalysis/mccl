@@ -13,7 +13,7 @@ namespace detail {
 
 #define BLOCK64_MASK0       { WORD_MASK_ONE }
 #define BLOCK64_MASK1(s)    { WORD_MASK_BIT(s) }
-const uint64_block_t<64> lastblockmask64[64] = 
+const uint64_block_t<64> _lastblockmask64[64] = 
 {
 	BLOCK64_MASK0,     BLOCK64_MASK1( 1), BLOCK64_MASK1( 2), BLOCK64_MASK1( 3), BLOCK64_MASK1( 4), BLOCK64_MASK1( 5), BLOCK64_MASK1( 6), BLOCK64_MASK1( 7),
 	BLOCK64_MASK1( 8), BLOCK64_MASK1( 9), BLOCK64_MASK1(10), BLOCK64_MASK1(11), BLOCK64_MASK1(12), BLOCK64_MASK1(13), BLOCK64_MASK1(14), BLOCK64_MASK1(15),
@@ -28,7 +28,7 @@ const uint64_block_t<64> lastblockmask64[64] =
 #define BLOCK128_MASK0       { WORD_MASK_ONE, WORD_MASK_ONE }
 #define BLOCK128_MASK1(s)    { WORD_MASK_BIT(s), 0 }
 #define BLOCK128_MASK2(s)    { WORD_MASK_ONE, WORD_MASK_BIT(s) }
-const uint64_block_t<128> lastblockmask128[128] = 
+const uint64_block_t<128> _lastblockmask128[128] = 
 {
 	BLOCK128_MASK0,     BLOCK128_MASK1( 1), BLOCK128_MASK1( 2), BLOCK128_MASK1( 3), BLOCK128_MASK1( 4), BLOCK128_MASK1( 5), BLOCK128_MASK1( 6), BLOCK128_MASK1( 7),
 	BLOCK128_MASK1( 8), BLOCK128_MASK1( 9), BLOCK128_MASK1(10), BLOCK128_MASK1(11), BLOCK128_MASK1(12), BLOCK128_MASK1(13), BLOCK128_MASK1(14), BLOCK128_MASK1(15),
@@ -53,7 +53,7 @@ const uint64_block_t<128> lastblockmask128[128] =
 #define BLOCK256_MASK2(s)    { WORD_MASK_ONE, WORD_MASK_BIT(s), 0, 0 }
 #define BLOCK256_MASK3(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0 }
 #define BLOCK256_MASK4(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s) }
-const uint64_block_t<256> lastblockmask256[256] = 
+const uint64_block_t<256> _lastblockmask256[256] = 
 {
 	BLOCK256_MASK0,     BLOCK256_MASK1( 1), BLOCK256_MASK1( 2), BLOCK256_MASK1( 3), BLOCK256_MASK1( 4), BLOCK256_MASK1( 5), BLOCK256_MASK1( 6), BLOCK256_MASK1( 7),
 	BLOCK256_MASK1( 8), BLOCK256_MASK1( 9), BLOCK256_MASK1(10), BLOCK256_MASK1(11), BLOCK256_MASK1(12), BLOCK256_MASK1(13), BLOCK256_MASK1(14), BLOCK256_MASK1(15),
@@ -98,7 +98,7 @@ const uint64_block_t<256> lastblockmask256[256] =
 #define BLOCK512_MASK6(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0, 0 }
 #define BLOCK512_MASK7(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0 }
 #define BLOCK512_MASK8(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s) }
-const uint64_block_t<512> lastblockmask512[512] = 
+const uint64_block_t<512> _lastblockmask512[512] = 
 {
 	BLOCK512_MASK0,     BLOCK512_MASK1( 1), BLOCK512_MASK1( 2), BLOCK512_MASK1( 3), BLOCK512_MASK1( 4), BLOCK512_MASK1( 5), BLOCK512_MASK1( 6), BLOCK512_MASK1( 7),
 	BLOCK512_MASK1( 8), BLOCK512_MASK1( 9), BLOCK512_MASK1(10), BLOCK512_MASK1(11), BLOCK512_MASK1(12), BLOCK512_MASK1(13), BLOCK512_MASK1(14), BLOCK512_MASK1(15),
@@ -200,28 +200,23 @@ void v_print(std::ostream& o, const cv_ptr& v)
 	o << "]";
 }
 
-
-
-
-bool m_isequal(const cm_ptr& m1, const cm_ptr& m2)
+size_t m_hw(const cm_ptr& m)
 {
-	if (m1.rows != m2.rows || m1.columns != m2.columns)
-		return false;
-	if (m1.rows == 0 || m1.columns == 0)
-		return true;
-	const size_t words = (m1.columns + 63) / 64;
-	auto lwm = lastwordmask(m1.columns);
-	for (size_t r = 0; r < m1.rows; ++r)
+	if (m.columns == 0 || m.rows == 0)
+		return 0;
+	size_t words = (m.columns + 63)/64;
+	uint64_t lwm = lastwordmask(m.columns);
+	size_t hw = 0;
+	for (size_t r = 0; r < m.rows; ++r)
 	{
-		auto first1 = m1.data(r), first2 = m2.data(r), last1 = m1.data(r) + words - 1;
-		for (; first1 != last1; ++first1, ++first2)
-			if (*first1 != *first2)
-				return false;
-		if ((lwm & *first1) != (lwm & *first2))
-			return false;
+		auto first1 = m.data(r), last1 = m.data(r) + words - 1;
+		for (; first1 != last1; ++first1)
+			hw += hammingweight(*first1);
+		hw += hammingweight((*first1) & lwm);
 	}
-	return true;
+	return hw;
 }
+
 void m_swapcolumns(const m_ptr& m, size_t c1, size_t c2)
 {
 	size_t w1 = c1/64, w2 = c2/64, r2 = (c1-c2)%64;
@@ -324,85 +319,7 @@ void m_clearcolumns(const m_ptr& m, size_t coloffset, size_t cols)
 }
 
 
-template<void f(uint64_t*, uint64_t*, uint64_t)>
-void m_1op_f(const m_ptr& dst)
-{
-	if (dst.rows == 0 || dst.columns == 0)
-		return;
-	const size_t words = (dst.columns - 1) / 64;
-	auto lwm = lastwordmask(dst.columns);
-	for (size_t r = 0; r < dst.rows; ++r)
-		f(dst.data(r), dst.data(r) + words, lwm);
-}
-template<void f(uint64_t*, uint64_t*, const uint64_t*, uint64_t)>
-void m_2op_f(const m_ptr& dst, const cm_ptr& src)
-{
-	if (dst.rows != src.rows || dst.columns != src.columns)
-		throw std::out_of_range("m_2op_f: matrices do not have equal dimensions");
-	if (src.rows == 0 || src.columns == 0)
-		return;
-	const size_t words = (src.columns - 1) / 64;
-	auto lwm = lastwordmask(src.columns);
-	for (size_t r = 0; r < src.rows; ++r)
-		f(dst.data(r), dst.data(r) + words, src.data(r), lwm);
-}
-template<void f(uint64_t*, uint64_t*, const uint64_t*, const uint64_t*, uint64_t)>
-void m_3op_f(const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2)
-{
-	if (dst.rows != src1.rows || dst.rows != src2.rows || dst.columns != src1.columns || dst.columns != src2.columns)
-		throw std::out_of_range("m_3op_f: matrices do not have equal dimensions");
-	if (dst.rows == 0 || dst.columns == 0)
-		return;
-	const size_t words = (dst.columns - 1) / 64;
-	auto lwm = lastwordmask(dst.columns);
-	for (size_t r = 0; r < dst.rows; ++r)
-		f(dst.data(r), dst.data(r) + words, src1.data(r), src2.data(r), lwm);
-}
-
-void m_set  (const m_ptr& m) { m_1op_f<_f1_set>(m); }
-void m_clear(const m_ptr& m) { m_1op_f<_f1_clear>(m); }
-void m_not  (const m_ptr& m) { m_1op_f<_f1_not>(m); }
-void m_set  (const m_ptr& m, bool b) { if (b) m_set(m); else m_clear(m); }
-
-void m_copy   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_copy>   (dst, src); }
-void m_copynot(const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_copynot>(dst, src); }
-void m_and    (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_and>    (dst, src); }
-void m_or     (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_or>     (dst, src); }
-void m_xor    (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_xor>    (dst, src); }
-void m_nand   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_nand>   (dst, src); }
-void m_nor    (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_nor>    (dst, src); }
-void m_nxor   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_nxor>   (dst, src); }
-void m_andin  (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_andin>  (dst, src); }
-void m_andni  (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_andni>  (dst, src); }
-void m_orin   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_orin>   (dst, src); }
-void m_orni   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_orni>   (dst, src); }
-void m_and    (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_and>(dst, src1, src2); }
-void m_or     (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_or> (dst, src1, src2); }
-void m_xor    (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_xor>(dst, src1, src2); }
-void m_nand   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_nand>(dst, src1, src2); }
-void m_nor    (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_nor> (dst, src1, src2); }
-void m_nxor   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_nxor>(dst, src1, src2); }
-void m_andin  (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_andin>(dst, src1, src2); }
-void m_andni  (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_andni>(dst, src1, src2); }
-void m_orin   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_orin> (dst, src1, src2); }
-void m_orni   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_orni> (dst, src1, src2); }
-
-size_t m_hw(const cm_ptr& m)
-{
-	if (m.columns == 0 || m.rows == 0)
-		return 0;
-	size_t words = (m.columns + 63)/64;
-	uint64_t lwm = lastwordmask(m.columns);
-	size_t hw = 0;
-	for (size_t r = 0; r < m.rows; ++r)
-	{
-		auto first1 = m.data(r), last1 = m.data(r) + words - 1;
-		for (; first1 != last1; ++first1)
-			hw += hammingweight(*first1);
-		hw += hammingweight((*first1) & lwm);
-	}
-	return hw;
-}
+/* TRANSPOSE FUNCTIONS */
 
 template<size_t bits = 64>
 void block_transpose(uint64_t* dst, size_t dststride, const uint64_t* src, size_t srcstride)
@@ -410,6 +327,7 @@ void block_transpose(uint64_t* dst, size_t dststride, const uint64_t* src, size_
 	static_assert(0 == (bits&(bits-1)), "bits must be power of 2");
 	static_assert(64 >= bits, "bits must not exceed uint64_t bitsize");
 
+	
 	// mask of lower half bits
 	uint64_t m = (uint64_t(1) << (bits/2))-1;
 	unsigned int j = (bits/2);
@@ -441,11 +359,14 @@ void block_transpose(uint64_t* dst, size_t dststride, const uint64_t* src, size_
 	}
 	// last loop iteration (j==1), load tmp store in dst
 //#pragma unroll
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	for (unsigned int k=0;  k<bits;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 }
 
@@ -493,11 +414,14 @@ inline void block_transpose2(uint64_t* dst, size_t dststride, const uint64_t* sr
 	}
 	// last loop iteration (j==1), load tmp store in dst
 //#pragma unroll
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	for (unsigned int k=0;  k<2*bits;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 }
 
@@ -549,25 +473,29 @@ inline void block_transpose(uint64_t* dst, size_t dststride, size_t dstrows, con
 		}
 	}
 	// last loop iteration (j==1), load tmp store in dst
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	unsigned int k=0;
 	for (;  k+1 < dstrows;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 	// note both k and bits are even and k < dstrows <= bits
 	// so k+1 < bits as well, nevertheless compilers may warn
 	if (k < dstrows)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1);
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask;
 	}
 }
 
 
 
-template<typename uint64_t>
+//template<typename uint64_t>
 inline void block_transpose(uint64_t* dst, size_t dststride, size_t dstrows, const uint64_t* src, size_t srcstride, size_t srcrows, size_t bits)
 {
 	assert(0 == (bits&(bits-1))); // bits must be power of 2
@@ -617,17 +545,21 @@ inline void block_transpose(uint64_t* dst, size_t dststride, size_t dstrows, con
 		}
 	}
 	// last loop iteration (j==1), load tmp store in dst
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	unsigned int k=0;
 	for (;  k+1 < dstrows;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 	if (k < dstrows)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1);
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask;
 	}
 }
 
@@ -689,6 +621,213 @@ void m_transpose(const m_ptr& dst, const cm_ptr& src)
 	}
 }
 
+
+
+
+
+
+
+
+template<size_t bits, bool masked>
+bool m_isequal(const cm_ptr& m1, const cm_ptr& m2, block_tag<bits,masked>)
+{
+        if (m1.rows != m2.rows || m1.columns != m2.columns)
+                return false;
+        if (m1.rows == 0 || m1.columns == 0)
+                return true;
+                
+        const size_t blocks = (m1.columns + bits - 1) / bits - (masked?1:0);
+        const size_t stride1 = m1.stride / (bits/64);
+        const size_t stride2 = m2.stride / (bits/64);
+        
+        auto first1 = make_block_ptr(m1.ptr, block_tag<bits,masked>());
+        auto first2 = make_block_ptr(m2.ptr, block_tag<bits,masked>());
+        if (!masked)
+        {
+	        for (size_t r = 0; r < m1.rows; ++r, first1+=stride1, first2+=stride2)
+	        {
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2;
+		        for (; first1r != last1r; ++first1r, ++first2r)
+	        	        if (*first1r != *first2r)
+	                	        return false;
+		}
+	} else {
+                auto lwm = lastwordmask(m1.columns, block_tag<bits,masked>());
+	        for (size_t r = 0; r < m1.rows; ++r, first1+=stride1, first2+=stride2)
+	        {
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2;
+		        for (; first1r != last1r; ++first1r, ++first2r)
+	        	        if (*first1r != *first2r)
+	                	        return false;
+       	        	if ((lwm & *first1r) != (lwm & *first2r))
+        	                return false;
+		}
+	}
+        return true;
 }
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<64 ,true >);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<64 ,false>);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<128,true >);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<128,false>);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<256,true >);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<256,false>);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<512,true >);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<512,false>);
+
+#define MCCL_MATRIX_BASE_FUNCTION_1OP(func,expr) \
+template<size_t bits, bool masked> \
+void m_ ## func (const m_ptr& dst, block_tag<bits,masked>) \
+{ \
+        if (dst.rows == 0 || dst.columns == 0) \
+                return; \
+        size_t blocks = (dst.columns + bits-1)/bits - (masked?1:0); \
+        const size_t stride = dst.stride / (bits/64); \
+        auto first1 = make_block_ptr(dst.ptr, block_tag<bits,masked>()); \
+        if (!masked)  \
+        { \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+		        for (; first1r != last1r; ++first1r) \
+		        	*first1r = expr ; \
+		} \
+	} else { \
+                auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+		        for (; first1r != last1r; ++first1r) \
+		        	*first1r = expr ; \
+			auto diff = lwm & (( expr ) ^ *first1r); \
+			*first1r ^= diff; \
+		} \
+	} \
+} \
+template void m_ ## func (const m_ptr&, block_tag<64 ,true >); \
+template void m_ ## func (const m_ptr&, block_tag<64 ,false>); \
+template void m_ ## func (const m_ptr&, block_tag<128,true >); \
+template void m_ ## func (const m_ptr&, block_tag<128,false>); \
+template void m_ ## func (const m_ptr&, block_tag<256,true >); \
+template void m_ ## func (const m_ptr&, block_tag<256,false>); \
+template void m_ ## func (const m_ptr&, block_tag<512,true >); \
+template void m_ ## func (const m_ptr&, block_tag<512,false>);
+
+MCCL_MATRIX_BASE_FUNCTION_1OP(not,~*first1r)
+MCCL_MATRIX_BASE_FUNCTION_1OP(clear,*first1r^*first1r)
+MCCL_MATRIX_BASE_FUNCTION_1OP(set,*first1r|~*first1r)
+
+
+#define MCCL_MATRIX_BASE_FUNCTION_2OP(func,expr) \
+template<size_t bits, bool masked> \
+void m_ ## func (const m_ptr& dst, const cm_ptr& m2, block_tag<bits,masked>) \
+{ \
+	if (dst.rows != m2.rows || dst.columns != m2.columns) \
+		throw std::out_of_range("matrices do not have equal dimensions"); \
+        if (dst.rows == 0 || dst.columns == 0) \
+                return; \
+        size_t blocks = (dst.columns + bits-1)/bits - (masked?1:0); \
+        const size_t stride1 = dst.stride / (bits/64); \
+        const size_t stride2 =  m2.stride / (bits/64); \
+        auto first1 = make_block_ptr(dst.ptr, block_tag<bits,masked>()); \
+        auto first2 = make_block_ptr( m2.ptr, block_tag<bits,masked>()); \
+        if (!masked)  \
+        { \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2; \
+		        for (; first1r != last1r; ++first1r,++first2r) \
+		        	*first1r = expr ; \
+		} \
+	} else { \
+                auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2; \
+		        for (; first1r != last1r; ++first1r,++first2r) \
+		        	*first1r = expr ; \
+			auto diff = lwm & (( expr ) ^ *first1r); \
+			*first1r ^= diff; \
+		} \
+	} \
+} \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<64 ,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<64 ,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<128,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<128,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<256,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<256,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<512,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<512,false>);
+
+MCCL_MATRIX_BASE_FUNCTION_2OP(copy,*first2r)
+MCCL_MATRIX_BASE_FUNCTION_2OP(copynot,~(*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(and,(*first1r) & (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(or ,(*first1r) | (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(xor,(*first1r) ^ (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(nand,~((*first1r) & (*first2r)))
+MCCL_MATRIX_BASE_FUNCTION_2OP(nor ,~((*first1r) | (*first2r)))
+MCCL_MATRIX_BASE_FUNCTION_2OP(nxor,~((*first1r) ^ (*first2r)))
+MCCL_MATRIX_BASE_FUNCTION_2OP(andin,(*first1r) & (~*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(andni,(~*first1r) & (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(orin ,(*first1r) | (~*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(orni ,(~*first1r) | (*first2r))
+
+
+#define MCCL_MATRIX_BASE_FUNCTION_3OP(func,expr) \
+template<size_t bits, bool masked> \
+void m_ ## func (const m_ptr& dst, const cm_ptr& m2, const cm_ptr& m3, block_tag<bits,masked>) \
+{ \
+	if (dst.rows != m2.rows || dst.columns != m2.columns) \
+		throw std::out_of_range("matrices do not have equal dimensions"); \
+        if (dst.rows == 0 || dst.columns == 0) \
+                return; \
+        size_t blocks = (dst.columns + bits-1)/bits - (masked?1:0); \
+        const size_t stride1 = dst.stride / (bits/64); \
+        const size_t stride2 =  m2.stride / (bits/64); \
+        const size_t stride3 =  m3.stride / (bits/64); \
+        auto first1 = make_block_ptr(dst.ptr, block_tag<bits,masked>()); \
+        auto first2 = make_block_ptr( m2.ptr, block_tag<bits,masked>()); \
+        auto first3 = make_block_ptr( m3.ptr, block_tag<bits,masked>()); \
+        if (!masked)  \
+        { \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2, first3 += stride3) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2, first3r = first3; \
+		        for (; first1r != last1r; ++first1r,++first2r,++first3r) \
+		        	*first1r = expr ; \
+		} \
+	} else { \
+                auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2, first3 += stride3) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2, first3r = first3; \
+		        for (; first1r != last1r; ++first1r,++first2r,++first3r) \
+		        	*first1r = expr ; \
+			auto diff = lwm & (( expr ) ^ *first1r); \
+			*first1r ^= diff; \
+		} \
+	} \
+} \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<64 ,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<64 ,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<128,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<128,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<256,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<256,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<512,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<512,false>);
+
+MCCL_MATRIX_BASE_FUNCTION_3OP(and,(*first2r) & (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(or ,(*first2r) | (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(xor,(*first2r) ^ (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(nand,~((*first2r) & (*first3r)))
+MCCL_MATRIX_BASE_FUNCTION_3OP(nor ,~((*first2r) | (*first3r)))
+MCCL_MATRIX_BASE_FUNCTION_3OP(nxor,~((*first2r) ^ (*first3r)))
+MCCL_MATRIX_BASE_FUNCTION_3OP(andin,(*first2r) & (~*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(andni,(~*first2r) & (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(orin ,(*first2r) | (~*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(orni ,(~*first2r) | (*first3r))
+
+} // namespace detail
 
 MCCL_END_NAMESPACE

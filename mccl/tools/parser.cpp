@@ -91,7 +91,7 @@ mat file_parser::_parse_matrix(const std::vector<parser_binary_vector_t>& Mparse
 			throw std::runtime_error("Parser::_parse_matrix(): unequal row lengths!");
 	ret.resize(Mparsed.size(), columns);
 	for (size_t r = 0; r < Mparsed.size(); ++r)
-		std::copy(Mparsed[r].first.begin(), Mparsed[r].first.end(), ret.data(r));
+		std::copy(Mparsed[r].first.begin(), Mparsed[r].first.end(), ret.wordptr(r));
 	return ret;
 }
 

@@ -90,7 +90,7 @@ public:
         if (words > 1)
             throw std::runtime_error("subISDT_lee_brickell::initialize(): Lee Brickell does not support l > 64");
 
-        firstwordmask = lastwordmask(columns);
+        firstwordmask = detail::lastwordmask(columns);
         padmask = ~firstwordmask;
     }
 
@@ -126,8 +126,8 @@ public:
         {
             firstwords.resize(rows);
             for (unsigned i = 0; i < rows; ++i)
-                firstwords[i] = *H12T.data(i);
-            curpath[0] = *S.data();
+                firstwords[i] = *H12T.wordptr(i);
+            curpath[0] = *S.wordptr();
             curpath[1] = curpath[0] ^ firstwords[0];
         }
     }
