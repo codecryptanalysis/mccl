@@ -25,7 +25,7 @@ struct matrix_trait
     typedef _block_tag this_block_tag;
     static const bool is_matrix = true;
 };
-
+// use as last template parameters to enable function resolution only if type t is a MCCL matrix/vector type
 #define MCCL_ENABLE_IF_VECTOR(t) typename std::enable_if< t ::is_vector,bool>::type = true
 #define MCCL_ENABLE_IF_MATRIX(t) typename std::enable_if< t ::is_matrix,bool>::type = true
 
@@ -234,7 +234,7 @@ typedef mat_t<default_block_tag> mat;
     cnst mattype& setbit(size_t r, size_t c)         cnst { detail::m_setbit(ptr, r, c); return *this; } \
     cnst mattype& setbit(size_t r, size_t c, bool b) cnst { detail::m_setbit(ptr, r, c, b); return *this; } \
     cnst mattype& transpose(const cmat_view& src)    cnst { detail::m_transpose(ptr, src.ptr); return *this; } \
-    cnst mattype& clear()                            cnst { detail::m_set(ptr, 0, this_block_tag()); return *this; } \
+    cnst mattype& clear()                            cnst { detail::m_clear(ptr, this_block_tag()); return *this; } \
     cnst mattype& set(bool b = true)                 cnst { detail::m_set(ptr, b, this_block_tag()); return *this; } \
     cnst mattype& mnot()                             cnst { detail::m_not(ptr, this_block_tag()); return *this; } \
     cnst mattype& setidentity()                      cnst { detail::m_clear(ptr, this_block_tag()); for (size_t i = 0; i < rows() && i < columns(); ++i) setbit(i,i); return *this; } \
@@ -303,19 +303,20 @@ public:
     cvec_view_t(const cv_ptr& p): ptr(p) {}
     
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
-    cvec_view_t(const cvec_view_t& ) = default;
-    cvec_view_t(cvec_view_t&& ) = default;
+    cvec_view_t(const cvec_view_t&  ) = default;
+    cvec_view_t(      cvec_view_t&& ) = default;
     // deleted for safety, to avoid confusion
-    cvec_view_t& operator=(const cvec_view_t& ) = delete;
-    cvec_view_t& operator=(cvec_view_t&& ) = delete;
+    cvec_view_t& operator=(const cvec_view_t&  ) = delete;
+    cvec_view_t& operator=(      cvec_view_t&& ) = delete;
     
     // view management
     void reset(const cv_ptr& p) { ptr = p; }
     void reset(const cvec_view_t& v) { ptr = v.ptr; }
+
     // by default a subvector uses default_block_tag
-    cvec_view_t<default_block_tag> subvector(size_t coloffset, size_t cols) const { return cvec_view_t<default_block_tag>(ptr.subvector(coloffset, cols)); }
-    template<typename block_tag>
-    cvec_view_t<block_tag> subvector(size_t coloffset, size_t cols, block_tag) const { return cvec_view_t<block_tag>(ptr.subvector(coloffset, cols)); }
+    template<size_t bits, bool masked>
+    cvec_view_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cvec_view_t<block_tag<bits,masked>>(ptr.subvector(coloffset, cols)); }
+    cvec_view_t<default_block_tag>      subvector(size_t coloffset, size_t cols)                         const { return cvec_view_t<default_block_tag>     (ptr.subvector(coloffset, cols)); }
 
     // automatic conversion
     operator const cvec_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cvec_view_t<cond_default_block_tag>* > (this); }
@@ -346,18 +347,19 @@ public:
     vec_view_t(const v_ptr& p): ptr(p) {}
     
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
-    vec_view_t(const vec_view_t& v) = default;
-    vec_view_t(vec_view_t&& v) = default;
+    vec_view_t(const vec_view_t& ) = default;
+    vec_view_t(      vec_view_t&&) = default;
     // deleted for safety, to avoid confusion
-    vec_view_t& operator=(const vec_view_t& v) = delete;
-    vec_view_t& operator=(vec_view_t&& v) = delete;
+    vec_view_t& operator=(const vec_view_t& ) = delete;
+    vec_view_t& operator=(      vec_view_t&&) = delete;
 
     // view management
     void reset(const v_ptr& p) { ptr = p; }
     void reset(const vec_view_t& v) { ptr = v.ptr; }
-    vec_view_t<default_block_tag> subvector(size_t coloffset, size_t cols) const { return vec_view_t<default_block_tag>(ptr.subvector(coloffset, cols)); }
-    template<typename block_tag>
-    vec_view_t<block_tag> subvector(size_t coloffset, size_t cols, block_tag) const { return vec_view_t<block_tag>(ptr.subvector(coloffset, cols)); }
+
+    template<size_t bits, bool masked>
+    vec_view_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>) const { return vec_view_t<block_tag<bits,masked>>(ptr.subvector(coloffset, cols)); }
+    vec_view_t<default_block_tag>      subvector(size_t coloffset, size_t cols)                         const { return vec_view_t<default_block_tag>     (ptr.subvector(coloffset, cols)); }
 
     // automatic conversion
     operator       cvec_view_t<this_block_tag>&()       { return *reinterpret_cast<      cvec_view_t<this_block_tag>*>(this); }
@@ -377,8 +379,8 @@ public:
     VECTOR_CLASS_MEMBERS(vec_view_t,)
 
     // vector result
-    template<typename F> const vec_view& operator=(vector_result<F>&& vr) const { vr.r(ptr, this_block_tag()); return *this; }
-    template<typename F>       vec_view& operator=(vector_result<F>&& vr)       { vr.r(ptr, this_block_tag()); return *this; }
+    template<typename F> const vec_view_t& operator=(vector_result<F>&& vr) const { vr.r(ptr, this_block_tag()); return *this; }
+    template<typename F>       vec_view_t& operator=(vector_result<F>&& vr)       { vr.r(ptr, this_block_tag()); return *this; }
 };
 
 template<typename _block_tag>
@@ -398,24 +400,22 @@ public:
     cvec_view_it_t(const cvi_ptr& p): ptr(p) {}
     
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
-    cvec_view_it_t(const cvec_view_it_t& v) = default;
-    cvec_view_it_t(cvec_view_it_t&& v) = default;
+    cvec_view_it_t(const cvec_view_it_t&) = default;
+    cvec_view_it_t(      cvec_view_it_t&&) = default;
     // deleted for safety, to avoid confusion
-    cvec_view_it_t& operator=(const cvec_view_it_t& v) = delete;
-    cvec_view_it_t& operator=(cvec_view_it_t&& v) = delete;
+    cvec_view_it_t& operator=(const cvec_view_it_t& ) = delete;
+    cvec_view_it_t& operator=(      cvec_view_it_t&&) = delete;
 
     // view management
     void reset(const cvi_ptr& p) { ptr = p; }
-    void reset(const cvec_view_it& v) { ptr = v.ptr; }
-    cvec_view_it_t<default_block_tag> subvector(size_t coloffset, size_t cols) const { return cvec_view_it_t<default_block_tag>(ptr.subvectorit(coloffset, cols)); }
-    template<typename block_tag> cvec_view_it_t<block_tag> subvector(size_t coloffset, size_t cols, block_tag) const { return cvec_view_it_t<block_tag>(ptr.subvectorit(coloffset, cols)); }
+    void reset(const cvec_view_it_t& v) { ptr = v.ptr; }
+    
+    template<size_t bits, bool masked>
+    cvec_view_it_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cvec_view_it_t<block_tag<bits,masked>>(ptr.subvectorit(coloffset, cols)); }
+    cvec_view_it_t<default_block_tag>      subvector(size_t coloffset, size_t cols)                         const { return cvec_view_it_t<default_block_tag>     (ptr.subvectorit(coloffset, cols)); }
 
     // automatic conversion
     operator const cvec_view_t<this_block_tag>&() const { return *reinterpret_cast<const cvec_view_t<this_block_tag>*>(this); }
-          cvec_view_it_t& operator*()       { return *this; }
-    const cvec_view_it_t& operator*() const { return *this; }
-          cvec_view_it_t* operator->()       { return this; }
-    const cvec_view_it_t* operator->() const { return this; }
 
     operator const cvec_view_t   <cond_default_block_tag>&() const { return *reinterpret_cast< const cvec_view_t   <cond_default_block_tag>* > (this); }
     operator const cvec_view_it_t<cond_default_block_tag>&() const { return *reinterpret_cast< const cvec_view_it_t<cond_default_block_tag>* > (this); }
@@ -424,6 +424,11 @@ public:
           cvec_view_it_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<      cvec_view_it_t<block_tag<bits,masked>>>(this); }
     template<size_t bits = 64, bool masked = true>
     const cvec_view_it_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const cvec_view_it_t<block_tag<bits,masked>>>(this); }
+
+          cvec_view_it_t& operator*()       { return *this; }
+    const cvec_view_it_t& operator*() const { return *this; }
+          cvec_view_it_t* operator->()       { return this; }
+    const cvec_view_it_t* operator->() const { return this; }
 
     // common vector API class members
     CONST_VECTOR_ITERATOR_CLASS_MEMBERS(cvec_view_it_t)
@@ -447,27 +452,25 @@ public:
     vec_view_it_t(const vi_ptr& p): ptr(p) {}
     
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
-    vec_view_it_t(const vec_view_it_t& v) = default;
-    vec_view_it_t(vec_view_it_t&& v) = default;
+    vec_view_it_t(const vec_view_it_t& ) = default;
+    vec_view_it_t(      vec_view_it_t&&) = default;
     // deleted for safety, to avoid confusion
-    vec_view_it_t& operator=(const vec_view_it_t& v) = delete;
-    vec_view_it_t& operator=(vec_view_it_t&& v) = delete;
+    vec_view_it_t& operator=(const vec_view_it_t& ) = delete;
+    vec_view_it_t& operator=(      vec_view_it_t&&) = delete;
 
     // view management
     void reset(const vi_ptr& p) { ptr = p; }
     void reset(const vec_view_it_t& v) { ptr = v.ptr; }
-    vec_view_it_t<default_block_tag> subvector(size_t coloffset, size_t cols) const { return vec_view_it_t<default_block_tag>(ptr.subvectorit(coloffset, cols)); }
-    template<typename block_tag> vec_view_it_t<block_tag> subvector(size_t coloffset, size_t cols, block_tag) const { return vec_view_it_t<block_tag>(ptr.subvectorit(coloffset, cols)); }
+    
+    template<size_t bits, bool masked>
+    vec_view_it_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>) const { return vec_view_it_t<block_tag<bits,masked>>(ptr.subvectorit(coloffset, cols)); }
+    vec_view_it_t<default_block_tag>      subvector(size_t coloffset, size_t cols)                         const { return vec_view_it_t<default_block_tag>     (ptr.subvectorit(coloffset, cols)); }
 
     // automatic conversion
-    operator const cvec_view_t<this_block_tag>&() const { return *reinterpret_cast<const cvec_view_t<this_block_tag>*>(this); }
-    operator const  vec_view_t<this_block_tag>&() const { return *reinterpret_cast<const  vec_view_t<this_block_tag>*>(this); }
+    operator const cvec_view_t   <this_block_tag>&() const { return *reinterpret_cast<const cvec_view_t   <this_block_tag>*>(this); }
+    operator const  vec_view_t   <this_block_tag>&() const { return *reinterpret_cast<const  vec_view_t   <this_block_tag>*>(this); }
     operator       cvec_view_it_t<this_block_tag>&()       { return *reinterpret_cast<      cvec_view_it_t<this_block_tag>*>(this); }
     operator const cvec_view_it_t<this_block_tag>&() const { return *reinterpret_cast<const cvec_view_it_t<this_block_tag>*>(this); }
-          vec_view_it& operator*()       { return *this; }
-    const vec_view_it& operator*() const { return *this; }
-          vec_view_it* operator->()       { return this; }
-    const vec_view_it* operator->() const { return this; }
 
     operator const cvec_view_t   <cond_default_block_tag>&() const { return *reinterpret_cast< const cvec_view_t   <cond_default_block_tag>* > (this); }
     operator const cvec_view_it_t<cond_default_block_tag>&() const { return *reinterpret_cast< const cvec_view_it_t<cond_default_block_tag>* > (this); }
@@ -479,6 +482,11 @@ public:
     template<size_t bits = 64, bool masked = true>
     const vec_view_it_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const vec_view_it_t<block_tag<bits,masked>>>(this); }
 
+          vec_view_it_t& operator*()       { return *this; }
+    const vec_view_it_t& operator*() const { return *this; }
+          vec_view_it_t* operator->()       { return this; }
+    const vec_view_it_t* operator->() const { return this; }
+
     // common vector API class members
     CONST_VECTOR_ITERATOR_CLASS_MEMBERS(vec_view_it_t)
     CONST_VECTOR_CLASS_MEMBERS
@@ -486,8 +494,8 @@ public:
     VECTOR_CLASS_MEMBERS(vec_view_it_t,)
 
     // vector result
-    template<typename F> const vec_view_it& operator=(vector_result<F>&& vr) const { vr.r(ptr, this_block_tag()); return *this; }
-    template<typename F>       vec_view_it& operator=(vector_result<F>&& vr)       { vr.r(ptr, this_block_tag()); return *this; }
+    template<typename F> const vec_view_it_t& operator=(vector_result<F>&& vr) const { vr.r(ptr, this_block_tag()); return *this; }
+    template<typename F>       vec_view_it_t& operator=(vector_result<F>&& vr)       { vr.r(ptr, this_block_tag()); return *this; }
 };
 
 
@@ -508,26 +516,28 @@ public:
     cmat_view_t(const cm_ptr& p): ptr(p) {}
     
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
-    cmat_view_t(const cmat_view_t& m) = default;
-    cmat_view_t(cmat_view_t&& m) = default;
+    cmat_view_t(const cmat_view_t& ) = default;
+    cmat_view_t(      cmat_view_t&&) = default;
     // deleted for safety, to avoid confusion
-    cmat_view_t& operator=(const cmat_view_t& m) = delete;
-    cmat_view_t& operator=(cmat_view_t&& m) = delete;
+    cmat_view_t& operator=(const cmat_view_t& ) = delete;
+    cmat_view_t& operator=(      cmat_view_t&&) = delete;
 
     // view management
     void reset(const cm_ptr& p) { ptr = p; }
     void reset(const cmat_view_t& m) { ptr = m.ptr; }
     
-    cvec_view_it_t<default_block_tag> subvector(size_t row, size_t coloffset, size_t cols) const { return cvec_view_it_t<default_block_tag>(ptr.subvectorit(row, coloffset, cols)); }
-    template<typename block_tag> cvec_view_it_t<block_tag> subvector(size_t row, size_t coloffset, size_t cols, block_tag) const { return cvec_view_it_t<block_tag>(ptr.subvectorit(row, coloffset, cols)); }
+    template<size_t bits, bool masked>
+    cvec_view_it_t<block_tag<bits,masked>> subvector(size_t row, size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cvec_view_it_t<block_tag<bits,masked>>(ptr.subvectorit(row, coloffset, cols)); }
+    cvec_view_it_t<default_block_tag>      subvector(size_t row, size_t coloffset, size_t cols)                         const { return cvec_view_it_t<default_block_tag>     (ptr.subvectorit(row, coloffset, cols)); }
     
-    cmat_view_t<default_block_tag> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return cmat_view_t<default_block_tag>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
-    template<typename block_tag> cmat_view_t<block_tag> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols, block_tag) const { return cmat_view_t<block_tag>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+    template<size_t bits, bool masked>
+    cmat_view_t<block_tag<bits,masked>> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cmat_view_t<block_tag<bits,masked>>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+    cmat_view_t<default_block_tag>      submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols)                         const { return cmat_view_t<default_block_tag>     (ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
 
     cvec_view_it_t<this_block_tag> operator[](size_t r) const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
     cvec_view_it_t<this_block_tag> operator()(size_t r) const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
-    cvec_view_it_t<this_block_tag> begin() const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(0)); }
-    cvec_view_it_t<this_block_tag> end()   const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(rows())); }
+    cvec_view_it_t<this_block_tag> begin()              const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(0)); }
+    cvec_view_it_t<this_block_tag> end()                const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(rows())); }
 
     // automatic conversion
     operator const cmat_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cmat_view_t<cond_default_block_tag>* > (this); }
@@ -558,21 +568,27 @@ public:
     mat_view_t(const m_ptr& p): ptr(p) {}
     
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
-    mat_view_t(const mat_view_t& m) = default;
-    mat_view_t(mat_view_t&& m) = default;
-    mat_view_t& operator=(const mat_view_t& m) = default;
-    mat_view_t& operator=(mat_view_t&& m) = default;
+    mat_view_t(const mat_view_t& ) = default;
+    mat_view_t(      mat_view_t&&) = default;
+    mat_view_t& operator=(const mat_view_t& ) = default;
+    mat_view_t& operator=(      mat_view_t&&) = default;
 
     // view management
     void reset(const m_ptr& p) { ptr = p; }
     void reset(const mat_view_t& m) { ptr = m.ptr; }
-    vec_view_it_t<default_block_tag> subvector(size_t row, size_t coloffset, size_t cols) const { return vec_view_it_t<default_block_tag>(ptr.subvectorit(row, coloffset, cols)); }
-    mat_view_t<default_block_tag> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return mat_view_t<default_block_tag>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+
+    template<size_t bits, bool masked>
+    vec_view_it_t<block_tag<bits,masked>> subvector(size_t row, size_t coloffset, size_t cols, block_tag<bits,masked>) const { return vec_view_it_t<block_tag<bits,masked>>(ptr.subvectorit(row, coloffset, cols)); }
+    vec_view_it_t<default_block_tag>      subvector(size_t row, size_t coloffset, size_t cols)                         const { return vec_view_it_t<default_block_tag>     (ptr.subvectorit(row, coloffset, cols)); }
+
+    template<size_t bits, bool masked>
+    mat_view_t<block_tag<bits,masked>> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols, block_tag<bits,masked>) const { return mat_view_t<block_tag<bits,masked>>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+    mat_view_t<default_block_tag>      submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols)                         const { return mat_view_t<default_block_tag>     (ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
 
     vec_view_it_t<this_block_tag> operator[](size_t r) const { return vec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
     vec_view_it_t<this_block_tag> operator()(size_t r) const { return vec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
-    vec_view_it_t<this_block_tag> begin() const { return vec_view_it_t<this_block_tag>(ptr.subvectorit(0)); }
-    vec_view_it_t<this_block_tag> end()   const { return vec_view_it_t<this_block_tag>(ptr.subvectorit(rows())); }
+    vec_view_it_t<this_block_tag> begin()              const { return vec_view_it_t<this_block_tag>(ptr.subvectorit(0)); }
+    vec_view_it_t<this_block_tag> end()                const { return vec_view_it_t<this_block_tag>(ptr.subvectorit(rows())); }
 
     // automatic conversion
     operator       cmat_view_t<this_block_tag>&()       { return *reinterpret_cast<      cmat_view_t<this_block_tag>*>(this); }
@@ -592,8 +608,8 @@ public:
     MATRIX_CLASS_MEMBERS(mat_view_t,)
 
     // matrix result
-    template<typename F> const mat_view& operator=(matrix_result<F>&& mr) const { mr.r(ptr,this_block_tag()); return *this; }
-    template<typename F>       mat_view& operator=(matrix_result<F>&& mr)       { mr.r(ptr,this_block_tag()); return *this; }
+    template<typename F> const mat_view_t& operator=(matrix_result<F>&& mr) const { mr.r(ptr,this_block_tag()); return *this; }
+    template<typename F>       mat_view_t& operator=(matrix_result<F>&& mr)       { mr.r(ptr,this_block_tag()); return *this; }
 };
 
 
@@ -661,31 +677,31 @@ public:
     vec_t(size_t _columns, bool value = false): ptr(), mem() { resize(_columns,value); }
     
     // copy/move constructors & assignment copy/move the view parameters, not the view contents
-    vec_t(const vec_t& v): ptr(), mem() { assign(v); }
+    vec_t(const vec_t&  v): ptr(), mem() { assign(v); }
     vec_t(      vec_t&& v): ptr(), mem() { swap(v); }
-    vec_t& operator=(const vec_t& v) { assign(v); return *this; }
+    
+    vec_t& operator=(const vec_t&  v) { assign(v); return *this; }
     vec_t& operator=(      vec_t&& v) { swap(v); return *this; }
 
     template<typename vector_t, MCCL_ENABLE_IF_VECTOR(vector_t)> vec_t(const vector_t& v): ptr(), mem() { assign(v); }
     template<typename vector_t, MCCL_ENABLE_IF_VECTOR(vector_t)> vec_t& operator=(const vector_t& v) { assign(v); return *this; }
 
-    template<typename F>
-    vec_t(vector_result<F>&& vr) { vr.r.resize_me(*this); vr.r(ptr, tag()); }
+    template<typename F> vec_t(vector_result<F>&& vr) { vr.r.resize_me(*this); vr.r(ptr, tag()); }
 
     // view management
-    cvec_view_t<default_block_tag> subvector(size_t coloffset, size_t cols) const { return cvec_view_t<default_block_tag>(ptr.subvector(coloffset, cols)); }
-     vec_view_t<default_block_tag> subvector(size_t coloffset, size_t cols)       { return  vec_view_t<default_block_tag>(ptr.subvector(coloffset, cols)); }
-    template<size_t bits, bool masked> cvec_view_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cvec_view_t<block_tag<bits,masked>>(ptr.subvector(coloffset, cols)); }
-    template<size_t bits, bool masked>  vec_view_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>)       { return  vec_view_t<block_tag<bits,masked>>(ptr.subvector(coloffset, cols)); }
+    template<size_t bits, bool masked>
+    cvec_view_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cvec_view_t<block_tag<bits,masked>>(ptr.subvector(coloffset, cols)); }
+    cvec_view_t<default_block_tag>      subvector(size_t coloffset, size_t cols)                         const { return cvec_view_t<default_block_tag>     (ptr.subvector(coloffset, cols)); }
+    template<size_t bits, bool masked>
+    vec_view_t<block_tag<bits,masked>> subvector(size_t coloffset, size_t cols, block_tag<bits,masked>)       { return  vec_view_t<block_tag<bits,masked>>(ptr.subvector(coloffset, cols)); }
+    vec_view_t<default_block_tag>      subvector(size_t coloffset, size_t cols)                               { return  vec_view_t<default_block_tag>     (ptr.subvector(coloffset, cols)); }
     
     // automatic conversion
     operator const cvec_view_t<this_block_tag>&() const { return *reinterpret_cast<const cvec_view_t<this_block_tag>*>(this); }
     operator const  vec_view_t<this_block_tag>&()       { return *reinterpret_cast<const  vec_view_t<this_block_tag>*>(this); }
 
-    operator const cvec_view_t   <cond_default_block_tag>& () const { return *reinterpret_cast< const cvec_view_t   <cond_default_block_tag>* > (this); }
-    operator const cvec_view_it_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cvec_view_it_t<cond_default_block_tag>* > (this); }
-    operator const  vec_view_t   <cond_default_block_tag>& () const { return *reinterpret_cast< const  vec_view_t   <cond_default_block_tag>* > (this); }
-    operator const  vec_view_it_t<cond_default_block_tag>& () const { return *reinterpret_cast< const  vec_view_it_t<cond_default_block_tag>* > (this); }
+    operator const cvec_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cvec_view_t<cond_default_block_tag>* > (this); }
+    operator const  vec_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const  vec_view_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
            vec_view_it_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<       vec_view_it_t<block_tag<bits,masked>>>(this); }
@@ -697,7 +713,7 @@ public:
     VECTOR_CLASS_MEMBERS(vec_t,)
 
     // vector result
-    template<typename F>       vec_t& operator=(vector_result<F>&& vr)       { vr.r.resize_me(*this); vr.r(ptr, tag()); return *this; }
+    template<typename F> vec_t& operator=(vector_result<F>&& vr) { vr.r.resize_me(*this); vr.r(ptr, tag()); return *this; }
 };
 
 template<typename _block_tag>
@@ -764,27 +780,36 @@ public:
     mat_t(const size_t rows, const size_t columns, bool value = false): ptr(), mem() { resize(rows, columns, value); }
     
     // copy/move constructors & assignment copy/move the contents
-    mat_t(const mat_t& m): ptr(), mem() { assign(m); }
+    mat_t(const mat_t&  m): ptr(), mem() { assign(m); }
     mat_t(      mat_t&& m): ptr(), mem() { swap(m); }
-    mat_t& operator=(const mat_t& m) { assign(m); return *this; }
+    mat_t& operator=(const mat_t&  m) { assign(m); return *this; }
     mat_t& operator=(      mat_t&& m) { assign(m); return *this; }
 
     template<typename matrix_t, MCCL_ENABLE_IF_MATRIX(matrix_t)> mat_t(const matrix_t& m): ptr(), mem() { assign(m); }
     template<typename matrix_t, MCCL_ENABLE_IF_MATRIX(matrix_t)> mat_t& operator=(const matrix_t& m) { assign(m); return *this; }
 
-    template<typename F>
-    mat_t(matrix_result<F>&& mr) { mr.r.resize_me(*this); mr.r(ptr, tag()); }
+    template<typename F> mat_t(matrix_result<F>&& mr) { mr.r.resize_me(*this); mr.r(ptr, tag()); }
 
     // view management
-    cvec_view_it_t<default_block_tag> subvector(size_t row, size_t coloffset, size_t cols) const { return cvec_view_it_t<default_block_tag>(ptr.subvectorit(row, coloffset, cols)); }
-     vec_view_it_t<default_block_tag> subvector(size_t row, size_t coloffset, size_t cols)       { return  vec_view_it_t<default_block_tag>(ptr.subvectorit(row, coloffset, cols)); }
-    cmat_view_t<default_block_tag> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols) const { return cmat_view_t<default_block_tag>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
-     mat_view_t<default_block_tag> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols)       { return  mat_view_t<default_block_tag>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+    template<size_t bits, bool masked>
+    cvec_view_it_t<block_tag<bits,masked>> subvector(size_t row, size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cvec_view_it_t<block_tag<bits,masked>>(ptr.subvectorit(row, coloffset, cols)); }
+    cvec_view_it_t<default_block_tag>      subvector(size_t row, size_t coloffset, size_t cols)                         const { return cvec_view_it_t<default_block_tag>     (ptr.subvectorit(row, coloffset, cols)); }
+    template<size_t bits, bool masked>
+     vec_view_it_t<block_tag<bits,masked>> subvector(size_t row, size_t coloffset, size_t cols, block_tag<bits,masked>)       { return  vec_view_it_t<block_tag<bits,masked>>(ptr.subvectorit(row, coloffset, cols)); }
+     vec_view_it_t<default_block_tag>      subvector(size_t row, size_t coloffset, size_t cols)                               { return  vec_view_it_t<default_block_tag>     (ptr.subvectorit(row, coloffset, cols)); }
+    
+    template<size_t bits, bool masked>
+    cmat_view_t<block_tag<bits,masked>> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols, block_tag<bits,masked>) const { return cmat_view_t<block_tag<bits,masked>>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+    cmat_view_t<default_block_tag>      submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols)                         const { return cmat_view_t<default_block_tag>     (ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+    template<size_t bits, bool masked>
+     mat_view_t<block_tag<bits,masked>> submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols, block_tag<bits,masked>)       { return  mat_view_t<block_tag<bits,masked>>(ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
+     mat_view_t<default_block_tag>      submatrix(size_t rowoffset, size_t _rows, size_t coloffset, size_t cols)                               { return  mat_view_t<default_block_tag>     (ptr.submatrix(rowoffset, _rows, coloffset, cols)); }
 
     cvec_view_it_t<this_block_tag> operator[](size_t r) const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
-    cvec_view_it_t<this_block_tag> operator()(size_t r) const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
      vec_view_it_t<this_block_tag> operator[](size_t r)       { return  vec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
+    cvec_view_it_t<this_block_tag> operator()(size_t r) const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
      vec_view_it_t<this_block_tag> operator()(size_t r)       { return  vec_view_it_t<this_block_tag>(ptr.subvectorit(r)); }
+
     cvec_view_it_t<this_block_tag> begin() const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(0)); }
     cvec_view_it_t<this_block_tag> end()   const { return cvec_view_it_t<this_block_tag>(ptr.subvectorit(rows())); }
      vec_view_it_t<this_block_tag> begin()       { return vec_view_it_t<this_block_tag>(ptr.subvectorit(0)); }
@@ -794,8 +819,8 @@ public:
     operator const cmat_view_t<this_block_tag>&() const { return *reinterpret_cast<const cmat_view_t<this_block_tag>*>(this); }
     operator const  mat_view_t<this_block_tag>&()       { return *reinterpret_cast<const  mat_view_t<this_block_tag>*>(this); }
 
-    operator const  mat_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const  mat_view_t<cond_default_block_tag>* > (this); }
     operator const cmat_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cmat_view_t<cond_default_block_tag>* > (this); }
+    operator const  mat_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const  mat_view_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
            mat_view_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<       mat_view_t<block_tag<bits,masked>>>(this); }
@@ -807,7 +832,7 @@ public:
     MATRIX_CLASS_MEMBERS(mat_t,)
 
     // vector result
-    template<typename F>       mat& operator=(matrix_result<F>&& mr)       { mr.r.resize_me(*this); mr.r(ptr, tag()); return *this; }
+    template<typename F> mat_t& operator=(matrix_result<F>&& mr) { mr.r.resize_me(*this); mr.r(ptr, tag()); return *this; }
 };
 
 template<typename vector1_t, typename vector2_t, MCCL_ENABLE_IF_VECTOR(vector1_t), MCCL_ENABLE_IF_VECTOR(vector2_t)>
@@ -824,45 +849,6 @@ inline bool operator==(const vector1_t& v1, const vec_t<tag2>& v2) { return v1.i
 template<typename vector1_t, typename tag2, MCCL_ENABLE_IF_VECTOR(vector1_t)>
 inline bool operator!=(const vector1_t& v1, const vec_t<tag2>& v2) { return !v1.isequal(v2); }
 
-/*
-template<typename tag1, typename tag2> inline bool operator==(const cvec_view_t<tag1>& v1, const cvec_view_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const cvec_view_t<tag1>& v1, const cvec_view_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const cvec_view_t<tag1>& v1, const  vec_view_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const cvec_view_t<tag1>& v1, const  vec_view_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const  vec_view_t<tag1>& v1, const cvec_view_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const  vec_view_t<tag1>& v1, const cvec_view_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const  vec_view_t<tag1>& v1, const  vec_view_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const  vec_view_t<tag1>& v1, const  vec_view_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-
-template<typename tag1, typename tag2> inline bool operator==(const cvec_view_it_t<tag1>& v1, const cvec_view_it_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const cvec_view_it_t<tag1>& v1, const cvec_view_it_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const cvec_view_it_t<tag1>& v1, const  vec_view_it_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const cvec_view_it_t<tag1>& v1, const  vec_view_it_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const  vec_view_it_t<tag1>& v1, const cvec_view_it_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const  vec_view_it_t<tag1>& v1, const cvec_view_it_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const  vec_view_it_t<tag1>& v1, const  vec_view_it_t<tag2>& v2) { return v1.ptr == v2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const  vec_view_it_t<tag1>& v1, const  vec_view_it_t<tag2>& v2) { return v1.ptr != v2.ptr; }
-
-template<typename tag1, typename tag2> inline bool operator==(const vec_t<tag1>& v1,          const vec_t<tag2>& v2)       { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const vec_t<tag1>& v1,          const vec_t<tag2>& v2)       { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const vec_t<tag1>& v1,          const vec_view_t<tag2>& v2)  { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const vec_t<tag1>& v1,          const vec_view_t<tag2>& v2)  { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const vec_t<tag1>& v1,          const cvec_view_t<tag2>& v2) { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const vec_t<tag1>& v1,          const cvec_view_t<tag2>& v2) { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const vec_t<tag1>& v1,          const vec_view_it_t<tag2>& v2)  { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const vec_t<tag1>& v1,          const vec_view_it_t<tag2>& v2)  { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const vec_t<tag1>& v1,          const cvec_view_it_t<tag2>& v2) { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const vec_t<tag1>& v1,          const cvec_view_it_t<tag2>& v2) { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const vec_view_t<tag1>& v1,     const vec_t<tag2>& v2)       { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const vec_view_t<tag1>& v1,     const vec_t<tag2>& v2)       { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const cvec_view_t<tag1>& v1,    const vec_t<tag2>& v2)       { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const cvec_view_t<tag1>& v1,    const vec_t<tag2>& v2)       { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const vec_view_it_t<tag1>& v1,  const vec_t<tag2>& v2)       { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const vec_view_it_t<tag1>& v1,  const vec_t<tag2>& v2)       { return !v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator==(const cvec_view_it_t<tag1>& v1, const vec_t<tag2>& v2)       { return v1.isequal(v2); }
-template<typename tag1, typename tag2> inline bool operator!=(const cvec_view_it_t<tag1>& v1, const vec_t<tag2>& v2)       { return !v1.isequal(v2); }
-*/
-
 template<typename matrix1_t, typename matrix2_t, MCCL_ENABLE_IF_MATRIX(matrix1_t), MCCL_ENABLE_IF_MATRIX(matrix2_t)>
 inline bool operator==(const matrix1_t& m1, const matrix2_t& m2) { return m1.ptr == m2.ptr; }
 template<typename matrix1_t, typename matrix2_t, MCCL_ENABLE_IF_MATRIX(matrix1_t), MCCL_ENABLE_IF_MATRIX(matrix2_t)>
@@ -877,43 +863,10 @@ inline bool operator==(const matrix1_t& m1, const mat_t<tag2>& m2) { return m1.i
 template<typename matrix1_t, typename tag2, MCCL_ENABLE_IF_MATRIX(matrix1_t)>
 inline bool operator!=(const matrix1_t& m1, const mat_t<tag2>& m2) { return !m1.isequal(m2); }
 
-/*
-template<typename tag1, typename tag2> inline bool operator==(const cmat_view_t<tag1>& m1, const cmat_view_t<tag2>& m2) { return m1.ptr == m2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const cmat_view_t<tag1>& m1, const cmat_view_t<tag2>& m2) { return m1.ptr != m2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const cmat_view_t<tag1>& m1, const  mat_view_t<tag2>& m2) { return m1.ptr == m2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const cmat_view_t<tag1>& m1, const  mat_view_t<tag2>& m2) { return m1.ptr != m2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const  mat_view_t<tag1>& m1, const cmat_view_t<tag2>& m2) { return m1.ptr == m2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const  mat_view_t<tag1>& m1, const cmat_view_t<tag2>& m2) { return m1.ptr != m2.ptr; }
-template<typename tag1, typename tag2> inline bool operator==(const  mat_view_t<tag1>& m1, const  mat_view_t<tag2>& m2) { return m1.ptr == m2.ptr; }
-template<typename tag1, typename tag2> inline bool operator!=(const  mat_view_t<tag1>& m1, const  mat_view_t<tag2>& m2) { return m1.ptr != m2.ptr; }
-
-template<typename tag1, typename tag2> inline bool operator==(const mat_t<tag1>& m1,       const mat_t<tag2>& m2)       { return m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator!=(const mat_t<tag1>& m1,       const mat_t<tag2>& m2)       { return !m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator==(const mat_t<tag1>& m1,       const mat_view_t<tag2>& m2)  { return m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator!=(const mat_t<tag1>& m1,       const mat_view_t<tag2>& m2)  { return !m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator==(const mat_t<tag1>& m1,       const cmat_view_t<tag2>& m2) { return m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator!=(const mat_t<tag1>& m1,       const cmat_view_t<tag2>& m2) { return !m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator==(const mat_view_t<tag1>& m1,  const mat_t<tag2>& m2)       { return m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator!=(const mat_view_t<tag1>& m1,  const mat_t<tag2>& m2)       { return !m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator==(const cmat_view_t<tag1>& m1, const mat_t<tag2>& m2)       { return m1.isequal(m2); }
-template<typename tag1, typename tag2> inline bool operator!=(const cmat_view_t<tag1>& m1, const mat_t<tag2>& m2)       { return !m1.isequal(m2); }
-*/
-
 template<typename vector_t, MCCL_ENABLE_IF_VECTOR(vector_t)>
 inline std::ostream& operator<<(std::ostream& o, const vector_t& v) { detail::v_print(o, v.ptr); return o; }
 template<typename matrix_t, MCCL_ENABLE_IF_MATRIX(matrix_t)>
 inline std::ostream& operator<<(std::ostream& o, const matrix_t& m) { detail::m_print(o, m.ptr); return o; }
-
-/*
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const cvec_view_t<tag>& v)    { detail::v_print(o, v.ptr); return o; }
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const  vec_view_t<tag>& v)    { detail::v_print(o, v.ptr); return o; }
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const cvec_view_it_t<tag>& v) { detail::v_print(o, v.ptr); return o; }
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const  vec_view_it_t<tag>& v) { detail::v_print(o, v.ptr); return o; }
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const  vec_t<tag>& v)         { detail::v_print(o, v.ptr); return o; }
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const cmat_view_t<tag>& m)    { detail::m_print(o, m.ptr); return o; }
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const  mat_view_t<tag>& m)    { detail::m_print(o, m.ptr); return o; }
-template<typename tag> inline std::ostream& operator<<(std::ostream& o, const  mat_t<tag>& m)         { detail::v_print(o, m.ptr); return o; }
-*/
 
 #define MCCL_VECTOR_RESULT_FUNCTION_OP2(func) \
 template<typename _block_tag2> \
@@ -930,7 +883,7 @@ struct v_ptr_op2_result_ ## func \
     template<size_t bits1, bool masked1> void operator()(const v_ptr& v1, block_tag<bits1,masked1>) { detail::  func (v1,*v2, block_tag<bits1,masked1>(), block_tag2()); } \
     void resize_me(vec& v) { v.resize(v2->columns); } \
 }; \
-template<typename vector_t, typename std::enable_if<vector_t::is_vector,bool>::type = true> \
+template<typename vector_t, MCCL_ENABLE_IF_VECTOR(vector_t)> \
 inline vector_result<v_ptr_op2_result_ ## func <typename vector_t::this_block_tag> > func (const vector_t& v2) \
 { \
     return vector_result<v_ptr_op2_result_ ## func <typename vector_t::this_block_tag> >(v2.ptr); \
@@ -956,7 +909,7 @@ struct v_ptr_op3_result_ ## func \
     template<size_t bits1, bool masked1> void operator()(const v_ptr& v1, block_tag<bits1,masked1>) { detail::  func (v1,*v2,*v3, block_tag<bits1,masked1>(), block_tag2(), block_tag3()); } \
     void resize_me(vec& v) { v.resize(v2->columns); } \
 }; \
-template<typename vector_t2, typename vector_t3, typename std::enable_if<vector_t2::is_vector,bool>::type = true, typename std::enable_if<vector_t3::is_vector,bool>::type = true> \
+template<typename vector_t2, typename vector_t3, MCCL_ENABLE_IF_VECTOR(vector_t2), MCCL_ENABLE_IF_VECTOR(vector_t3)> \
 inline vector_result<v_ptr_op3_result_ ## func <typename vector_t2::this_block_tag, typename vector_t3::this_block_tag>> func (const vector_t2& v2, const vector_t3& v3) \
 { \
     return vector_result<v_ptr_op3_result_ ## func <typename vector_t2::this_block_tag, typename vector_t3::this_block_tag> >(v2.ptr, v3.ptr); \
@@ -989,7 +942,7 @@ struct m_ptr_op2_result_ ## func \
     template<size_t bits1, bool masked1> void operator()(const m_ptr& m1, block_tag<bits1,masked1>) { detail:: func (m1,*m2, block_tag<bits1,masked1>(), block_tag2()); } \
     void resize_me(mat& m) { m.resize(m2->rows, m2->columns); } \
 }; \
-template<typename matrix_t, typename std::enable_if<matrix_t::is_matrix,bool>::type = true> \
+template<typename matrix_t, MCCL_ENABLE_IF_MATRIX(matrix_t)> \
 inline matrix_result<m_ptr_op2_result_ ## func <typename matrix_t::this_block_tag>> func (const matrix_t& m2) \
 { \
     return matrix_result<m_ptr_op2_result_ ## func <typename matrix_t::this_block_tag> >(m2.ptr); \
@@ -1010,7 +963,7 @@ struct m_ptr_op2_result_m_transpose
     template<size_t bits1, bool masked1> void operator()(const m_ptr& m1, block_tag<bits1,masked1>) { detail::m_transpose(m1,*m2); }
     void resize_me(mat& m) { m.resize(m2->columns, m2->rows); }
 };
-template<typename matrix_t, typename std::enable_if<matrix_t::is_matrix,bool>::type = true>
+template<typename matrix_t, MCCL_ENABLE_IF_MATRIX(matrix_t)>
 inline matrix_result<m_ptr_op2_result_m_transpose> m_transpose(const matrix_t& m2)
 {
     return matrix_result<m_ptr_op2_result_m_transpose>(m2.ptr);
@@ -1033,7 +986,7 @@ struct m_ptr_op3_result_ ## func \
     template<size_t bits1, bool masked1> void operator()(const m_ptr& m1, block_tag<bits1,masked1>) { detail:: func (m1,*m2,*m3, block_tag<bits1,masked1>(), block_tag2(), block_tag3()); } \
     void resize_me(mat& m) { m.resize(m2->rows, m2->columns); } \
 }; \
-template<typename matrix_t2, typename matrix_t3, typename std::enable_if<matrix_t2::is_matrix,bool>::type = true, typename std::enable_if<matrix_t3::is_matrix,bool>::type = true> \
+template<typename matrix_t2, typename matrix_t3, MCCL_ENABLE_IF_MATRIX(matrix_t2), MCCL_ENABLE_IF_MATRIX(matrix_t3)> \
 inline matrix_result<m_ptr_op3_result_ ## func <typename matrix_t2::this_block_tag, typename matrix_t3::this_block_tag>> func (const matrix_t2& m2, const matrix_t3& m3) \
 { \
     return matrix_result<m_ptr_op3_result_ ## func <typename matrix_t2::this_block_tag, typename matrix_t3::this_block_tag> >(m2.ptr, m3.ptr); \
@@ -1051,31 +1004,31 @@ MCCL_MATRIX_RESULT_FUNCTION_OP3(m_orin)
 MCCL_MATRIX_RESULT_FUNCTION_OP3(m_orni)
 
 
-template<typename vector_t2, typename vector_t3, typename std::enable_if<vector_t2::is_vector,bool>::type = true, typename std::enable_if<vector_t3::is_vector,bool>::type = true>
+template<typename vector_t2, typename vector_t3, MCCL_ENABLE_IF_VECTOR(vector_t2), MCCL_ENABLE_IF_VECTOR(vector_t3)>
 inline auto operator & (const vector_t2& v2, const vector_t3& v3) -> decltype(v_and(v2,v3)) { return v_and(v2, v3); }
-template<typename vector_t2, typename vector_t3, typename std::enable_if<vector_t2::is_vector,bool>::type = true, typename std::enable_if<vector_t3::is_vector,bool>::type = true>
+template<typename vector_t2, typename vector_t3, MCCL_ENABLE_IF_VECTOR(vector_t2), MCCL_ENABLE_IF_VECTOR(vector_t3)>
 inline auto operator | (const vector_t2& v2, const vector_t3& v3) -> decltype(v_or (v2,v3)) { return v_or (v2, v3); }
-template<typename vector_t2, typename vector_t3, typename std::enable_if<vector_t2::is_vector,bool>::type = true, typename std::enable_if<vector_t3::is_vector,bool>::type = true>
+template<typename vector_t2, typename vector_t3, MCCL_ENABLE_IF_VECTOR(vector_t2), MCCL_ENABLE_IF_VECTOR(vector_t3)>
 inline auto operator ^ (const vector_t2& v2, const vector_t3& v3) -> decltype(v_xor(v2,v3)) { return v_xor(v2, v3); }
 
-template<typename matrix_t2, typename matrix_t3, typename std::enable_if<matrix_t2::is_matrix,bool>::type = true, typename std::enable_if<matrix_t3::is_matrix,bool>::type = true>
+template<typename matrix_t2, typename matrix_t3, MCCL_ENABLE_IF_MATRIX(matrix_t2), MCCL_ENABLE_IF_MATRIX(matrix_t3)>
 inline auto operator & (const matrix_t2& m2, const matrix_t3& m3) -> decltype(m_and(m2,m3)) { return m_and(m2, m3); }
-template<typename matrix_t2, typename matrix_t3, typename std::enable_if<matrix_t2::is_matrix,bool>::type = true, typename std::enable_if<matrix_t3::is_matrix,bool>::type = true>
+template<typename matrix_t2, typename matrix_t3, MCCL_ENABLE_IF_MATRIX(matrix_t2), MCCL_ENABLE_IF_MATRIX(matrix_t3)>
 inline auto operator | (const matrix_t2& m2, const matrix_t3& m3) -> decltype(m_or (m2,m3)) { return m_or (m2, m3); }
-template<typename matrix_t2, typename matrix_t3, typename std::enable_if<matrix_t2::is_matrix,bool>::type = true, typename std::enable_if<matrix_t3::is_matrix,bool>::type = true>
+template<typename matrix_t2, typename matrix_t3, MCCL_ENABLE_IF_MATRIX(matrix_t2), MCCL_ENABLE_IF_MATRIX(matrix_t3)>
 inline auto operator ^ (const matrix_t2& m2, const matrix_t3& m3) -> decltype(m_xor(m2,m3)) { return m_xor(m2, m3); }
 
-template<typename matrix_t, typename std::enable_if<matrix_t::is_matrix,bool>::type = true>
+template<typename matrix_t, MCCL_ENABLE_IF_MATRIX(matrix_t)>
 inline size_t hammingweight(const matrix_t& m) { return m.hw(); }
 
-template<typename vector_t, typename std::enable_if<vector_t::is_vector,bool>::type = true>
+template<typename vector_t, MCCL_ENABLE_IF_VECTOR(vector_t)>
 inline size_t hammingweight(const vector_t& v) { return v.hw(); }
 
-template<typename vector_t1, typename vector_t2, typename std::enable_if<vector_t1::is_vector,bool>::type = true, typename std::enable_if<vector_t2::is_vector,bool>::type = true>
+template<typename vector_t1, typename vector_t2, MCCL_ENABLE_IF_VECTOR(vector_t1), MCCL_ENABLE_IF_VECTOR(vector_t2)>
 inline size_t hammingweight_and(const vector_t1& v1, const vector_t2& v2) { return detail::v_hw_and(v1.ptr, v2.ptr); }
-template<typename vector_t1, typename vector_t2, typename std::enable_if<vector_t1::is_vector,bool>::type = true, typename std::enable_if<vector_t2::is_vector,bool>::type = true>
+template<typename vector_t1, typename vector_t2, MCCL_ENABLE_IF_VECTOR(vector_t1), MCCL_ENABLE_IF_VECTOR(vector_t2)>
 inline size_t hammingweight_or (const vector_t1& v1, const vector_t2& v2) { return detail::v_hw_or (v1.ptr, v2.ptr); }
-template<typename vector_t1, typename vector_t2, typename std::enable_if<vector_t1::is_vector,bool>::type = true, typename std::enable_if<vector_t2::is_vector,bool>::type = true>
+template<typename vector_t1, typename vector_t2, MCCL_ENABLE_IF_VECTOR(vector_t1), MCCL_ENABLE_IF_VECTOR(vector_t2)>
 inline size_t hammingweight_xor(const vector_t1& v1, const vector_t2& v2) { return detail::v_hw_xor(v1.ptr, v2.ptr); }
 
 
