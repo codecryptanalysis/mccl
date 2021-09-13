@@ -86,8 +86,8 @@ typedef cmat_view_t<default_block_tag> cmat_view;
 template<typename _block_tag = default_block_tag> class vec_t;
 template<typename _block_tag = default_block_tag> class mat_t;
 
-typedef vec_t<default_block_tag> vec;
-typedef mat_t<default_block_tag> mat;
+typedef vec_t<block_tag<256,false>> vec;
+typedef mat_t<block_tag<256,false>> mat;
 
 //template<size_t bits, bool masked> using  vec_t = vec_t<block_tag<bits,masked>>;
 //template<size_t bits, bool masked> using  mat_t = mat_t<block_tag<bits,masked>>;
@@ -322,9 +322,9 @@ public:
     operator const cvec_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cvec_view_t<cond_default_block_tag>* > (this); }
     
     template<size_t bits = 64, bool masked = true>
-          cvec_view_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<      cvec_view_t<block_tag<bits,masked>>>(this); }
+          cvec_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<      cvec_view_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const cvec_view_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const cvec_view_t<block_tag<bits,masked>>>(this); }
+    const cvec_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const cvec_view_t<block_tag<bits,masked>>*>(this); }
 
     // common vector API class members
     CONST_VECTOR_CLASS_MEMBERS
@@ -369,9 +369,9 @@ public:
     operator const  vec_view_t<cond_default_block_tag>&() const { return *reinterpret_cast< const  vec_view_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
-          vec_view_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<      vec_view_t<block_tag<bits,masked>>>(this); }
+          vec_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<      vec_view_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const vec_view_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const vec_view_t<block_tag<bits,masked>>>(this); }
+    const vec_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const vec_view_t<block_tag<bits,masked>>*>(this); }
 
     // common vector API class members
     CONST_VECTOR_CLASS_MEMBERS
@@ -421,9 +421,9 @@ public:
     operator const cvec_view_it_t<cond_default_block_tag>&() const { return *reinterpret_cast< const cvec_view_it_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
-          cvec_view_it_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<      cvec_view_it_t<block_tag<bits,masked>>>(this); }
+          cvec_view_it_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<      cvec_view_it_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const cvec_view_it_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const cvec_view_it_t<block_tag<bits,masked>>>(this); }
+    const cvec_view_it_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const cvec_view_it_t<block_tag<bits,masked>>*>(this); }
 
           cvec_view_it_t& operator*()       { return *this; }
     const cvec_view_it_t& operator*() const { return *this; }
@@ -478,9 +478,9 @@ public:
     operator const  vec_view_it_t<cond_default_block_tag>&() const { return *reinterpret_cast< const  vec_view_it_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
-          vec_view_it_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<      vec_view_it_t<block_tag<bits,masked>>>(this); }
+          vec_view_it_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<      vec_view_it_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const vec_view_it_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const vec_view_it_t<block_tag<bits,masked>>>(this); }
+    const vec_view_it_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const vec_view_it_t<block_tag<bits,masked>>*>(this); }
 
           vec_view_it_t& operator*()       { return *this; }
     const vec_view_it_t& operator*() const { return *this; }
@@ -543,9 +543,9 @@ public:
     operator const cmat_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cmat_view_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
-          cmat_view_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<      cmat_view_t<block_tag<bits,masked>>>(this); }
+          cmat_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<      cmat_view_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const cmat_view_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const cmat_view_t<block_tag<bits,masked>>>(this); }
+    const cmat_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const cmat_view_t<block_tag<bits,masked>>*>(this); }
 
     // common matrix API class members
     CONST_MATRIX_CLASS_MEMBERS
@@ -598,9 +598,9 @@ public:
     operator const cmat_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const cmat_view_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
-          mat_view_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<      mat_view_t<block_tag<bits,masked>>>(this); }
+          mat_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<      mat_view_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const mat_view_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const mat_view_t<block_tag<bits,masked>>>(this); }
+    const mat_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const mat_view_t<block_tag<bits,masked>>*>(this); }
 
     // common matrix API class members
     CONST_MATRIX_CLASS_MEMBERS
@@ -704,9 +704,9 @@ public:
     operator const  vec_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const  vec_view_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
-           vec_view_it_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<       vec_view_it_t<block_tag<bits,masked>>>(this); }
+           vec_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<       vec_view_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const cvec_view_it_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const cvec_view_it_t<block_tag<bits,masked>>>(this); }
+    const cvec_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const cvec_view_t<block_tag<bits,masked>>*>(this); }
 
     // common matrix API class members
     CONST_VECTOR_CLASS_MEMBERS
@@ -823,9 +823,9 @@ public:
     operator const  mat_view_t<cond_default_block_tag>& () const { return *reinterpret_cast< const  mat_view_t<cond_default_block_tag>* > (this); }
 
     template<size_t bits = 64, bool masked = true>
-           mat_view_t<block_tag<bits,masked>>& as()       { return *reinterpret_cast<       mat_view_t<block_tag<bits,masked>>>(this); }
+           mat_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>)       { return *reinterpret_cast<       mat_view_t<block_tag<bits,masked>>*>(this); }
     template<size_t bits = 64, bool masked = true>
-    const cmat_view_t<block_tag<bits,masked>>& as() const { return *reinterpret_cast<const cmat_view_t<block_tag<bits,masked>>>(this); }
+    const cmat_view_t<block_tag<bits,masked>>& as(block_tag<bits,masked>) const { return *reinterpret_cast<const cmat_view_t<block_tag<bits,masked>>*>(this); }
 
     // common matrix API class members
     CONST_MATRIX_CLASS_MEMBERS

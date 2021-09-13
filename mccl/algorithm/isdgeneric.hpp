@@ -71,7 +71,7 @@ extern ISD_generic_config_t ISD_generic_config_default;
 //
 // this makes it easy to include additional columns of H1T together with H2T to subISD
 
-template<typename subISDT_t = subISDT_API, size_t _bit_alignment = 256>
+template<typename subISDT_t = subISDT_API, size_t _bit_alignment = 256, bool _masked = false>
 class ISD_generic
     : public syndrome_decoding_API
 {
@@ -81,7 +81,7 @@ public:
     static const size_t bit_alignment = _bit_alignment;
     
     typedef uint64_block_t<bit_alignment>  this_block_t;
-    typedef block_tag<bit_alignment,false> this_block_tag;
+    typedef block_tag<bit_alignment,_masked> this_block_tag;
 
     ISD_generic(subISDT_t& sI)
         : subISDT(&sI), config(ISD_generic_config_default), stats("ISD-generic")
@@ -118,13 +118,13 @@ public:
         Sorg.reset(_S);
         HST.reset(_H, _S, l);
 
-        C.resize(HST.Spadded().columns());
+        C.resize(HST.S().columns());
         
-        blocks_per_row = HST.Spadded().rowblocks(this_block_tag());
-        block_stride = HST.H12T().blockstride(this_block_tag());
-        H12T_blockptr = HST.H12Tpadded().blockptr(this_block_tag());
-        S_blockptr = HST.Spadded().blockptr(this_block_tag());
-        C_blockptr = C.blockptr(this_block_tag());
+        blocks_per_row = HST.H12T().rowblocks();
+        block_stride = HST.H12T().blockstride();
+        H12T_blockptr = HST.H12T().blockptr();
+        S_blockptr = HST.S().blockptr();
+        C_blockptr = C.blockptr();
         
         sol.clear();
         solution = vec();
@@ -272,10 +272,10 @@ private:
     vec solution;
 
     // maintains (U(H|S)P)^T in ISD form for random column permutations P
-    HST_ISD_form_t<_bit_alignment> HST;
+    HST_ISD_form_t<_bit_alignment,_masked> HST;
 
     // temporary vector to compute sum of syndrome and H columns
-    vec C;
+    vec_t<this_block_tag> C;
     
     // block pointers to H12T, S and C
     size_t block_stride, blocks_per_row;

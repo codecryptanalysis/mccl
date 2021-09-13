@@ -94,7 +94,7 @@ inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols, bool b)
 
 inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 {
-	if (v.columns == 0 || cols == 0)
+	if (!MCCL_VECTOR_NO_SANITY_CHECKS && (v.columns == 0 || cols == 0))
 		return;
 	auto firstword = coloffset/64, firstword2 = firstword+1, lastword = (coloffset+cols-1)/64;
 	auto fwm = firstwordmask(coloffset);
@@ -113,7 +113,7 @@ inline void v_setcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 
 inline void v_flipcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 {
-	if (v.columns == 0 || cols == 0)
+	if (!MCCL_VECTOR_NO_SANITY_CHECKS && (v.columns == 0 || cols == 0))
 		return;
 	auto firstword = coloffset/64, firstword2 = firstword+1, lastword = (coloffset+cols-1)/64;
 	auto fwm = firstwordmask(coloffset);
@@ -133,7 +133,7 @@ inline void v_flipcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 
 inline void v_clearcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 {
-	if (v.columns == 0 || cols == 0)
+	if (!MCCL_VECTOR_NO_SANITY_CHECKS && (v.columns == 0 || cols == 0))
 		return;
 	auto firstword = coloffset/64, firstword2 = firstword+1, lastword = (coloffset+cols-1)/64;
 	auto fwm = ~firstwordmask(coloffset);
@@ -154,7 +154,7 @@ inline void v_clearcolumns(const v_ptr& v, size_t coloffset, size_t cols)
 
 inline size_t v_hw(const cv_ptr& v)
 {
-	if (v.columns == 0)
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && (v.columns == 0))
 		return 0;
 	size_t words = (v.columns + 63)/64;
 	uint64_t lwm = lastwordmask(v.columns);
@@ -168,9 +168,9 @@ inline size_t v_hw(const cv_ptr& v)
 
 inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2)
 {
-	if (v1.columns != v2.columns)
+	if (!MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS && v1.columns != v2.columns)
 		throw std::out_of_range("v_swap: vectors do not have equal dimensions");
-	if (v1.columns == 0)
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && v1.columns == 0)
 		return 0;
 	size_t words = (v1.columns + 63)/64;
 	uint64_t lwm = lastwordmask(v1.columns);
@@ -185,9 +185,9 @@ inline size_t v_hw_and(const cv_ptr& v1, const cv_ptr& v2)
 
 inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2)
 {
-	if (v1.columns != v2.columns)
+	if (!MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS && v1.columns != v2.columns)
 		throw std::out_of_range("v_swap: vectors do not have equal dimensions");
-	if (v1.columns == 0)
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && v1.columns == 0)
 		return 0;
 	size_t words = (v1.columns + 63)/64;
 	uint64_t lwm = lastwordmask(v1.columns);
@@ -202,9 +202,9 @@ inline size_t v_hw_or(const cv_ptr& v1, const cv_ptr& v2)
 
 inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2)
 {
-	if (v1.columns != v2.columns)
+	if (!MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS && v1.columns != v2.columns)
 		throw std::out_of_range("v_swap: vectors do not have equal dimensions");
-	if (v1.columns == 0)
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && v1.columns == 0)
 		return 0;
 	size_t words = (v1.columns + 63)/64;
 	uint64_t lwm = lastwordmask(v1.columns);
@@ -222,9 +222,9 @@ inline size_t v_hw_xor(const cv_ptr& v1, const cv_ptr& v2)
 template<size_t bits, bool masked>
 inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, block_tag<bits,masked>)
 {
-	if (v1.columns != v2.columns)
+	if (!MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS && v1.columns != v2.columns)
 		return false;
-	if (v1.columns == 0)
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && v1.columns == 0)
 		return true;
 	const size_t words = (v1.columns + bits - 1) / bits - (masked?1:0);
 	auto first1 = make_block_ptr(v1.ptr, block_tag<bits,masked>()), last1 = first1 + words;
@@ -244,15 +244,20 @@ inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, block_tag<bits,masked>
 template<size_t bits, bool masked>
 inline void v_swap(const v_ptr& v1, const v_ptr& v2, block_tag<bits,masked>)
 {
-	if (v1.columns != v2.columns)
+	if (!MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS && v1.columns != v2.columns)
 		throw std::out_of_range("v_swap: vectors do not have equal dimensions");
-	if (v1.columns == 0)
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && v1.columns == 0)
 		return;
 	const size_t words = (v1.columns+bits-1) / bits - (masked?1:0);
 	auto first1 = make_block_ptr(v1.ptr, block_tag<bits,masked>()), last1 = first1 + words;
 	auto first2 = make_block_ptr(v2.ptr, block_tag<bits,masked>());
 	for (; first1 != last1; ++first1,++first2)
-		std::swap(*first1, *first2);
+	{
+		auto x = *first2;// ^ *first2;
+		*first2 = *first1;
+		*first1 = x;
+//		std::swap(*first1, *first2);
+	}
 	if (masked)
 	{
 		auto lwm = lastwordmask(v1.columns, block_tag<bits,masked>());
@@ -268,7 +273,7 @@ inline void v_swap(const v_ptr& v1, const v_ptr& v2, block_tag<bits,masked>)
 template<size_t bits, bool masked> \
 inline void v_ ## func (const v_ptr& dst, block_tag<bits,masked>) \
 { \
-	if (dst.columns == 0) \
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && dst.columns == 0) \
 		return; \
 	size_t words = (dst.columns + bits-1)/bits - (masked?1:0); \
 	auto firstd = make_block_ptr(dst.ptr, block_tag<bits,masked>()), lastd = firstd + words; \
@@ -301,9 +306,9 @@ inline void v_set(const v_ptr& v, bool b, block_tag<bits,masked>)
 template<size_t bits, bool masked> \
 inline void v_ ## func (const v_ptr& dst, const cv_ptr& v1, block_tag<bits,masked>) \
 { \
-	if (dst.columns == 0) \
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && dst.columns == 0) \
 		return; \
-	if (dst.columns != v1.columns) \
+	if (!MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS && dst.columns != v1.columns) \
 		throw std::out_of_range("vectors do not have equal dimensions"); \
 	size_t words = (dst.columns + bits-1)/bits - (masked?1:0); \
 	auto firstd = make_block_ptr(dst.ptr, block_tag<bits,masked>()), lastd = firstd + words; \
@@ -320,16 +325,16 @@ inline void v_ ## func (const v_ptr& dst, const cv_ptr& v1, block_tag<bits,maske
 
 MCCL_VECTOR_BASE_FUNCTION_2OP(copy,*first1)
 MCCL_VECTOR_BASE_FUNCTION_2OP(copynot,~*first1)
-MCCL_VECTOR_BASE_FUNCTION_2OP(and  ,(*firstd) & (*first1))
-MCCL_VECTOR_BASE_FUNCTION_2OP(or   ,(*firstd) | (*first1))
-MCCL_VECTOR_BASE_FUNCTION_2OP(xor  ,(*firstd) ^ (*first1))
-MCCL_VECTOR_BASE_FUNCTION_2OP(nand ,~((*firstd) & (*first1)))
-MCCL_VECTOR_BASE_FUNCTION_2OP(nor  ,~((*firstd) | (*first1)))
-MCCL_VECTOR_BASE_FUNCTION_2OP(nxor ,~((*firstd) ^ (*first1)))
-MCCL_VECTOR_BASE_FUNCTION_2OP(andin,(*firstd)  & (~*first1))
-MCCL_VECTOR_BASE_FUNCTION_2OP(andni,(~*firstd) & (*first1))
-MCCL_VECTOR_BASE_FUNCTION_2OP(orin ,(*firstd)  | (~*first1))
-MCCL_VECTOR_BASE_FUNCTION_2OP(orni ,(~*firstd) | (*first1))
+MCCL_VECTOR_BASE_FUNCTION_2OP(and,(*firstd)&(*first1))
+MCCL_VECTOR_BASE_FUNCTION_2OP(or,(*firstd)|(*first1))
+MCCL_VECTOR_BASE_FUNCTION_2OP(xor,(*firstd)^(*first1))
+MCCL_VECTOR_BASE_FUNCTION_2OP(nand,~((*firstd)&(*first1)))
+MCCL_VECTOR_BASE_FUNCTION_2OP(nor,~((*firstd)|(*first1)))
+MCCL_VECTOR_BASE_FUNCTION_2OP(nxor,~((*firstd)^(*first1)))
+MCCL_VECTOR_BASE_FUNCTION_2OP(andin,(*firstd)&(~*first1))
+MCCL_VECTOR_BASE_FUNCTION_2OP(andni,(~*firstd)&(*first1))
+MCCL_VECTOR_BASE_FUNCTION_2OP(orin,(*firstd)|(~*first1))
+MCCL_VECTOR_BASE_FUNCTION_2OP(orni,(~*firstd)|(*first1))
 
 
 
@@ -337,9 +342,9 @@ MCCL_VECTOR_BASE_FUNCTION_2OP(orni ,(~*firstd) | (*first1))
 template<size_t bits, bool masked> \
 inline void v_ ## func (const v_ptr& dst, const cv_ptr& v1, const cv_ptr& v2, block_tag<bits,masked>) \
 { \
-	if (dst.columns == 0) \
+	if (!MCCL_VECTOR_ASSUME_NONEMPTY && dst.columns == 0) \
 		return; \
-	if (dst.columns != v1.columns || dst.columns != v2.columns) \
+	if (!MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS && (dst.columns != v1.columns || dst.columns != v2.columns)) \
 		throw std::out_of_range("vectors do not have equal dimensions"); \
 	size_t words = (dst.columns + bits-1)/bits - (masked?1:0); \
 	auto firstd = make_block_ptr(dst.ptr, block_tag<bits,masked>()), lastd = firstd + words; \
