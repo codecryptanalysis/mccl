@@ -1,7 +1,4 @@
-# Low-level framework design
-
------
-## Matrices & Vectors design
+# Matrices & Vectors design
 
 This library is designed for matrices and vectors over F_2, i.e., bit matrices and bit vectors.
 All the bits in a row or vector are stored contiguously in memory packed in unsigned 64-bit integers `uint64_t` named words.
