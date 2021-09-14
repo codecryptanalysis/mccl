@@ -226,18 +226,15 @@ inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, block_tag<bits,masked>
 		return false;
 	if (!MCCL_VECTOR_ASSUME_NONEMPTY && v1.columns == 0)
 		return true;
-	const size_t words = (v1.columns + bits - 1) / bits - (masked?1:0);
+	const size_t words = (v1.columns + bits - 1) / bits - 1;
 	auto first1 = make_block_ptr(v1.ptr, block_tag<bits,masked>()), last1 = first1 + words;
 	auto first2 = make_block_ptr(v2.ptr, block_tag<bits,masked>());
 	for (; first1 != last1; ++first1, ++first2)
 		if (*first1 != *first2)
 			return false;
-	if (masked)
-	{
-		auto lwm = lastwordmask(v1.columns, block_tag<bits,masked>());
-		if ((lwm & *first1) != (lwm & *first2))
-			return false;
-	}
+	auto lwm = lastwordmask(v1.columns, block_tag<bits,masked>());
+	if ((lwm & *first1) != (lwm & *first2))
+		return false;
 	return true;
 }
 
@@ -253,10 +250,9 @@ inline void v_swap(const v_ptr& v1, const v_ptr& v2, block_tag<bits,masked>)
 	auto first2 = make_block_ptr(v2.ptr, block_tag<bits,masked>());
 	for (; first1 != last1; ++first1,++first2)
 	{
-		auto x = *first2;// ^ *first2;
+		auto x = *first2;
 		*first2 = *first1;
 		*first1 = x;
-//		std::swap(*first1, *first2);
 	}
 	if (masked)
 	{

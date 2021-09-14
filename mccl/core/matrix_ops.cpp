@@ -636,43 +636,28 @@ bool m_isequal(const cm_ptr& m1, const cm_ptr& m2, block_tag<bits,masked>)
         if (m1.rows == 0 || m1.columns == 0)
                 return true;
                 
-        const size_t blocks = (m1.columns + bits - 1) / bits - (masked?1:0);
+        const size_t blocks = (m1.columns + bits - 1) / bits - 1;
         const size_t stride1 = m1.stride / (bits/64);
         const size_t stride2 = m2.stride / (bits/64);
         
         auto first1 = make_block_ptr(m1.ptr, block_tag<bits,masked>());
         auto first2 = make_block_ptr(m2.ptr, block_tag<bits,masked>());
-        if (!masked)
+        auto lwm = lastwordmask(m1.columns, block_tag<bits,masked>());
+        for (size_t r = 0; r < m1.rows; ++r, first1+=stride1, first2+=stride2)
         {
-	        for (size_t r = 0; r < m1.rows; ++r, first1+=stride1, first2+=stride2)
-	        {
-	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2;
-		        for (; first1r != last1r; ++first1r, ++first2r)
-	        	        if (*first1r != *first2r)
-	                	        return false;
-		}
-	} else {
-                auto lwm = lastwordmask(m1.columns, block_tag<bits,masked>());
-	        for (size_t r = 0; r < m1.rows; ++r, first1+=stride1, first2+=stride2)
-	        {
-	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2;
-		        for (; first1r != last1r; ++first1r, ++first2r)
-	        	        if (*first1r != *first2r)
-	                	        return false;
-       	        	if ((lwm & *first1r) != (lwm & *first2r))
-        	                return false;
-		}
+        	auto first1r = first1, last1r = first1r + blocks, first2r = first2;
+	        for (; first1r != last1r; ++first1r, ++first2r)
+        	        if (*first1r != *first2r)
+                	        return false;
+        	if ((lwm & *first1r) != (lwm & *first2r))
+       	                return false;
 	}
         return true;
 }
 template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<64 ,true >);
-template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<64 ,false>);
 template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<128,true >);
-template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<128,false>);
 template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<256,true >);
-template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<256,false>);
 template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<512,true >);
-template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<512,false>);
 
 #define MCCL_MATRIX_BASE_FUNCTION_1OP(func,expr) \
 template<size_t bits, bool masked> \

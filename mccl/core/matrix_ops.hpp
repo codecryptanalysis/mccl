@@ -50,7 +50,7 @@ inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, block_tag<bits,masked>
 template<size_t bits1, bool masked1, size_t bits2, bool masked2>
 inline bool v_isequal(const cv_ptr& v1, const cv_ptr& v2, block_tag<bits1,masked1>, block_tag<bits2,masked2>)
 {
-    return v_isequal(v1, v2, block_tag<(bits1<bits2?bits1:bits2),(masked1|masked2)>());
+    return v_isequal(v1, v2, block_tag<(bits1<bits2?bits1:bits2),true>()); // always use maskedlastword
 }
 
 template<size_t bits, bool masked>
@@ -58,7 +58,7 @@ inline void v_swap(const v_ptr& v1, const v_ptr& v2, block_tag<bits,masked>);
 template<size_t bits1, bool masked1, size_t bits2, bool masked2>
 inline void v_swap(const v_ptr& v1, const v_ptr& v2, block_tag<bits1,masked1>, block_tag<bits2,masked2>)
 {
-    v_swap(v1, v2, block_tag<(bits1<bits2?bits1:bits2),(masked1|masked2)>());
+    v_swap(v1, v2, block_tag<(bits1<bits2?bits1:bits2),(masked1|masked2)>()); // use maskedlastword if either does
 }
 
 
@@ -131,7 +131,7 @@ bool m_isequal(const cm_ptr& m1, const cm_ptr& m2, block_tag<bits,masked>);
 template<size_t bits1, bool masked1, size_t bits2, bool masked2>
 inline bool m_isequal(const cm_ptr& m1, const cm_ptr& m2, block_tag<bits1,masked1>, block_tag<bits2,masked2>)
 {
-    return m_isequal(m1, m2, block_tag<(bits1<bits2?bits1:bits2),(masked1|masked2)>());
+    return m_isequal(m1, m2, block_tag<(bits1<bits2?bits1:bits2),true>());
 }
 
 #define MCCL_MATRIX_2OP_FUNC_DEF(func) \
