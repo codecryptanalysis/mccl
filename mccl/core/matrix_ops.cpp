@@ -8,6 +8,164 @@ MCCL_BEGIN_NAMESPACE
 
 namespace detail {
 
+#define WORD_MASK_ONE    (~uint64_t(0))
+#define WORD_MASK_BIT(s) ((uint64_t(1)<<s)-1)
+
+#define BLOCK64_MASK0       { WORD_MASK_ONE }
+#define BLOCK64_MASK1(s)    { WORD_MASK_BIT(s) }
+const uint64_block_t<64> _lastblockmask64[64] = 
+{
+	BLOCK64_MASK0,     BLOCK64_MASK1( 1), BLOCK64_MASK1( 2), BLOCK64_MASK1( 3), BLOCK64_MASK1( 4), BLOCK64_MASK1( 5), BLOCK64_MASK1( 6), BLOCK64_MASK1( 7),
+	BLOCK64_MASK1( 8), BLOCK64_MASK1( 9), BLOCK64_MASK1(10), BLOCK64_MASK1(11), BLOCK64_MASK1(12), BLOCK64_MASK1(13), BLOCK64_MASK1(14), BLOCK64_MASK1(15),
+	BLOCK64_MASK1(16), BLOCK64_MASK1(17), BLOCK64_MASK1(18), BLOCK64_MASK1(19), BLOCK64_MASK1(20), BLOCK64_MASK1(21), BLOCK64_MASK1(22), BLOCK64_MASK1(23),
+	BLOCK64_MASK1(24), BLOCK64_MASK1(25), BLOCK64_MASK1(26), BLOCK64_MASK1(27), BLOCK64_MASK1(28), BLOCK64_MASK1(29), BLOCK64_MASK1(30), BLOCK64_MASK1(31),
+	BLOCK64_MASK1(32), BLOCK64_MASK1(33), BLOCK64_MASK1(34), BLOCK64_MASK1(35), BLOCK64_MASK1(36), BLOCK64_MASK1(37), BLOCK64_MASK1(38), BLOCK64_MASK1(39),
+	BLOCK64_MASK1(40), BLOCK64_MASK1(41), BLOCK64_MASK1(42), BLOCK64_MASK1(43), BLOCK64_MASK1(44), BLOCK64_MASK1(45), BLOCK64_MASK1(46), BLOCK64_MASK1(47),
+	BLOCK64_MASK1(48), BLOCK64_MASK1(49), BLOCK64_MASK1(50), BLOCK64_MASK1(51), BLOCK64_MASK1(52), BLOCK64_MASK1(53), BLOCK64_MASK1(54), BLOCK64_MASK1(55),
+	BLOCK64_MASK1(56), BLOCK64_MASK1(57), BLOCK64_MASK1(58), BLOCK64_MASK1(59), BLOCK64_MASK1(60), BLOCK64_MASK1(61), BLOCK64_MASK1(62), BLOCK64_MASK1(63),
+};
+
+#define BLOCK128_MASK0       { WORD_MASK_ONE, WORD_MASK_ONE }
+#define BLOCK128_MASK1(s)    { WORD_MASK_BIT(s), 0 }
+#define BLOCK128_MASK2(s)    { WORD_MASK_ONE, WORD_MASK_BIT(s) }
+const uint64_block_t<128> _lastblockmask128[128] = 
+{
+	BLOCK128_MASK0,     BLOCK128_MASK1( 1), BLOCK128_MASK1( 2), BLOCK128_MASK1( 3), BLOCK128_MASK1( 4), BLOCK128_MASK1( 5), BLOCK128_MASK1( 6), BLOCK128_MASK1( 7),
+	BLOCK128_MASK1( 8), BLOCK128_MASK1( 9), BLOCK128_MASK1(10), BLOCK128_MASK1(11), BLOCK128_MASK1(12), BLOCK128_MASK1(13), BLOCK128_MASK1(14), BLOCK128_MASK1(15),
+	BLOCK128_MASK1(16), BLOCK128_MASK1(17), BLOCK128_MASK1(18), BLOCK128_MASK1(19), BLOCK128_MASK1(20), BLOCK128_MASK1(21), BLOCK128_MASK1(22), BLOCK128_MASK1(23),
+	BLOCK128_MASK1(24), BLOCK128_MASK1(25), BLOCK128_MASK1(26), BLOCK128_MASK1(27), BLOCK128_MASK1(28), BLOCK128_MASK1(29), BLOCK128_MASK1(30), BLOCK128_MASK1(31),
+	BLOCK128_MASK1(32), BLOCK128_MASK1(33), BLOCK128_MASK1(34), BLOCK128_MASK1(35), BLOCK128_MASK1(36), BLOCK128_MASK1(37), BLOCK128_MASK1(38), BLOCK128_MASK1(39),
+	BLOCK128_MASK1(40), BLOCK128_MASK1(41), BLOCK128_MASK1(42), BLOCK128_MASK1(43), BLOCK128_MASK1(44), BLOCK128_MASK1(45), BLOCK128_MASK1(46), BLOCK128_MASK1(47),
+	BLOCK128_MASK1(48), BLOCK128_MASK1(49), BLOCK128_MASK1(50), BLOCK128_MASK1(51), BLOCK128_MASK1(52), BLOCK128_MASK1(53), BLOCK128_MASK1(54), BLOCK128_MASK1(55),
+	BLOCK128_MASK1(56), BLOCK128_MASK1(57), BLOCK128_MASK1(58), BLOCK128_MASK1(59), BLOCK128_MASK1(60), BLOCK128_MASK1(61), BLOCK128_MASK1(62), BLOCK128_MASK1(63),
+	BLOCK128_MASK2( 0), BLOCK128_MASK2( 1), BLOCK128_MASK2( 2), BLOCK128_MASK2( 3), BLOCK128_MASK2( 4), BLOCK128_MASK2( 5), BLOCK128_MASK2( 6), BLOCK128_MASK2( 7),
+	BLOCK128_MASK2( 8), BLOCK128_MASK2( 9), BLOCK128_MASK2(10), BLOCK128_MASK2(11), BLOCK128_MASK2(12), BLOCK128_MASK2(13), BLOCK128_MASK2(14), BLOCK128_MASK2(15),
+	BLOCK128_MASK2(16), BLOCK128_MASK2(17), BLOCK128_MASK2(18), BLOCK128_MASK2(19), BLOCK128_MASK2(20), BLOCK128_MASK2(21), BLOCK128_MASK2(22), BLOCK128_MASK2(23),
+	BLOCK128_MASK2(24), BLOCK128_MASK2(25), BLOCK128_MASK2(26), BLOCK128_MASK2(27), BLOCK128_MASK2(28), BLOCK128_MASK2(29), BLOCK128_MASK2(30), BLOCK128_MASK2(31),
+	BLOCK128_MASK2(32), BLOCK128_MASK2(33), BLOCK128_MASK2(34), BLOCK128_MASK2(35), BLOCK128_MASK2(36), BLOCK128_MASK2(37), BLOCK128_MASK2(38), BLOCK128_MASK2(39),
+	BLOCK128_MASK2(40), BLOCK128_MASK2(41), BLOCK128_MASK2(42), BLOCK128_MASK2(43), BLOCK128_MASK2(44), BLOCK128_MASK2(45), BLOCK128_MASK2(46), BLOCK128_MASK2(47),
+	BLOCK128_MASK2(48), BLOCK128_MASK2(49), BLOCK128_MASK2(50), BLOCK128_MASK2(51), BLOCK128_MASK2(52), BLOCK128_MASK2(53), BLOCK128_MASK2(54), BLOCK128_MASK2(55),
+	BLOCK128_MASK2(56), BLOCK128_MASK2(57), BLOCK128_MASK2(58), BLOCK128_MASK2(59), BLOCK128_MASK2(60), BLOCK128_MASK2(61), BLOCK128_MASK2(62), BLOCK128_MASK2(63),
+};
+
+#define BLOCK256_MASK0       { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE }
+#define BLOCK256_MASK1(s)    { WORD_MASK_BIT(s), 0 , 0, 0 }
+#define BLOCK256_MASK2(s)    { WORD_MASK_ONE, WORD_MASK_BIT(s), 0, 0 }
+#define BLOCK256_MASK3(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0 }
+#define BLOCK256_MASK4(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s) }
+const uint64_block_t<256> _lastblockmask256[256] = 
+{
+	BLOCK256_MASK0,     BLOCK256_MASK1( 1), BLOCK256_MASK1( 2), BLOCK256_MASK1( 3), BLOCK256_MASK1( 4), BLOCK256_MASK1( 5), BLOCK256_MASK1( 6), BLOCK256_MASK1( 7),
+	BLOCK256_MASK1( 8), BLOCK256_MASK1( 9), BLOCK256_MASK1(10), BLOCK256_MASK1(11), BLOCK256_MASK1(12), BLOCK256_MASK1(13), BLOCK256_MASK1(14), BLOCK256_MASK1(15),
+	BLOCK256_MASK1(16), BLOCK256_MASK1(17), BLOCK256_MASK1(18), BLOCK256_MASK1(19), BLOCK256_MASK1(20), BLOCK256_MASK1(21), BLOCK256_MASK1(22), BLOCK256_MASK1(23),
+	BLOCK256_MASK1(24), BLOCK256_MASK1(25), BLOCK256_MASK1(26), BLOCK256_MASK1(27), BLOCK256_MASK1(28), BLOCK256_MASK1(29), BLOCK256_MASK1(30), BLOCK256_MASK1(31),
+	BLOCK256_MASK1(32), BLOCK256_MASK1(33), BLOCK256_MASK1(34), BLOCK256_MASK1(35), BLOCK256_MASK1(36), BLOCK256_MASK1(37), BLOCK256_MASK1(38), BLOCK256_MASK1(39),
+	BLOCK256_MASK1(40), BLOCK256_MASK1(41), BLOCK256_MASK1(42), BLOCK256_MASK1(43), BLOCK256_MASK1(44), BLOCK256_MASK1(45), BLOCK256_MASK1(46), BLOCK256_MASK1(47),
+	BLOCK256_MASK1(48), BLOCK256_MASK1(49), BLOCK256_MASK1(50), BLOCK256_MASK1(51), BLOCK256_MASK1(52), BLOCK256_MASK1(53), BLOCK256_MASK1(54), BLOCK256_MASK1(55),
+	BLOCK256_MASK1(56), BLOCK256_MASK1(57), BLOCK256_MASK1(58), BLOCK256_MASK1(59), BLOCK256_MASK1(60), BLOCK256_MASK1(61), BLOCK256_MASK1(62), BLOCK256_MASK1(63),
+	BLOCK256_MASK2( 0), BLOCK256_MASK2( 1), BLOCK256_MASK2( 2), BLOCK256_MASK2( 3), BLOCK256_MASK2( 4), BLOCK256_MASK2( 5), BLOCK256_MASK2( 6), BLOCK256_MASK2( 7),
+	BLOCK256_MASK2( 8), BLOCK256_MASK2( 9), BLOCK256_MASK2(10), BLOCK256_MASK2(11), BLOCK256_MASK2(12), BLOCK256_MASK2(13), BLOCK256_MASK2(14), BLOCK256_MASK2(15),
+	BLOCK256_MASK2(16), BLOCK256_MASK2(17), BLOCK256_MASK2(18), BLOCK256_MASK2(19), BLOCK256_MASK2(20), BLOCK256_MASK2(21), BLOCK256_MASK2(22), BLOCK256_MASK2(23),
+	BLOCK256_MASK2(24), BLOCK256_MASK2(25), BLOCK256_MASK2(26), BLOCK256_MASK2(27), BLOCK256_MASK2(28), BLOCK256_MASK2(29), BLOCK256_MASK2(30), BLOCK256_MASK2(31),
+	BLOCK256_MASK2(32), BLOCK256_MASK2(33), BLOCK256_MASK2(34), BLOCK256_MASK2(35), BLOCK256_MASK2(36), BLOCK256_MASK2(37), BLOCK256_MASK2(38), BLOCK256_MASK2(39),
+	BLOCK256_MASK2(40), BLOCK256_MASK2(41), BLOCK256_MASK2(42), BLOCK256_MASK2(43), BLOCK256_MASK2(44), BLOCK256_MASK2(45), BLOCK256_MASK2(46), BLOCK256_MASK2(47),
+	BLOCK256_MASK2(48), BLOCK256_MASK2(49), BLOCK256_MASK2(50), BLOCK256_MASK2(51), BLOCK256_MASK2(52), BLOCK256_MASK2(53), BLOCK256_MASK2(54), BLOCK256_MASK2(55),
+	BLOCK256_MASK2(56), BLOCK256_MASK2(57), BLOCK256_MASK2(58), BLOCK256_MASK2(59), BLOCK256_MASK2(60), BLOCK256_MASK2(61), BLOCK256_MASK2(62), BLOCK256_MASK2(63),
+	BLOCK256_MASK3( 0), BLOCK256_MASK3( 1), BLOCK256_MASK3( 2), BLOCK256_MASK3( 3), BLOCK256_MASK3( 4), BLOCK256_MASK3( 5), BLOCK256_MASK3( 6), BLOCK256_MASK3( 7),
+	BLOCK256_MASK3( 8), BLOCK256_MASK3( 9), BLOCK256_MASK3(10), BLOCK256_MASK3(11), BLOCK256_MASK3(12), BLOCK256_MASK3(13), BLOCK256_MASK3(14), BLOCK256_MASK3(15),
+	BLOCK256_MASK3(16), BLOCK256_MASK3(17), BLOCK256_MASK3(18), BLOCK256_MASK3(19), BLOCK256_MASK3(20), BLOCK256_MASK3(21), BLOCK256_MASK3(22), BLOCK256_MASK3(23),
+	BLOCK256_MASK3(24), BLOCK256_MASK3(25), BLOCK256_MASK3(26), BLOCK256_MASK3(27), BLOCK256_MASK3(28), BLOCK256_MASK3(29), BLOCK256_MASK3(30), BLOCK256_MASK3(31),
+	BLOCK256_MASK3(32), BLOCK256_MASK3(33), BLOCK256_MASK3(34), BLOCK256_MASK3(35), BLOCK256_MASK3(36), BLOCK256_MASK3(37), BLOCK256_MASK3(38), BLOCK256_MASK3(39),
+	BLOCK256_MASK3(40), BLOCK256_MASK3(41), BLOCK256_MASK3(42), BLOCK256_MASK3(43), BLOCK256_MASK3(44), BLOCK256_MASK3(45), BLOCK256_MASK3(46), BLOCK256_MASK3(47),
+	BLOCK256_MASK3(48), BLOCK256_MASK3(49), BLOCK256_MASK3(50), BLOCK256_MASK3(51), BLOCK256_MASK3(52), BLOCK256_MASK3(53), BLOCK256_MASK3(54), BLOCK256_MASK3(55),
+	BLOCK256_MASK3(56), BLOCK256_MASK3(57), BLOCK256_MASK3(58), BLOCK256_MASK3(59), BLOCK256_MASK3(60), BLOCK256_MASK3(61), BLOCK256_MASK3(62), BLOCK256_MASK3(63),
+	BLOCK256_MASK4( 0), BLOCK256_MASK4( 1), BLOCK256_MASK4( 2), BLOCK256_MASK4( 3), BLOCK256_MASK4( 4), BLOCK256_MASK4( 5), BLOCK256_MASK4( 6), BLOCK256_MASK4( 7),
+	BLOCK256_MASK4( 8), BLOCK256_MASK4( 9), BLOCK256_MASK4(10), BLOCK256_MASK4(11), BLOCK256_MASK4(12), BLOCK256_MASK4(13), BLOCK256_MASK4(14), BLOCK256_MASK4(15),
+	BLOCK256_MASK4(16), BLOCK256_MASK4(17), BLOCK256_MASK4(18), BLOCK256_MASK4(19), BLOCK256_MASK4(20), BLOCK256_MASK4(21), BLOCK256_MASK4(22), BLOCK256_MASK4(23),
+	BLOCK256_MASK4(24), BLOCK256_MASK4(25), BLOCK256_MASK4(26), BLOCK256_MASK4(27), BLOCK256_MASK4(28), BLOCK256_MASK4(29), BLOCK256_MASK4(30), BLOCK256_MASK4(31),
+	BLOCK256_MASK4(32), BLOCK256_MASK4(33), BLOCK256_MASK4(34), BLOCK256_MASK4(35), BLOCK256_MASK4(36), BLOCK256_MASK4(37), BLOCK256_MASK4(38), BLOCK256_MASK4(39),
+	BLOCK256_MASK4(40), BLOCK256_MASK4(41), BLOCK256_MASK4(42), BLOCK256_MASK4(43), BLOCK256_MASK4(44), BLOCK256_MASK4(45), BLOCK256_MASK4(46), BLOCK256_MASK4(47),
+	BLOCK256_MASK4(48), BLOCK256_MASK4(49), BLOCK256_MASK4(50), BLOCK256_MASK4(51), BLOCK256_MASK4(52), BLOCK256_MASK4(53), BLOCK256_MASK4(54), BLOCK256_MASK4(55),
+	BLOCK256_MASK4(56), BLOCK256_MASK4(57), BLOCK256_MASK4(58), BLOCK256_MASK4(59), BLOCK256_MASK4(60), BLOCK256_MASK4(61), BLOCK256_MASK4(62), BLOCK256_MASK4(63),
+};
+
+#define BLOCK512_MASK0       { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE }
+#define BLOCK512_MASK1(s)    { WORD_MASK_BIT(s), 0, 0, 0,  0, 0, 0, 0 }
+#define BLOCK512_MASK2(s)    { WORD_MASK_ONE, WORD_MASK_BIT(s), 0, 0,  0, 0, 0, 0 }
+#define BLOCK512_MASK3(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0,  0, 0, 0, 0 }
+#define BLOCK512_MASK4(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s),  0, 0, 0, 0 }
+#define BLOCK512_MASK5(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0, 0, 0 }
+#define BLOCK512_MASK6(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0, 0 }
+#define BLOCK512_MASK7(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s), 0 }
+#define BLOCK512_MASK8(s)    { WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_ONE, WORD_MASK_BIT(s) }
+const uint64_block_t<512> _lastblockmask512[512] = 
+{
+	BLOCK512_MASK0,     BLOCK512_MASK1( 1), BLOCK512_MASK1( 2), BLOCK512_MASK1( 3), BLOCK512_MASK1( 4), BLOCK512_MASK1( 5), BLOCK512_MASK1( 6), BLOCK512_MASK1( 7),
+	BLOCK512_MASK1( 8), BLOCK512_MASK1( 9), BLOCK512_MASK1(10), BLOCK512_MASK1(11), BLOCK512_MASK1(12), BLOCK512_MASK1(13), BLOCK512_MASK1(14), BLOCK512_MASK1(15),
+	BLOCK512_MASK1(16), BLOCK512_MASK1(17), BLOCK512_MASK1(18), BLOCK512_MASK1(19), BLOCK512_MASK1(20), BLOCK512_MASK1(21), BLOCK512_MASK1(22), BLOCK512_MASK1(23),
+	BLOCK512_MASK1(24), BLOCK512_MASK1(25), BLOCK512_MASK1(26), BLOCK512_MASK1(27), BLOCK512_MASK1(28), BLOCK512_MASK1(29), BLOCK512_MASK1(30), BLOCK512_MASK1(31),
+	BLOCK512_MASK1(32), BLOCK512_MASK1(33), BLOCK512_MASK1(34), BLOCK512_MASK1(35), BLOCK512_MASK1(36), BLOCK512_MASK1(37), BLOCK512_MASK1(38), BLOCK512_MASK1(39),
+	BLOCK512_MASK1(40), BLOCK512_MASK1(41), BLOCK512_MASK1(42), BLOCK512_MASK1(43), BLOCK512_MASK1(44), BLOCK512_MASK1(45), BLOCK512_MASK1(46), BLOCK512_MASK1(47),
+	BLOCK512_MASK1(48), BLOCK512_MASK1(49), BLOCK512_MASK1(50), BLOCK512_MASK1(51), BLOCK512_MASK1(52), BLOCK512_MASK1(53), BLOCK512_MASK1(54), BLOCK512_MASK1(55),
+	BLOCK512_MASK1(56), BLOCK512_MASK1(57), BLOCK512_MASK1(58), BLOCK512_MASK1(59), BLOCK512_MASK1(60), BLOCK512_MASK1(61), BLOCK512_MASK1(62), BLOCK512_MASK1(63),
+	BLOCK512_MASK2( 0), BLOCK512_MASK2( 1), BLOCK512_MASK2( 2), BLOCK512_MASK2( 3), BLOCK512_MASK2( 4), BLOCK512_MASK2( 5), BLOCK512_MASK2( 6), BLOCK512_MASK2( 7),
+	BLOCK512_MASK2( 8), BLOCK512_MASK2( 9), BLOCK512_MASK2(10), BLOCK512_MASK2(11), BLOCK512_MASK2(12), BLOCK512_MASK2(13), BLOCK512_MASK2(14), BLOCK512_MASK2(15),
+	BLOCK512_MASK2(16), BLOCK512_MASK2(17), BLOCK512_MASK2(18), BLOCK512_MASK2(19), BLOCK512_MASK2(20), BLOCK512_MASK2(21), BLOCK512_MASK2(22), BLOCK512_MASK2(23),
+	BLOCK512_MASK2(24), BLOCK512_MASK2(25), BLOCK512_MASK2(26), BLOCK512_MASK2(27), BLOCK512_MASK2(28), BLOCK512_MASK2(29), BLOCK512_MASK2(30), BLOCK512_MASK2(31),
+	BLOCK512_MASK2(32), BLOCK512_MASK2(33), BLOCK512_MASK2(34), BLOCK512_MASK2(35), BLOCK512_MASK2(36), BLOCK512_MASK2(37), BLOCK512_MASK2(38), BLOCK512_MASK2(39),
+	BLOCK512_MASK2(40), BLOCK512_MASK2(41), BLOCK512_MASK2(42), BLOCK512_MASK2(43), BLOCK512_MASK2(44), BLOCK512_MASK2(45), BLOCK512_MASK2(46), BLOCK512_MASK2(47),
+	BLOCK512_MASK2(48), BLOCK512_MASK2(49), BLOCK512_MASK2(50), BLOCK512_MASK2(51), BLOCK512_MASK2(52), BLOCK512_MASK2(53), BLOCK512_MASK2(54), BLOCK512_MASK2(55),
+	BLOCK512_MASK2(56), BLOCK512_MASK2(57), BLOCK512_MASK2(58), BLOCK512_MASK2(59), BLOCK512_MASK2(60), BLOCK512_MASK2(61), BLOCK512_MASK2(62), BLOCK512_MASK2(63),
+	BLOCK512_MASK3( 0), BLOCK512_MASK3( 1), BLOCK512_MASK3( 2), BLOCK512_MASK3( 3), BLOCK512_MASK3( 4), BLOCK512_MASK3( 5), BLOCK512_MASK3( 6), BLOCK512_MASK3( 7),
+	BLOCK512_MASK3( 8), BLOCK512_MASK3( 9), BLOCK512_MASK3(10), BLOCK512_MASK3(11), BLOCK512_MASK3(12), BLOCK512_MASK3(13), BLOCK512_MASK3(14), BLOCK512_MASK3(15),
+	BLOCK512_MASK3(16), BLOCK512_MASK3(17), BLOCK512_MASK3(18), BLOCK512_MASK3(19), BLOCK512_MASK3(20), BLOCK512_MASK3(21), BLOCK512_MASK3(22), BLOCK512_MASK3(23),
+	BLOCK512_MASK3(24), BLOCK512_MASK3(25), BLOCK512_MASK3(26), BLOCK512_MASK3(27), BLOCK512_MASK3(28), BLOCK512_MASK3(29), BLOCK512_MASK3(30), BLOCK512_MASK3(31),
+	BLOCK512_MASK3(32), BLOCK512_MASK3(33), BLOCK512_MASK3(34), BLOCK512_MASK3(35), BLOCK512_MASK3(36), BLOCK512_MASK3(37), BLOCK512_MASK3(38), BLOCK512_MASK3(39),
+	BLOCK512_MASK3(40), BLOCK512_MASK3(41), BLOCK512_MASK3(42), BLOCK512_MASK3(43), BLOCK512_MASK3(44), BLOCK512_MASK3(45), BLOCK512_MASK3(46), BLOCK512_MASK3(47),
+	BLOCK512_MASK3(48), BLOCK512_MASK3(49), BLOCK512_MASK3(50), BLOCK512_MASK3(51), BLOCK512_MASK3(52), BLOCK512_MASK3(53), BLOCK512_MASK3(54), BLOCK512_MASK3(55),
+	BLOCK512_MASK3(56), BLOCK512_MASK3(57), BLOCK512_MASK3(58), BLOCK512_MASK3(59), BLOCK512_MASK3(60), BLOCK512_MASK3(61), BLOCK512_MASK3(62), BLOCK512_MASK3(63),
+	BLOCK512_MASK4( 0), BLOCK512_MASK4( 1), BLOCK512_MASK4( 2), BLOCK512_MASK4( 3), BLOCK512_MASK4( 4), BLOCK512_MASK4( 5), BLOCK512_MASK4( 6), BLOCK512_MASK4( 7),
+	BLOCK512_MASK4( 8), BLOCK512_MASK4( 9), BLOCK512_MASK4(10), BLOCK512_MASK4(11), BLOCK512_MASK4(12), BLOCK512_MASK4(13), BLOCK512_MASK4(14), BLOCK512_MASK4(15),
+	BLOCK512_MASK4(16), BLOCK512_MASK4(17), BLOCK512_MASK4(18), BLOCK512_MASK4(19), BLOCK512_MASK4(20), BLOCK512_MASK4(21), BLOCK512_MASK4(22), BLOCK512_MASK4(23),
+	BLOCK512_MASK4(24), BLOCK512_MASK4(25), BLOCK512_MASK4(26), BLOCK512_MASK4(27), BLOCK512_MASK4(28), BLOCK512_MASK4(29), BLOCK512_MASK4(30), BLOCK512_MASK4(31),
+	BLOCK512_MASK4(32), BLOCK512_MASK4(33), BLOCK512_MASK4(34), BLOCK512_MASK4(35), BLOCK512_MASK4(36), BLOCK512_MASK4(37), BLOCK512_MASK4(38), BLOCK512_MASK4(39),
+	BLOCK512_MASK4(40), BLOCK512_MASK4(41), BLOCK512_MASK4(42), BLOCK512_MASK4(43), BLOCK512_MASK4(44), BLOCK512_MASK4(45), BLOCK512_MASK4(46), BLOCK512_MASK4(47),
+	BLOCK512_MASK4(48), BLOCK512_MASK4(49), BLOCK512_MASK4(50), BLOCK512_MASK4(51), BLOCK512_MASK4(52), BLOCK512_MASK4(53), BLOCK512_MASK4(54), BLOCK512_MASK4(55),
+	BLOCK512_MASK4(56), BLOCK512_MASK4(57), BLOCK512_MASK4(58), BLOCK512_MASK4(59), BLOCK512_MASK4(60), BLOCK512_MASK4(61), BLOCK512_MASK4(62), BLOCK512_MASK4(63),
+	BLOCK512_MASK5( 0), BLOCK512_MASK5( 1), BLOCK512_MASK5( 2), BLOCK512_MASK5( 3), BLOCK512_MASK5( 4), BLOCK512_MASK5( 5), BLOCK512_MASK5( 6), BLOCK512_MASK5( 7),
+	BLOCK512_MASK5( 8), BLOCK512_MASK5( 9), BLOCK512_MASK5(10), BLOCK512_MASK5(11), BLOCK512_MASK5(12), BLOCK512_MASK5(13), BLOCK512_MASK5(14), BLOCK512_MASK5(15),
+	BLOCK512_MASK5(16), BLOCK512_MASK5(17), BLOCK512_MASK5(18), BLOCK512_MASK5(19), BLOCK512_MASK5(20), BLOCK512_MASK5(21), BLOCK512_MASK5(22), BLOCK512_MASK5(23),
+	BLOCK512_MASK5(24), BLOCK512_MASK5(25), BLOCK512_MASK5(26), BLOCK512_MASK5(27), BLOCK512_MASK5(28), BLOCK512_MASK5(29), BLOCK512_MASK5(30), BLOCK512_MASK5(31),
+	BLOCK512_MASK5(32), BLOCK512_MASK5(33), BLOCK512_MASK5(34), BLOCK512_MASK5(35), BLOCK512_MASK5(36), BLOCK512_MASK5(37), BLOCK512_MASK5(38), BLOCK512_MASK5(39),
+	BLOCK512_MASK5(40), BLOCK512_MASK5(41), BLOCK512_MASK5(42), BLOCK512_MASK5(43), BLOCK512_MASK5(44), BLOCK512_MASK5(45), BLOCK512_MASK5(46), BLOCK512_MASK5(47),
+	BLOCK512_MASK5(48), BLOCK512_MASK5(49), BLOCK512_MASK5(50), BLOCK512_MASK5(51), BLOCK512_MASK5(52), BLOCK512_MASK5(53), BLOCK512_MASK5(54), BLOCK512_MASK5(55),
+	BLOCK512_MASK5(56), BLOCK512_MASK5(57), BLOCK512_MASK5(58), BLOCK512_MASK5(59), BLOCK512_MASK5(60), BLOCK512_MASK5(61), BLOCK512_MASK5(62), BLOCK512_MASK5(63),
+	BLOCK512_MASK6( 0), BLOCK512_MASK6( 1), BLOCK512_MASK6( 2), BLOCK512_MASK6( 3), BLOCK512_MASK6( 4), BLOCK512_MASK6( 5), BLOCK512_MASK6( 6), BLOCK512_MASK6( 7),
+	BLOCK512_MASK6( 8), BLOCK512_MASK6( 9), BLOCK512_MASK6(10), BLOCK512_MASK6(11), BLOCK512_MASK6(12), BLOCK512_MASK6(13), BLOCK512_MASK6(14), BLOCK512_MASK6(15),
+	BLOCK512_MASK6(16), BLOCK512_MASK6(17), BLOCK512_MASK6(18), BLOCK512_MASK6(19), BLOCK512_MASK6(20), BLOCK512_MASK6(21), BLOCK512_MASK6(22), BLOCK512_MASK6(23),
+	BLOCK512_MASK6(24), BLOCK512_MASK6(25), BLOCK512_MASK6(26), BLOCK512_MASK6(27), BLOCK512_MASK6(28), BLOCK512_MASK6(29), BLOCK512_MASK6(30), BLOCK512_MASK6(31),
+	BLOCK512_MASK6(32), BLOCK512_MASK6(33), BLOCK512_MASK6(34), BLOCK512_MASK6(35), BLOCK512_MASK6(36), BLOCK512_MASK6(37), BLOCK512_MASK6(38), BLOCK512_MASK6(39),
+	BLOCK512_MASK6(40), BLOCK512_MASK6(41), BLOCK512_MASK6(42), BLOCK512_MASK6(43), BLOCK512_MASK6(44), BLOCK512_MASK6(45), BLOCK512_MASK6(46), BLOCK512_MASK6(47),
+	BLOCK512_MASK6(48), BLOCK512_MASK6(49), BLOCK512_MASK6(50), BLOCK512_MASK6(51), BLOCK512_MASK6(52), BLOCK512_MASK6(53), BLOCK512_MASK6(54), BLOCK512_MASK6(55),
+	BLOCK512_MASK6(56), BLOCK512_MASK6(57), BLOCK512_MASK6(58), BLOCK512_MASK6(59), BLOCK512_MASK6(60), BLOCK512_MASK6(61), BLOCK512_MASK6(62), BLOCK512_MASK6(63),
+	BLOCK512_MASK7( 0), BLOCK512_MASK7( 1), BLOCK512_MASK7( 2), BLOCK512_MASK7( 3), BLOCK512_MASK7( 4), BLOCK512_MASK7( 5), BLOCK512_MASK7( 6), BLOCK512_MASK7( 7),
+	BLOCK512_MASK7( 8), BLOCK512_MASK7( 9), BLOCK512_MASK7(10), BLOCK512_MASK7(11), BLOCK512_MASK7(12), BLOCK512_MASK7(13), BLOCK512_MASK7(14), BLOCK512_MASK7(15),
+	BLOCK512_MASK7(16), BLOCK512_MASK7(17), BLOCK512_MASK7(18), BLOCK512_MASK7(19), BLOCK512_MASK7(20), BLOCK512_MASK7(21), BLOCK512_MASK7(22), BLOCK512_MASK7(23),
+	BLOCK512_MASK7(24), BLOCK512_MASK7(25), BLOCK512_MASK7(26), BLOCK512_MASK7(27), BLOCK512_MASK7(28), BLOCK512_MASK7(29), BLOCK512_MASK7(30), BLOCK512_MASK7(31),
+	BLOCK512_MASK7(32), BLOCK512_MASK7(33), BLOCK512_MASK7(34), BLOCK512_MASK7(35), BLOCK512_MASK7(36), BLOCK512_MASK7(37), BLOCK512_MASK7(38), BLOCK512_MASK7(39),
+	BLOCK512_MASK7(40), BLOCK512_MASK7(41), BLOCK512_MASK7(42), BLOCK512_MASK7(43), BLOCK512_MASK7(44), BLOCK512_MASK7(45), BLOCK512_MASK7(46), BLOCK512_MASK7(47),
+	BLOCK512_MASK7(48), BLOCK512_MASK7(49), BLOCK512_MASK7(50), BLOCK512_MASK7(51), BLOCK512_MASK7(52), BLOCK512_MASK7(53), BLOCK512_MASK7(54), BLOCK512_MASK7(55),
+	BLOCK512_MASK7(56), BLOCK512_MASK7(57), BLOCK512_MASK7(58), BLOCK512_MASK7(59), BLOCK512_MASK7(60), BLOCK512_MASK7(61), BLOCK512_MASK7(62), BLOCK512_MASK7(63),
+	BLOCK512_MASK8( 0), BLOCK512_MASK8( 1), BLOCK512_MASK8( 2), BLOCK512_MASK8( 3), BLOCK512_MASK8( 4), BLOCK512_MASK8( 5), BLOCK512_MASK8( 6), BLOCK512_MASK8( 7),
+	BLOCK512_MASK8( 8), BLOCK512_MASK8( 9), BLOCK512_MASK8(10), BLOCK512_MASK8(11), BLOCK512_MASK8(12), BLOCK512_MASK8(13), BLOCK512_MASK8(14), BLOCK512_MASK8(15),
+	BLOCK512_MASK8(16), BLOCK512_MASK8(17), BLOCK512_MASK8(18), BLOCK512_MASK8(19), BLOCK512_MASK8(20), BLOCK512_MASK8(21), BLOCK512_MASK8(22), BLOCK512_MASK8(23),
+	BLOCK512_MASK8(24), BLOCK512_MASK8(25), BLOCK512_MASK8(26), BLOCK512_MASK8(27), BLOCK512_MASK8(28), BLOCK512_MASK8(29), BLOCK512_MASK8(30), BLOCK512_MASK8(31),
+	BLOCK512_MASK8(32), BLOCK512_MASK8(33), BLOCK512_MASK8(34), BLOCK512_MASK8(35), BLOCK512_MASK8(36), BLOCK512_MASK8(37), BLOCK512_MASK8(38), BLOCK512_MASK8(39),
+	BLOCK512_MASK8(40), BLOCK512_MASK8(41), BLOCK512_MASK8(42), BLOCK512_MASK8(43), BLOCK512_MASK8(44), BLOCK512_MASK8(45), BLOCK512_MASK8(46), BLOCK512_MASK8(47),
+	BLOCK512_MASK8(48), BLOCK512_MASK8(49), BLOCK512_MASK8(50), BLOCK512_MASK8(51), BLOCK512_MASK8(52), BLOCK512_MASK8(53), BLOCK512_MASK8(54), BLOCK512_MASK8(55),
+	BLOCK512_MASK8(56), BLOCK512_MASK8(57), BLOCK512_MASK8(58), BLOCK512_MASK8(59), BLOCK512_MASK8(60), BLOCK512_MASK8(61), BLOCK512_MASK8(62), BLOCK512_MASK8(63),
+};
+
 void m_print(std::ostream& o, const cm_ptr& m, bool transpose)
 {
 	o << "[";
@@ -42,28 +200,23 @@ void v_print(std::ostream& o, const cv_ptr& v)
 	o << "]";
 }
 
-
-
-
-bool m_isequal(const cm_ptr& m1, const cm_ptr& m2)
+size_t m_hw(const cm_ptr& m)
 {
-	if (m1.rows != m2.rows || m1.columns != m2.columns)
-		return false;
-	if (m1.rows == 0 || m1.columns == 0)
-		return true;
-	const size_t words = (m1.columns + 63) / 64;
-	auto lwm = lastwordmask(m1.columns);
-	for (size_t r = 0; r < m1.rows; ++r)
+	if (m.columns == 0 || m.rows == 0)
+		return 0;
+	size_t words = (m.columns + 63)/64;
+	uint64_t lwm = lastwordmask(m.columns);
+	size_t hw = 0;
+	for (size_t r = 0; r < m.rows; ++r)
 	{
-		auto first1 = m1.data(r), first2 = m2.data(r), last1 = m1.data(r) + words - 1;
-		for (; first1 != last1; ++first1, ++first2)
-			if (*first1 != *first2)
-				return false;
-		if ((lwm & *first1) != (lwm & *first2))
-			return false;
+		auto first1 = m.data(r), last1 = m.data(r) + words - 1;
+		for (; first1 != last1; ++first1)
+			hw += hammingweight(*first1);
+		hw += hammingweight((*first1) & lwm);
 	}
-	return true;
+	return hw;
 }
+
 void m_swapcolumns(const m_ptr& m, size_t c1, size_t c2)
 {
 	size_t w1 = c1/64, w2 = c2/64, r2 = (c1-c2)%64;
@@ -166,85 +319,7 @@ void m_clearcolumns(const m_ptr& m, size_t coloffset, size_t cols)
 }
 
 
-template<void f(uint64_t*, uint64_t*, uint64_t)>
-void m_1op_f(const m_ptr& dst)
-{
-	if (dst.rows == 0 || dst.columns == 0)
-		return;
-	const size_t words = (dst.columns - 1) / 64;
-	auto lwm = lastwordmask(dst.columns);
-	for (size_t r = 0; r < dst.rows; ++r)
-		f(dst.data(r), dst.data(r) + words, lwm);
-}
-template<void f(uint64_t*, uint64_t*, const uint64_t*, uint64_t)>
-void m_2op_f(const m_ptr& dst, const cm_ptr& src)
-{
-	if (dst.rows != src.rows || dst.columns != src.columns)
-		throw std::out_of_range("m_2op_f: matrices do not have equal dimensions");
-	if (src.rows == 0 || src.columns == 0)
-		return;
-	const size_t words = (src.columns - 1) / 64;
-	auto lwm = lastwordmask(src.columns);
-	for (size_t r = 0; r < src.rows; ++r)
-		f(dst.data(r), dst.data(r) + words, src.data(r), lwm);
-}
-template<void f(uint64_t*, uint64_t*, const uint64_t*, const uint64_t*, uint64_t)>
-void m_3op_f(const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2)
-{
-	if (dst.rows != src1.rows || dst.rows != src2.rows || dst.columns != src1.columns || dst.columns != src2.columns)
-		throw std::out_of_range("m_3op_f: matrices do not have equal dimensions");
-	if (dst.rows == 0 || dst.columns == 0)
-		return;
-	const size_t words = (dst.columns - 1) / 64;
-	auto lwm = lastwordmask(dst.columns);
-	for (size_t r = 0; r < dst.rows; ++r)
-		f(dst.data(r), dst.data(r) + words, src1.data(r), src2.data(r), lwm);
-}
-
-void m_set  (const m_ptr& m) { m_1op_f<_f1_set>(m); }
-void m_clear(const m_ptr& m) { m_1op_f<_f1_clear>(m); }
-void m_not  (const m_ptr& m) { m_1op_f<_f1_not>(m); }
-void m_set  (const m_ptr& m, bool b) { if (b) m_set(m); else m_clear(m); }
-
-void m_copy   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_copy>   (dst, src); }
-void m_copynot(const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_copynot>(dst, src); }
-void m_and    (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_and>    (dst, src); }
-void m_or     (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_or>     (dst, src); }
-void m_xor    (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_xor>    (dst, src); }
-void m_nand   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_nand>   (dst, src); }
-void m_nor    (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_nor>    (dst, src); }
-void m_nxor   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_nxor>   (dst, src); }
-void m_andin  (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_andin>  (dst, src); }
-void m_andni  (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_andni>  (dst, src); }
-void m_orin   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_orin>   (dst, src); }
-void m_orni   (const m_ptr& dst, const cm_ptr& src) { m_2op_f<_f2_orni>   (dst, src); }
-void m_and    (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_and>(dst, src1, src2); }
-void m_or     (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_or> (dst, src1, src2); }
-void m_xor    (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_xor>(dst, src1, src2); }
-void m_nand   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_nand>(dst, src1, src2); }
-void m_nor    (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_nor> (dst, src1, src2); }
-void m_nxor   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_nxor>(dst, src1, src2); }
-void m_andin  (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_andin>(dst, src1, src2); }
-void m_andni  (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_andni>(dst, src1, src2); }
-void m_orin   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_orin> (dst, src1, src2); }
-void m_orni   (const m_ptr& dst, const cm_ptr& src1, const cm_ptr& src2) { m_3op_f<_f3_orni> (dst, src1, src2); }
-
-size_t m_hw(const cm_ptr& m)
-{
-	if (m.columns == 0 || m.rows == 0)
-		return 0;
-	size_t words = (m.columns + 63)/64;
-	uint64_t lwm = lastwordmask(m.columns);
-	size_t hw = 0;
-	for (size_t r = 0; r < m.rows; ++r)
-	{
-		auto first1 = m.data(r), last1 = m.data(r) + words - 1;
-		for (; first1 != last1; ++first1)
-			hw += hammingweight(*first1);
-		hw += hammingweight((*first1) & lwm);
-	}
-	return hw;
-}
+/* TRANSPOSE FUNCTIONS */
 
 template<size_t bits = 64>
 void block_transpose(uint64_t* dst, size_t dststride, const uint64_t* src, size_t srcstride)
@@ -252,6 +327,7 @@ void block_transpose(uint64_t* dst, size_t dststride, const uint64_t* src, size_
 	static_assert(0 == (bits&(bits-1)), "bits must be power of 2");
 	static_assert(64 >= bits, "bits must not exceed uint64_t bitsize");
 
+	
 	// mask of lower half bits
 	uint64_t m = (uint64_t(1) << (bits/2))-1;
 	unsigned int j = (bits/2);
@@ -283,11 +359,14 @@ void block_transpose(uint64_t* dst, size_t dststride, const uint64_t* src, size_
 	}
 	// last loop iteration (j==1), load tmp store in dst
 //#pragma unroll
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	for (unsigned int k=0;  k<bits;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 }
 
@@ -335,11 +414,14 @@ inline void block_transpose2(uint64_t* dst, size_t dststride, const uint64_t* sr
 	}
 	// last loop iteration (j==1), load tmp store in dst
 //#pragma unroll
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	for (unsigned int k=0;  k<2*bits;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 }
 
@@ -391,25 +473,29 @@ inline void block_transpose(uint64_t* dst, size_t dststride, size_t dstrows, con
 		}
 	}
 	// last loop iteration (j==1), load tmp store in dst
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	unsigned int k=0;
 	for (;  k+1 < dstrows;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 	// note both k and bits are even and k < dstrows <= bits
 	// so k+1 < bits as well, nevertheless compilers may warn
 	if (k < dstrows)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1);
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask;
 	}
 }
 
 
 
-template<typename uint64_t>
+//template<typename uint64_t>
 inline void block_transpose(uint64_t* dst, size_t dststride, size_t dstrows, const uint64_t* src, size_t srcstride, size_t srcrows, size_t bits)
 {
 	assert(0 == (bits&(bits-1))); // bits must be power of 2
@@ -459,17 +545,21 @@ inline void block_transpose(uint64_t* dst, size_t dststride, size_t dstrows, con
 		}
 	}
 	// last loop iteration (j==1), load tmp store in dst
+	const uint64_t bitmask = (~uint64_t(0)) >> (64 - bits);
 	unsigned int k=0;
 	for (;  k+1 < dstrows;  k += 2)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1); dst+=dststride;
-		*dst = tmp[k+1] ^ t; dst+=dststride;
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		val = tmp[k+1] ^ t;
+		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
 	}
 	if (k < dstrows)
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
-		*dst = tmp[k] ^ (t<<1);
+		uint64_t val = tmp[k] ^ (t<<1);
+		*dst ^= (*dst ^ val) & bitmask;
 	}
 }
 
@@ -531,6 +621,198 @@ void m_transpose(const m_ptr& dst, const cm_ptr& src)
 	}
 }
 
+
+
+
+
+
+
+
+template<size_t bits, bool masked>
+bool m_isequal(const cm_ptr& m1, const cm_ptr& m2, block_tag<bits,masked>)
+{
+        if (m1.rows != m2.rows || m1.columns != m2.columns)
+                return false;
+        if (m1.rows == 0 || m1.columns == 0)
+                return true;
+                
+        const size_t blocks = (m1.columns + bits - 1) / bits - 1;
+        const size_t stride1 = m1.stride / (bits/64);
+        const size_t stride2 = m2.stride / (bits/64);
+        
+        auto first1 = make_block_ptr(m1.ptr, block_tag<bits,masked>());
+        auto first2 = make_block_ptr(m2.ptr, block_tag<bits,masked>());
+        auto lwm = lastwordmask(m1.columns, block_tag<bits,masked>());
+        for (size_t r = 0; r < m1.rows; ++r, first1+=stride1, first2+=stride2)
+        {
+        	auto first1r = first1, last1r = first1r + blocks, first2r = first2;
+	        for (; first1r != last1r; ++first1r, ++first2r)
+        	        if (*first1r != *first2r)
+                	        return false;
+        	if ((lwm & *first1r) != (lwm & *first2r))
+       	                return false;
+	}
+        return true;
 }
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<64 ,true >);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<128,true >);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<256,true >);
+template bool m_isequal(const cm_ptr&, const cm_ptr&, block_tag<512,true >);
+
+#define MCCL_MATRIX_BASE_FUNCTION_1OP(func,expr) \
+template<size_t bits, bool masked> \
+void m_ ## func (const m_ptr& dst, block_tag<bits,masked>) \
+{ \
+        if (dst.rows == 0 || dst.columns == 0) \
+                return; \
+        size_t blocks = (dst.columns + bits-1)/bits - (masked?1:0); \
+        const size_t stride = dst.stride / (bits/64); \
+        auto first1 = make_block_ptr(dst.ptr, block_tag<bits,masked>()); \
+        if (!masked)  \
+        { \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+		        for (; first1r != last1r; ++first1r) \
+		        	*first1r = expr ; \
+		} \
+	} else { \
+                auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+		        for (; first1r != last1r; ++first1r) \
+		        	*first1r = expr ; \
+			auto diff = lwm & (( expr ) ^ *first1r); \
+			*first1r ^= diff; \
+		} \
+	} \
+} \
+template void m_ ## func (const m_ptr&, block_tag<64 ,true >); \
+template void m_ ## func (const m_ptr&, block_tag<64 ,false>); \
+template void m_ ## func (const m_ptr&, block_tag<128,true >); \
+template void m_ ## func (const m_ptr&, block_tag<128,false>); \
+template void m_ ## func (const m_ptr&, block_tag<256,true >); \
+template void m_ ## func (const m_ptr&, block_tag<256,false>); \
+template void m_ ## func (const m_ptr&, block_tag<512,true >); \
+template void m_ ## func (const m_ptr&, block_tag<512,false>);
+
+MCCL_MATRIX_BASE_FUNCTION_1OP(not,~*first1r)
+MCCL_MATRIX_BASE_FUNCTION_1OP(clear,*first1r^*first1r)
+MCCL_MATRIX_BASE_FUNCTION_1OP(set,*first1r|~*first1r)
+
+
+#define MCCL_MATRIX_BASE_FUNCTION_2OP(func,expr) \
+template<size_t bits, bool masked> \
+void m_ ## func (const m_ptr& dst, const cm_ptr& m2, block_tag<bits,masked>) \
+{ \
+	if (dst.rows != m2.rows || dst.columns != m2.columns) \
+		throw std::out_of_range("matrices do not have equal dimensions"); \
+        if (dst.rows == 0 || dst.columns == 0) \
+                return; \
+        size_t blocks = (dst.columns + bits-1)/bits - (masked?1:0); \
+        const size_t stride1 = dst.stride / (bits/64); \
+        const size_t stride2 =  m2.stride / (bits/64); \
+        auto first1 = make_block_ptr(dst.ptr, block_tag<bits,masked>()); \
+        auto first2 = make_block_ptr( m2.ptr, block_tag<bits,masked>()); \
+        if (!masked)  \
+        { \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2; \
+		        for (; first1r != last1r; ++first1r,++first2r) \
+		        	*first1r = expr ; \
+		} \
+	} else { \
+                auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2; \
+		        for (; first1r != last1r; ++first1r,++first2r) \
+		        	*first1r = expr ; \
+			auto diff = lwm & (( expr ) ^ *first1r); \
+			*first1r ^= diff; \
+		} \
+	} \
+} \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<64 ,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<64 ,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<128,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<128,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<256,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<256,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<512,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, block_tag<512,false>);
+
+MCCL_MATRIX_BASE_FUNCTION_2OP(copy,*first2r)
+MCCL_MATRIX_BASE_FUNCTION_2OP(copynot,~(*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(and,(*first1r) & (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(or ,(*first1r) | (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(xor,(*first1r) ^ (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(nand,~((*first1r) & (*first2r)))
+MCCL_MATRIX_BASE_FUNCTION_2OP(nor ,~((*first1r) | (*first2r)))
+MCCL_MATRIX_BASE_FUNCTION_2OP(nxor,~((*first1r) ^ (*first2r)))
+MCCL_MATRIX_BASE_FUNCTION_2OP(andin,(*first1r) & (~*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(andni,(~*first1r) & (*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(orin ,(*first1r) | (~*first2r))
+MCCL_MATRIX_BASE_FUNCTION_2OP(orni ,(~*first1r) | (*first2r))
+
+
+#define MCCL_MATRIX_BASE_FUNCTION_3OP(func,expr) \
+template<size_t bits, bool masked> \
+void m_ ## func (const m_ptr& dst, const cm_ptr& m2, const cm_ptr& m3, block_tag<bits,masked>) \
+{ \
+	if (dst.rows != m2.rows || dst.columns != m2.columns) \
+		throw std::out_of_range("matrices do not have equal dimensions"); \
+        if (dst.rows == 0 || dst.columns == 0) \
+                return; \
+        size_t blocks = (dst.columns + bits-1)/bits - (masked?1:0); \
+        const size_t stride1 = dst.stride / (bits/64); \
+        const size_t stride2 =  m2.stride / (bits/64); \
+        const size_t stride3 =  m3.stride / (bits/64); \
+        auto first1 = make_block_ptr(dst.ptr, block_tag<bits,masked>()); \
+        auto first2 = make_block_ptr( m2.ptr, block_tag<bits,masked>()); \
+        auto first3 = make_block_ptr( m3.ptr, block_tag<bits,masked>()); \
+        if (!masked)  \
+        { \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2, first3 += stride3) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2, first3r = first3; \
+		        for (; first1r != last1r; ++first1r,++first2r,++first3r) \
+		        	*first1r = expr ; \
+		} \
+	} else { \
+                auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
+	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2, first3 += stride3) \
+	        { \
+	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2, first3r = first3; \
+		        for (; first1r != last1r; ++first1r,++first2r,++first3r) \
+		        	*first1r = expr ; \
+			auto diff = lwm & (( expr ) ^ *first1r); \
+			*first1r ^= diff; \
+		} \
+	} \
+} \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<64 ,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<64 ,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<128,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<128,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<256,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<256,false>); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<512,true >); \
+template void m_ ## func (const m_ptr&, const cm_ptr&, const cm_ptr&, block_tag<512,false>);
+
+MCCL_MATRIX_BASE_FUNCTION_3OP(and,(*first2r) & (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(or ,(*first2r) | (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(xor,(*first2r) ^ (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(nand,~((*first2r) & (*first3r)))
+MCCL_MATRIX_BASE_FUNCTION_3OP(nor ,~((*first2r) | (*first3r)))
+MCCL_MATRIX_BASE_FUNCTION_3OP(nxor,~((*first2r) ^ (*first3r)))
+MCCL_MATRIX_BASE_FUNCTION_3OP(andin,(*first2r) & (~*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(andni,(~*first2r) & (*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(orin ,(*first2r) | (~*first3r))
+MCCL_MATRIX_BASE_FUNCTION_3OP(orni ,(~*first2r) | (*first3r))
+
+} // namespace detail
 
 MCCL_END_NAMESPACE

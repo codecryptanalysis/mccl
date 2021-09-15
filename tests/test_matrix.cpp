@@ -67,6 +67,7 @@ int test_matrixref(size_t r = 512, size_t c = 512)
     if (c%64 != 0) return 0;
     LOG_CERR(r << "x" << c);
     mat matrix(2*r, 2*c);
+    auto blockptr = matrix.blockptr();
     mat_view mref1(matrix);
     mat_view mrefUL(matrix.submatrix(0, r, 0, c));
     mat_view mrefUR(matrix.submatrix(0, r, c, c));

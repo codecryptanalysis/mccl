@@ -73,7 +73,7 @@ vec solve_SD(ISD_t& ISD, const cmat_view& H, const cvec_view& S, unsigned int w)
 {
     ISD.initialize(H, S, w);
     ISD.solve();
-    return ISD.get_solution();
+    return vec(ISD.get_solution());
 }
 template<typename ISD_t = syndrome_decoding_API>
 vec solve_SD(ISD_t& ISD, const syndrome_decoding_problem& SD)

@@ -32,15 +32,16 @@ MCCL_BEGIN_NAMESPACE
       This form ensures H2^T columns are before H1^T columns
       and thus is flexible with padding H2^T column words (64-bit or s-bit SIMD) with additional H1^T columns
 */
-template<size_t _bit_alignment = 64>
+template<size_t _bits = 256, bool _masked = false>
 class HST_ISD_form_t
 {
 public:
-    static const size_t bit_alignment = _bit_alignment;
-    typedef aligned_tag<bit_alignment> this_aligned_tag;
+    static const size_t bit_alignment = _bits;
+    typedef block_tag<bit_alignment, _masked> this_block_tag;
     
     HST_ISD_form_t() {}
     HST_ISD_form_t(const cmat_view& H_, const cvec_view& S_, size_t l_) { reset(H_, S_, l_); }
+    
     void reset(const cmat_view& H_, const cvec_view& S_, size_t l_)
     {
     	assert( l_ < H_.rows() );
@@ -48,39 +49,27 @@ public:
     	
     	// setup HST
     	size_t HTrows = H_.columns(), HTcols = H_.rows();
-    	size_t HTcolspadded = (HTcols + bit_alignment - 1) & ~(bit_alignment-1);
     	HT_columns = HTcols;
     	H2T_columns = l_;
-    	H2T_columns_padded = (H2T_columns + bit_alignment - 1) & ~(bit_alignment - 1);
     	H1T_columns = HTcols - l_;
     	echelon_rows = HTcols - l_;
     	ISD_rows = HTrows - echelon_rows;
     	max_update_rows = size_t( float(echelon_rows) * float(ISD_rows) / float(echelon_rows+ISD_rows) );
 
-    	HST.resize(HTrows + 1, HTcolspadded);
+    	HST.resize(HTrows + 1, HTcols);
     	HST.clear();
 
     	// create views
-    	_HT        .reset(HST.submatrix(0, HTrows, 0, HTcols));
-    	_HTpadded  .reset(HST.submatrix(0, HTrows, 0, HTcolspadded));
-    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, HTcols));
-    	_H12Tpadded.reset(HST.submatrix(echelon_rows, ISD_rows, 0, HTcolspadded));
-    	_S         .reset(HST[HTrows].subvector(0, HTcols));
-    	_Spadded   .reset(HST[HTrows].subvector(0, HTcolspadded));
+    	_HT        .reset(HST.submatrix(0, HTrows, 0, HTcols, this_block_tag()));
+    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, HTcols, this_block_tag()));
+    	_S         .reset(HST[HTrows].subvector(0, HTcols, this_block_tag()));
 
-	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, H2T_columns));
-	_H2Tpadded.reset(HST.submatrix(echelon_rows, ISD_rows, 0, H2T_columns_padded));
-	_S2       .reset(_Spadded.subvector(0, H2T_columns));
-	_S2padded .reset(_Spadded.subvector(0, H2T_columns_padded));
-	
-	_H1Trest      .reset(HST.submatrix(echelon_rows, ISD_rows, H2T_columns_padded, HTcols));
-	_H1Trestpadded.reset(HST.submatrix(echelon_rows, ISD_rows, H2T_columns_padded, HTcolspadded));
-	_S1rest       .reset(_Spadded.subvector(H2T_columns_padded, HTcols));
-	_S1restpadded .reset(_Spadded.subvector(H2T_columns_padded, HTcolspadded));
+	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, H2T_columns, this_block_tag()));
+	_S2       .reset(_S.subvector(0, H2T_columns, this_block_tag()));
 
-    	// copy H and S into HST
-    	_HT.transpose(H_);
-    	_S.copy(S_);
+    	// copy H and S into HST using block_tag<bits,true> to force clearing out trailing bits
+    	_HT.as(block_tag<bit_alignment,true>()).transpose(H_);
+    	_S.as(block_tag<bit_alignment,true>()).copy(S_);
 
     	// setup HT row perm
     	perm.resize(HTrows);
@@ -129,41 +118,31 @@ public:
     size_t echelonrows() const { return echelon_rows; }
     size_t ISDrows() const { return ISD_rows; }
 
-    const cmat_view& HT()            const { return _HT; }
-    const cmat_view& HTpadded()      const { return _HTpadded; }
-    const cmat_view& H12T()          const { return _H12T; }
-    const cmat_view& H12Tpadded()    const { return _H12Tpadded; }
-    const cmat_view& H2T()           const { return _H2T; }
-    const cmat_view& H2Tpadded()     const { return _H2Tpadded; }
-    const cmat_view& H1Trest()       const { return _H1Trest; }
-    const cmat_view& H1Trestpadded() const { return _H1Trestpadded; }
+    const cmat_view_t<this_block_tag>& HT()   const { return _HT; }
+    const cmat_view_t<this_block_tag>& H12T() const { return _H12T; }
+    const cmat_view_t<this_block_tag>& H2T()  const { return _H2T; }
 
-    const cvec_view& S()            const { return _S; }
-    const cvec_view& Spadded()      const { return _Spadded; }
-    const cvec_view& S2()           const { return _S2; }
-    const cvec_view& S2padded()     const { return _S2padded; }
-    const cvec_view& S1rest()       const { return _S1rest; }
-    const cvec_view& S1restpadded() const { return _S1restpadded; }
-    
+    const cvec_view_t<this_block_tag>& S()    const { return _S; }
+    const cvec_view_t<this_block_tag>& S2()   const { return _S2; }
     
     // swap with random row outside echelon form and bring it back to echelon form
     void swap_echelon(size_t echelon_idx, size_t ISD_idx)
     {
-    	if (echelon_idx >= echelon_rows || echelon_rows + ISD_idx >= perm.size())
+    	if (!MCCL_VECTOR_NO_SANITY_CHECKS && (echelon_idx >= echelon_rows || echelon_rows + ISD_idx >= perm.size()))
     		throw std::runtime_error("HST_ISD_form_t::swap_echelon(): bad input index");
 	// swap rows
 	std::swap(perm[echelon_idx], perm[echelon_rows + ISD_idx]);
-	HST[echelon_idx].swap(HST[echelon_rows + ISD_idx], this_aligned_tag());
+	HST[echelon_idx].swap(HST[echelon_rows + ISD_idx]);
 
 	// bring HST back in echelon form
 	size_t pivotcol = HT_columns - echelon_idx - 1;
-	vec_view pivotrow(HST[echelon_idx]);
+	auto pivotrow = HST[echelon_idx];
 	pivotrow.clearbit(pivotcol);
 	auto HSTrowit = HST[echelon_start];
 	for (size_t r2 = echelon_start; r2 < HST.rows(); ++r2,++HSTrowit)
 		if (HST(r2,pivotcol))
-			HSTrowit.vxor(pivotrow, this_aligned_tag());
-	pivotrow.clear(this_aligned_tag());
+			HSTrowit.vxor(pivotrow);
+	pivotrow.clear();
 	pivotrow.setbit(pivotcol);
     }
     // update 1 echelon row
@@ -369,19 +348,16 @@ public:
     }
 
 private:
-    mat HST;
+    mat_t<this_block_tag> HST;
 
-    mat_view _HT, _HTpadded, _H12T, _H12Tpadded;
-    vec_view _S, _Spadded;
+    mat_view_t<this_block_tag> _HT, _H12T;
+    vec_view_t<this_block_tag> _S;
 
-    mat_view _H2T, _H2Tpadded;
-    vec_view _S2, _S2padded;
+    mat_view_t<this_block_tag> _H2T;
+    vec_view_t<this_block_tag> _S2;
 
-    mat_view _H1Trest, _H1Trestpadded;
-    vec_view _S1rest, _S1restpadded;
-    
     std::vector<uint32_t> perm;
-    size_t HT_columns, H1T_columns, H2T_columns, H2T_columns_padded;
+    size_t HT_columns, H1T_columns, H2T_columns;
     size_t echelon_rows, ISD_rows, max_update_rows, echelon_start, cur_echelon_row, cur_ISD_row, rnd_ISD_row;
     std::vector<uint32_t> echelon_perm, ISD_perm;
 

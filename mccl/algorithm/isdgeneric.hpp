@@ -71,7 +71,7 @@ extern ISD_generic_config_t ISD_generic_config_default;
 //
 // this makes it easy to include additional columns of H1T together with H2T to subISD
 
-template<typename subISDT_t = subISDT_API, size_t _bit_alignment = 64>
+template<typename subISDT_t = subISDT_API, size_t _bit_alignment = 256, bool _masked = false>
 class ISD_generic
     : public syndrome_decoding_API
 {
@@ -80,8 +80,8 @@ public:
 
     static const size_t bit_alignment = _bit_alignment;
     
-    typedef block_t<bit_alignment>     this_block_t;
-    typedef aligned_tag<bit_alignment> this_aligned_tag;
+    typedef uint64_block_t<bit_alignment>  this_block_t;
+    typedef block_tag<bit_alignment,_masked> this_block_tag;
 
     ISD_generic(subISDT_t& sI)
         : subISDT(&sI), config(ISD_generic_config_default), stats("ISD-generic")
@@ -118,13 +118,13 @@ public:
         Sorg.reset(_S);
         HST.reset(_H, _S, l);
 
-        C.resize(HST.Spadded().columns());
+        C.resize(HST.S().columns());
         
-        blocks_per_row = HST.Spadded().columns() / bit_alignment;
-        block_stride = (HST.H12T().stride() * sizeof(uint64_t)) / sizeof(this_block_t);
-        H12T_blockptr = reinterpret_cast<const this_block_t*>( HST.H12Tpadded().data() );
-        S_blockptr = reinterpret_cast<const this_block_t*>( HST.Spadded().data() );
-        C_blockptr = reinterpret_cast<this_block_t*>( C.data() );
+        blocks_per_row = HST.H12T().rowblocks();
+        block_stride = HST.H12T().blockstride();
+        H12T_blockptr = HST.H12T().blockptr();
+        S_blockptr = HST.S().blockptr();
+        C_blockptr = C.blockptr();
         
         sol.clear();
         solution = vec();
@@ -238,7 +238,7 @@ public:
                 return true;
 
             // 3. construct full solution on echelon and ISD part
-            if (wsol != (end-begin) + hammingweight(C, this_aligned_tag()))
+            if (wsol != (end-begin) + hammingweight(C))
                 throw std::runtime_error("ISD_generic::callback: internal error 1: w1partial is not correct?");
             sol.clear();
             for (auto p = begin; p != end; ++p)
@@ -272,10 +272,10 @@ private:
     vec solution;
 
     // maintains (U(H|S)P)^T in ISD form for random column permutations P
-    HST_ISD_form_t<_bit_alignment> HST;
+    HST_ISD_form_t<_bit_alignment,_masked> HST;
 
     // temporary vector to compute sum of syndrome and H columns
-    vec C;
+    vec_t<this_block_tag> C;
     
     // block pointers to H12T, S and C
     size_t block_stride, blocks_per_row;
