@@ -79,9 +79,11 @@ subISD attack implementations should derive from the `subISDT_API` (see [decodin
 - `void initialize(const cmat_view& H2TH1T, size_t ell, const cvec_view& S2S1, unsigned int w, callback_t callback, void* ptr = nullptr)`: obtain the subISD problem `H2TH1T`, `ell` `S2S1`, `w` as well as the callback function `callback` together with a ISD_generic internal pointer `ptr` that has to be supplied with each call to `callback`.
 - `void prepare_loop()`: prepare internal structures for the first main loop execution.
 - `bool loop_next()`: execute one main loop iteration. return `false` to stop the main loop (indicated by `callback` or subISD search space is exhausted).
-- `void solve()`: optional. calls `prepare_loop()` once and then `loop_next` repeatedly until it returns `false`.
+- `void solve()`: calls `prepare_loop()` once and then `loop_next` repeatedly until it returns `false`. Please copy the implementation of `solve` from `subISDT_API` to the derived class such that calls to `solve` involve at most one virtual call, instead of many.
 
-Note that `callback_t` is the function pointer type `bool (*callback_t)(void*, const uint32_t*, const uint32_t*, unsigned int)`, if it returns `false` then a solution has been found and subISD should stop the main loop.
+Note 1: ISD_generic will call `initialize` only once as this passes matrix *views*. For subsequent iterations, the content changes but the matrix view is the same and is reused. It will call `solve()` as many times until a solution is found.
+
+Note 2: `callback_t` is the function pointer type `bool (*callback_t)(void*, const uint32_t*, const uint32_t*, unsigned int)`, if it returns `false` then a solution has been found and subISD should stop the main loop.
 
 Furthermore, ISD_generic passes the matrix `(H2^T || H1^T)`, subISD only need to consider the first `ell` columns that corresponds to `H2^T`.
 Obtaining the `H2T` submatrix view can be easily done as follows: `auto H2T = H2TH1T.submatrix(0, H2TH1T.rows(), 0, ell);`
