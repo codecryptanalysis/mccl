@@ -38,6 +38,7 @@ class HST_ISD_form_t
 public:
     static const size_t bit_alignment = _bits;
     typedef block_tag<bit_alignment, _masked> this_block_tag;
+    typedef block_tag<bit_alignment, true> this_block_tag_masked;
     
     HST_ISD_form_t() {}
     HST_ISD_form_t(const cmat_view& H_, const cvec_view& S_, size_t l_) { reset(H_, S_, l_); }
@@ -60,9 +61,9 @@ public:
     	HST.m_clear();
 
     	// create views
-    	_HT        .reset(HST.submatrix(0, HTrows, HTcols));
-    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows, HTcols));
-    	_S         .reset(HST[HTrows].subvector(HTcols));
+    	_HT        .reset(HST.submatrix(0, HTrows));
+    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows));
+    	_S         .reset(HST[HTrows].subvector());
 
 	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, H2T_columns));
 	_S2       .reset(_S.subvector(H2T_columns));
@@ -120,10 +121,10 @@ public:
 
     const cmat_view_t<this_block_tag>& HT()   const { return _HT; }
     const cmat_view_t<this_block_tag>& H12T() const { return _H12T; }
-    const cmat_view_t<this_block_tag>& H2T()  const { return _H2T; }
+    const cmat_view_t<this_block_tag_masked>& H2T()  const { return _H2T; }
 
     const cvec_view_t<this_block_tag>& S()    const { return _S; }
-    const cvec_view_t<this_block_tag>& S2()   const { return _S2; }
+    const cvec_view_t<this_block_tag_masked>& S2()   const { return _S2; }
     
     // swap with random row outside echelon form and bring it back to echelon form
     void swap_echelon(size_t echelon_idx, size_t ISD_idx)
@@ -353,8 +354,8 @@ private:
     mat_view_t<this_block_tag> _HT, _H12T;
     vec_view_t<this_block_tag> _S;
 
-    mat_view_t<this_block_tag> _H2T;
-    vec_view_t<this_block_tag> _S2;
+    mat_view_t<this_block_tag_masked> _H2T;
+    vec_view_t<this_block_tag_masked> _S2;
 
     std::vector<uint32_t> perm;
     size_t HT_columns, H1T_columns, H2T_columns;

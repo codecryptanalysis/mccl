@@ -35,10 +35,11 @@ They can be passed to all functions that take a matrix/vector and have all basic
 
 ## Result objects
 
-Matrices and vectors have member functions to modify their contents, e.g. `m.mand(m1,m2);` assigns the result of the bit-wise and of `m1` and `m2` to the matrix (view) `m`.
-For convenience, this can also be written as `m = m_and(m1,m2);`. 
+Matrices and vectors have member functions to modify their contents, e.g. `m.m_and(m1,m2);` assigns the result of the bit-wise and of `m1` and `m2` to the matrix (view) `m`.
+For convenience, this can also be written as `m = m_and(m1,m2);`.
+(note: we use `v_and` and `m_and`, since `and`, `xor`, `or` are C++ reserved key words and cannot be used as names for member functions.)
 
-Internally, the expression `m_and(m1,m2)` returns a `matrix_result` object that captures `m1`, `m2` and the intended member function call `m.mand` (for a yet unknown matrix (view) `m`). When that `matrix_result` is assigned to the matrix (view) `m`, `m` passes itself to the `matrix_result` which then finally calls the intended function.
+Internally, the expression `m_and(m1,m2)` returns a `matrix_result` object that captures `m1`, `m2` and the intended member function call `m.m_and` (for a yet unknown matrix (view) `m`). When that `matrix_result` is assigned to the matrix (view) `m`, `m` passes itself to the `matrix_result` which then finally calls the intended function.
 
 -----
 
@@ -48,31 +49,35 @@ Internally, the expression `m_and(m1,m2)` returns a `matrix_result` object that 
 - `columns()`: nr of columns
 - `rows()`: nr of rows
 - `hw()`: returns the hammingweight
-- `wordptr(r = 0)`: returns a `[const] uint64_t*` to the first word of row `r`
-- `rowwords()`: nr of words in a row
-- `stride()`: nr of words to jump to the next row
+- `word_ptr(r = 0)`: returns a `[const] uint64_t*` to the first word of row `r`
+- `row_words()`: nr of words in a row
+- `word_stride()`: nr of words to jump to the next row
 - `operator()(r,c)`: returns the bit (as `bool`) on row `r` column `c` of `mat`
-- `isequal(m)`: returns a `bool` whether the two matrices have equal contents
-- `subvector(r, coloff, cols)`: returns a vector (const) view to row `r`, columns `coloff`,...,`coloff+cols-1`
-- `submatrix(rowoff, rows, coloff, cols)`: returns a matrix (const) view to rows `rowoff`,...,`rowoff+rows-1` and columns `coloff`,...,`coloff+cols-1`
-- `operator[](r)`, `operator()(r)`: returns a vector iterator (const) view to row `r`
-- `begin()`, `end()`: returns a vector iterator (const) view to row `0` and `rows()`
+- `is_equal(m)`: returns a `bool` whether the two matrices have equal contents
+- `subvector(r)`: returns a vector view for whole row `r` (see below: has same block_tag as matrix)
+- `subvector(r, cols)`: return a vector view for the first `cols` columns of `r` (see below: has block_tag with same bits as matrix and maskedlastblock = true)
+- `subvector(r, coloff, cols)`: returns a vector (const) view to row `r`, columns `coloff`,...,`coloff+cols-1` (see below: has default_block_tag)
+- `submatrix(rowoff, rows)`: returns a matrix (const) view to rows `rowoff`,...,`rowoff+rows-1` and all columns (see below: has same block_tag as matrix)
+- `submatrix(rowoff, rows, cols)`: returns a matrix (const) view to rows `rowoff`,...,`rowoff+rows-1` and columns `0`,...,`coloff+cols-1` (see below: has block_tag with same bits as matrix and maskedlastblock = true) 
+- `submatrix(rowoff, rows, coloff, cols)`: returns a matrix (const) view to rows `rowoff`,...,`rowoff+rows-1` and columns `coloff`,...,`coloff+cols-1` (see below: has default_block_tag)
+- `operator[](r)`, `operator()(r)`: returns a vector iterator (const) view to row `r` (see below: has same block_tag as matrix)
+- `begin()`, `end()`: returns a vector iterator (const) view to row `0` and `rows()` (see below: has same block_tag as matrix)
 
 Note that actual const-ness of the return type may depend on the const-ness of the underlying matrix contents.
 I.e., const for `const mat`, `cmat_view`, and non-const for `mat` and `mat_view`.
 
 ### Common matrix member functions:
-- `clear()`, `set(b = true)`: clear matrix to 0, set all bits of matrix to `b`
-- `setidentity()`: clear matrix and set the diagonal bits
-- `mnot()`: invert all bits
+- `m_clear()`, `m_set(b = true)`: clear matrix to 0, set all bits of matrix to `b`
+- `set_identity()`: clear matrix and set the diagonal bits
+- `m_not()`: invert all bits
 - `clearbit(r, c)`, `flipbit(r,c)`, `setbit(r,c)`, `setbit(r,c,b)`: modify bit a row `r` column `c` (clear to 0, flip, set to 1, set to `b`)
 - `clearcolumns(c_off, c_cnt)`, `flipcolumns(c_off,c_cnt)`, `setcolumns(c_off,c_cnt)`, `setcolumns(c_off,c_cnt,b)`: modify columns `c_off`,..,`c_off+c_cnt-1`: clear to 0, flip, set to 1, set to `b`
 - `swapcolumns(c1, c2)`: swap columns `c1` and `c2`
-- `copy(m)`: assign contents of `m`
-- `mnot(m)`: assign contents of `m` and invert all bits
+- `m_copy(m)`: assign contents of `m`
+- `m_not(m)`: assign contents of `m` and invert all bits
 - `transpose(m)`: assign the transposed contents of `m`
-- `mxor(m)`, `mand(m)`, `mor(m)`: assign the xor/and/or of this matrix with `m`
-- `mxor(m1,m2)`, `mand(m1,m2)`, `mor(m1,m2)`: assign the xor/and/or of `m1` and `m2`
+- `m_xor(m)`, `m_and(m)`, `m_or(m)`: assign the xor/and/or of this matrix with `m`
+- `m_xor(m1,m2)`, `m_and(m1,m2)`, `m_or(m1,m2)`: assign the xor/and/or of `m1` and `m2`
 - `operator^=(m)`, `operator&=(m)`, `operator|=(m)`: assign the xor/and/or of this matrix with `m`
 
 ### Additional `mat_view`, `cmat_view` member functions:
@@ -86,12 +91,10 @@ I.e., const for `const mat`, `cmat_view`, and non-const for `mat` and `mat_view`
 - `operator=(mat&& m)`, `swap(mat& m)`: swap underlying contents with another `mat` object
 
 ### Global matrix functions:
-- `operator==/!=(const mat_view/cmat_view& m1, const mat_view/cmat_view& m2)`: compares *view* of m1 & m2
-- `operator==/!=(const mat& m1, const mat/mat_view/cmat_view& m2)`: compares *contents* of m1 & m2
-- `operator==/!=(const mat/mat_view/cmat_view& m1, const mat& m2)`: compares *contents* of m1 & m2
+- `operator==/!=(const matrix& m1, const matrix& m2)`: compares *content* of m1 & m2
 - `operator<<(std::ostream& o, m)`: prints `m` to ostream `o`
 - `m_transpose(m)`: returns `matrix_result` object to assign the transposed contents of `m`
-- `m_copy(m), m_copynot(m)`: returns `matrix_result` object to assign the contents of `m` (as is / inverting all bits)
+- `m_copy(m), m_not(m)`: returns `matrix_result` object to assign the contents of `m` (as is / inverting all bits)
 - `m_and(m1,m2), m_or(m1,m2), m_xor(m1,m2)`: returns a `matrix_result` to assign the contents of the and/or/xor of `m1` and `m2`
 - `operator & (m1,m2), operator | (m1,m2), operator ^ (m1,m2)`: returns a `matrix_result` to assign the contents of the and/or/xor of `m1` and `m2`
 - `hammingweight(m)`: returns the hammingweight of `m`
@@ -103,29 +106,31 @@ I.e., const for `const mat`, `cmat_view`, and non-const for `mat` and `mat_view`
 ### Common const vector member functions
 - `columns()`: nr of columns
 - `hw()`: returns the hammingweight
-- `wordptr(r = 0)`: returns a `[const] uint64_t*` to the first word
-- `rowwords()`: nr of words in a row
+- `word_ptr(r = 0)`: returns a `[const] uint64_t*` to the first word
+- `row_words()`: nr of words in a row
 - `operator[](c), operator()(c)`: returns the bit (as `bool`) on column `c`
-- `isequal(v)`: returns a `bool` whether the two vectors have equal contents
-- `subvector(r, coloff, cols)`: returns a vector (const) view to row `r`, columns `coloff`,...,`coloff+cols-1`
+- `is_equal(v)`: returns a `bool` whether the two vectors have equal contents
+- `subvector()`: returns the whole vector (see below: has same block_tag as vector)
+- `subvector(cols)`: returns a vector (const) view to columns `0`,...,`coloff+cols-1` (see below: has block_tag with same bits as vector and maskedlastblock = true)
+- `subvector(coloff, cols)`: returns a vector (const) view to columns `coloff`,...,`coloff+cols-1` (see below: has default_block_tag)
 
 Note that actual const-ness of the return type may depend on the const-ness of the underlying vector contents.
 I.e., const for `const vec`, `cvec_view`, `cvec_view_it`, and non-const for `vec`, `vec_view`, `vec_view_it`.
 
 ### Common vector member functions:
-- `clear()`, `set(b = true)`: clear vector to 0, set all bits of vector to `b`
-- `vnot()`: invert all bits
+- `v_clear()`, `v_set(b = true)`: clear vector to 0, set all bits of vector to `b`
+- `v_not()`: invert all bits
 - `clearbit(c)`, `flipbit(c)`, `setbit(c)`, `setbit(c,b)`: modify bit in column `c` (clear to 0, flip, set to 1, set to `b`)
 - `clearcolumns(c_off, c_cnt)`, `flipcolumns(c_off,c_cnt)`, `setcolumns(c_off,c_cnt)`, `setcolumns(c_off,c_cnt,b)`: modify columns `c_off`,..,`c_off+c_cnt-1`: clear to 0, flip, set to 1, set to `b`
-- `swap(v)`: swap contents with `v`
-- `copy(v)`: assign contents of `v`
-- `vnot(v)`: assign contents of `v` and invert all bits
-- `vxor(v)`, `vand(v)`, `vor(v)`: assign the xor/and/or of this vector with `v`
-- `vnxor(v)`, `vnand(v)`, `vnor(v)`: assign the nxor/nand/nor of this vector with `v`
-- `vandin(v)`, `vandni(v)`, `vorin(v)`, `vorni(v)`: assign the andin/andni/orin/orni of this vector with `v`
-- `vxor(v1,v2)`, `vand(v1,v2)`, `vor(v1,v2)`: assign the xor/and/or of `v1` and `v2`
-- `vnxor(v1,v2)`, `vnand(v1,v2)`, `vnor(v1,v2)`: assign the nxor/nand/nor of `v1` and `v2`
-- `vandin(v1,v2)`, `vandni(v1,v2)`, `vorin(v1,v2)`, `vorni(v1,v2)`: assign the andin/andni/orin/orni of `v1` and `v2`
+- `v_swap(v)`: swap contents with `v`
+- `v_copy(v)`: assign contents of `v`
+- `v_not(v)`: assign contents of `v` and invert all bits
+- `v_xor(v)`, `v_and(v)`, `v_or(v)`: assign the xor/and/or of this vector with `v`
+- `v_nxor(v)`, `v_nand(v)`, `v_nor(v)`: assign the nxor/nand/nor of this vector with `v`
+- `v_andin(v)`, `v_andni(v)`, `v_orin(v)`, `v_orni(v)`: assign the andin/andni/orin/orni of this vector with `v`
+- `v_xor(v1,v2)`, `v_and(v1,v2)`, `v_or(v1,v2)`: assign the xor/and/or of `v1` and `v2`
+- `v_nxor(v1,v2)`, `v_nand(v1,v2)`, `v_nor(v1,v2)`: assign the nxor/nand/nor of `v1` and `v2`
+- `v_andin(v1,v2)`, `v_andni(v1,v2)`, `v_orin(v1,v2)`, `v_orni(v1,v2)`: assign the andin/andni/orin/orni of `v1` and `v2`
 - `operator^=(v)`, `operator&=(v)`, `operator|=(v)`: assign the xor/and/or of this vector with `v`
 
 Note that `andin(b1,b2)=b1 & (!b2)`, `andni(b1,b2)=(!b1) & b2`, `orin(b1,b2)=b1 | (!b2)`, `orni(b1,b2)=(!b1) | b2` (the two additional letters stand for the modification  `i=identity` & `n=not` of the respective input).
@@ -135,7 +140,7 @@ Note that `andin(b1,b2)=b1 & (!b2)`, `andni(b1,b2)=(!b1) & b2`, `orin(b1,b2)=b1 
 - `reset(vv)`: assign the view `vv`
 
 ### Additional `vec_view_it`, `cvec_view_it` member functions:
-- `stride()`: nr of words to jump to the next row
+- `word_stride()`: nr of words to jump to the next row
 - `operator++()`, `operator--()`: jump to next / previous row
 - `operator+=(n)`, `operator-=(n)`: jump to `n`-th next / previous row
 - `operator++(int)`, `operator--(int)`: jump to next / previous row, but return copy of original value
@@ -151,12 +156,9 @@ Note that `andin(b1,b2)=b1 & (!b2)`, `andni(b1,b2)=(!b1) & b2`, `orin(b1,b2)=b1 
 - `operator=(vec&& m)`, `swap(vec& m)`: swap underlying contents with another `vec` object
 
 ### Global vector functions:
-- `operator==/!=(const vec_view/cvec_view& v1, const vec_view/cvec_view& v2)`: compares *view* of v1 & v2
-- `operator==/!=(const vec_view_it/cvec_view_it& v1, const vec_view_it/cvec_view_it& v2)`: compares *view and stride* of v1 & v2
-- `operator==/!=(const vec& v1, const vec/[c]vec_view[_it]& v2)`: compares *contents* of v1 & v2
-- `operator==/!=(const vec/[c]vec_view[_it]& v1, const vec& v2)`: compares *contents* of v1 & v2
+- `operator==/!=(const vector& v1, const vector& v2)`: compares *content* of v1 & v2
 - `operator<<(std::ostream& o, v)`: prints `v` to ostream `o`
-- `v_copy(v), v_copynot(v)`: returns `vector_result` object to assign the contents of `v` (as is / inverting all bits)
+- `v_copy(v), v_not(v)`: returns `vector_result` object to assign the contents of `v` (as is / inverting all bits)
 - `v_and(v1,v2), v_or(v1,v2), v_xor(v1,v2)`: returns a `vector_result` to assign the contents of the and/or/xor of `v1` and `v2`
 - `v_nand(v1,v2), v_nor(v1,v2), v_nxor(v1,v2)`: returns a `vector_result` to assign the contents of the nand/nor/nxor of `v1` and `v2`
 - `v_andin(v1,v2), v_andni(v1,v2), v_orin(v1,v2), v_orni(v1,v2)`: returns a `vector_result` to assign the contents of the andin/andni/orin/orni of `v1` and `v2`
@@ -214,15 +216,15 @@ In contrast, matrix member functions `operator[](r)`, `begin()`, `end()`, that r
 
 ### Additional block processing related member functions
 
-In extension of `wordptr(..)`, `rowwords()`, `stride()` there are also analogous member functions for blocks:
-- `blockptr()`: return a pointer to the first `bits`-bit block of a row / vector
-- `rowblocks()`: nr of blocks in a row
-- `blockstride()`: nr of blocks to jump to the next row
+In extension of `word_ptr(..)`, `row_words()`, `word_stride()` there are also analogous member functions for blocks:
+- `block_ptr()`: return a pointer to the first `bits`-bit block of a row / vector
+- `row_blocks()`: nr of blocks in a row
+- `block_stride()`: nr of blocks to jump to the next row
 
 The used block tag can also be overridden for the following functions, by appending a different tag as parameter `( ..., block_tag<bits2,mask2>() )`:
-- `blockptr()`
-- `rowblocks()`
-- `blockstride()`
+- `block_ptr()`
+- `row_blocks()`
+- `block_stride()`
 - `subvector()`
 - `submatrix()`
 

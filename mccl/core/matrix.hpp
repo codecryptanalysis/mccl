@@ -439,7 +439,7 @@ public:
     template<typename block_tag>
     using this_vector_view_const = base_vector_t<block_tag, is_const||is_owner, false, false>;
 
-    typedef block_tag<bits,true> this_block_tag_masked;
+    typedef block_tag<block_bits,true> this_block_tag_masked;
     
     // whole subvector maintains block_tag
     this_vector_view      <this_block_tag>        subvector(size_t row)                    { return this_vector_view      <this_block_tag>( ptr().subvector(row,0,columns()) ); }
@@ -755,15 +755,11 @@ public:
 
 template<typename bt1, bool cv1, bool al1, typename bt2, bool cv2, bool al2>
 inline bool operator==(const base_matrix_t<bt1,cv1,al1>& m1, const base_matrix_t<bt2,cv2,al2>& m2)
-{ return m1.word_ptr() == m2.word_ptr() && m1.rows() == m2.rows() && m1.columns() == m2.columns() && m1.word_stride() == m2.word_stride; }
+{ return m1.is_equal(m2); }
 
 template<typename bt1, bool cv1, bool al1, typename bt2, bool cv2, bool al2>
 inline bool operator!=(const base_matrix_t<bt1,cv1,al1>& m1, const base_matrix_t<bt2,cv2,al2>& m2)
-{ return !( m1.word_ptr() == m2.word_ptr() && m1.rows() == m2.rows() && m1.columns() == m2.columns() && m1.word_stride() == m2.word_stride ); }
-
-template<typename bt1, bool cv1, bool al1, typename bt2, bool cv2, bool al2>
-inline bool is_equal(const base_matrix_t<bt1,cv1,al1>& m1, const base_matrix_t<bt2,cv2,al2>& m2)
-{ return m1.is_equal(m2); }
+{ return ! m1.is_equal(m2); }
 
 
 /* OUTPUT */

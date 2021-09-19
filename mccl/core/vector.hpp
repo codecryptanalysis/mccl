@@ -435,7 +435,11 @@ public:
     template<MCCL_BASEVEC_DELETE_IF_NOT_ITERATOR> this_type  operator+ (size_t n) const = delete;
     template<MCCL_BASEVEC_DELETE_IF_NOT_ITERATOR> this_type  operator- (size_t n) const = delete;
     template<MCCL_BASEVEC_DELETE_IF_NOT_ITERATOR> ptrdiff_t  operator- (const this_type& v2) const = delete;
-    
+
+    template<MCCL_BASEVEC_ENABLE_IF_ITERATOR>
+    size_t word_stride() const { return ptr().stride; }
+    template<MCCL_BASEVEC_DELETE_IF_NOT_ITERATOR>
+    size_t word_stride() const = delete;
     
     /* COMMON basic member functions */
 
@@ -461,7 +465,7 @@ public:
     template<typename block_tag>
     using this_view_const = base_vector_t<block_tag, is_const||is_owner, is_iterator, false>;
     
-    typedef block_tag<bits,true> this_block_tag_masked;
+    typedef block_tag<block_bits,true> this_block_tag_masked;
 
     // whole subvector maintains block_tag
     this_view      <this_block_tag>    subvector()       { return this_view      <this_block_tag>( ptr() ); }
@@ -719,15 +723,11 @@ public:
 
 template<typename bt1, bool cv1, bool iv1, bool al1, typename bt2, bool cv2, bool iv2, bool al2>
 inline bool operator==(const base_vector_t<bt1,cv1,iv1,al1>& v1, const base_vector_t<bt2,cv2,iv2,al2>& v2)
-{ return v1.word_ptr() == v2.word_ptr() && v1.columns() == v2.columns(); }
+{ return v1.is_equal(v2); }
 
 template<typename bt1, bool cv1, bool iv1, bool al1, typename bt2, bool cv2, bool iv2, bool al2>
 inline bool operator!=(const base_vector_t<bt1,cv1,iv1,al1>& v1, const base_vector_t<bt2,cv2,iv2,al2>& v2)
-{ return !(v1.word_ptr() == v2.word_ptr() && v1.columns() == v2.columns()); }
-
-template<typename bt1, bool cv1, bool iv1, bool al1, typename bt2, bool cv2, bool iv2, bool al2>
-inline bool is_equal(const base_vector_t<bt1,cv1,iv1,al1>& v1, const base_vector_t<bt2,cv2,iv2,al2>& v2)
-{ return v1.is_equal(v2); }
+{ return ! v1.is_equal(v2); }
 
 
 /* OUTPUT */
