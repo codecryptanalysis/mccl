@@ -84,6 +84,7 @@ struct cv_ptr
 		ptr = _ptr;
 		columns = _columns;
 	}
+
 	cv_ptr subvector(size_t coloffset, size_t cols) const
 	{
 #if MCCL_VECTOR_NO_SANITY_CHECKS == 0
@@ -164,12 +165,13 @@ struct cvi_ptr
 		columns = _columns;
 		stride = _stride;
 	}
-	cv_ptr subvector(size_t coloffset, size_t cols) const
+	
+	cvi_ptr subvector(size_t coloffset, size_t cols) const
 	{
 #if MCCL_VECTOR_NO_SANITY_CHECKS == 0
 		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("cvi_ptr::subvector(): columns out of range");
 #endif
-		return cv_ptr(ptr + (coloffset/64), cols);
+		return cvi_ptr(ptr + (coloffset/64), cols, stride);
 	}
 	cvi_ptr subvectorit(size_t coloffset, size_t cols) const
 	{
@@ -226,12 +228,12 @@ struct vi_ptr
 		columns = _columns;
 		stride = _stride;
 	}
-	v_ptr subvector(size_t coloffset, size_t cols) const
+	vi_ptr subvector(size_t coloffset, size_t cols) const
 	{
 #if MCCL_VECTOR_NO_SANITY_CHECKS == 0
 		if ((coloffset % 64 != 0) || (coloffset+cols>columns)) throw std::out_of_range("vi_ptr::subvector(): columns out of range");
 #endif
-		return v_ptr(ptr + (coloffset/64), cols);
+		return vi_ptr(ptr + (coloffset/64), cols, stride);
 	}
 	vi_ptr subvectorit(size_t coloffset, size_t cols) const
 	{
@@ -284,7 +286,7 @@ struct cm_ptr
 		stride = _stride;
 		rows = _rows;
 	}
-	cv_ptr subvector(size_t rowoffset = 0) const
+	cv_ptr subvector(size_t rowoffset) const
 	{
 #if MCCL_VECTOR_NO_SANITY_CHECKS == 0
 		if (rowoffset >= rows) throw std::out_of_range("cm_ptr::subvector(): columns out of range");
@@ -298,7 +300,7 @@ struct cm_ptr
 #endif
 		return cv_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols);
 	}
-	cvi_ptr subvectorit(size_t rowoffset = 0) const
+	cvi_ptr subvectorit(size_t rowoffset) const
 	{
 #if MCCL_VECTOR_NO_SANITY_CHECKS == 0
 		if (rowoffset >= rows) throw std::out_of_range("cm_ptr::subvectorit(): columns out of range");
@@ -354,7 +356,7 @@ struct m_ptr
 		stride = _stride;
 		rows = _rows;
 	}
-	v_ptr subvector(size_t rowoffset = 0) const
+	v_ptr subvector(size_t rowoffset) const
 	{
 #if MCCL_VECTOR_NO_SANITY_CHECKS == 0
 		if (rowoffset >= rows) throw std::out_of_range("m_ptr::subvector(): columns out of range");
@@ -368,7 +370,7 @@ struct m_ptr
 #endif
 		return v_ptr(ptr + (coloffset/64) + (rowoffset*stride), cols);
 	}
-	vi_ptr subvectorit(size_t rowoffset = 0) const
+	vi_ptr subvectorit(size_t rowoffset) const
 	{
 #if MCCL_VECTOR_NO_SANITY_CHECKS == 0
 		if (rowoffset >= rows) throw std::out_of_range("m_ptr::subvectorit(): columns out of range");

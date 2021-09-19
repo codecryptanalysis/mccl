@@ -26,11 +26,11 @@ void fillword(const mat_view& m, Func& f)
 {
     if (m.rows() == 0 || m.columns() == 0)
         return;
-    const size_t words = m.rowwords();
+    const size_t words = m.row_words();
     const uint64_t lwm = detail::lastwordmask(m.columns());
     for (size_t r = 0; r < m.rows(); ++r)
     {
-        uint64_t* first = m.ptr.data(r);
+        uint64_t* first = m.word_ptr(r);
         uint64_t* last = first + words - 1;
         size_t w = 0;
         for (; first != last; ++first,++w)
@@ -43,9 +43,9 @@ void fillword(const vec_view& v, Func& f)
 {
     if (v.columns() == 0)
         return;
-    const size_t words = v.rowwords();
+    const size_t words = v.row_words();
     const uint64_t lwm = detail::lastwordmask(v.columns());
-    uint64_t* first = v.ptr.data(0);
+    uint64_t* first = v.word_ptr();
     uint64_t* last = first + words - 1;
     size_t w = 0;
     for (; first != last; ++first,++w)
@@ -59,11 +59,11 @@ void fillgenerator(const mat_view& m, Generator& g)
 {
     if (m.rows() == 0 || m.columns() == 0)
         return;
-    const size_t words = m.rowwords();
+    const size_t words = m.row_words();
     const uint64_t lwm = detail::lastwordmask(m.columns());
     for (size_t r = 0; r < m.rows(); ++r)
     {
-        uint64_t* first = m.ptr.data(r);
+        uint64_t* first = m.word_ptr(r);
         uint64_t* last = first + words - 1;
         for (; first != last; ++first)
             g(*first);
@@ -77,9 +77,9 @@ void fillgenerator(const vec_view& v, Generator& g)
 {
     if (v.columns() == 0)
         return;
-    const size_t words = v.rowwords();
+    const size_t words = v.row_words();
     const uint64_t lwm = detail::lastwordmask(v.columns());
-    uint64_t* first = v.ptr.data(0);
+    uint64_t* first = v.word_ptr();
     uint64_t* last = first + words - 1;
     for (; first != last; ++first)
         g(*first);
@@ -127,19 +127,19 @@ size_t echelonize(matrix_t& m, size_t column_start = 0, size_t column_end = ~siz
             continue;
         // swap row if necessary
         if (p != pivot_start)
-            m[p].swap(m[pivot_start]);
+            m[p].v_swap(m[pivot_start]);
         // reduce column c
         auto pivotrow = m[pivot_start];
-        auto mrowit = m[0];
+        auto mrowit = m.begin();
         //std::cerr << (mrowit) << std::endl;
         for (size_t r = 0; r < pivot_start; ++r,++mrowit)
             if (m(r,c))
-                mrowit.vxor(pivotrow);
+                mrowit.v_xor(pivotrow);
         // skip pivotrow itself
         ++mrowit;
         for (size_t r = pivot_start+1; r < m.rows(); ++r,++mrowit)
             if (m(r,c))
-                mrowit.vxor(pivotrow);
+                mrowit.v_xor(pivotrow);
         // increase pivot_start for next column
         ++pivot_start;
     }
@@ -171,12 +171,12 @@ size_t echelonize_col(matrix_t& m, size_t row_start = 0, size_t row_end = ~size_
         // note: first clear bit pivot_start in row r to prevent row r & column pivot_start to be changed
         vec_view pivotrow(m[r]);
         pivotrow.clearbit(pivot_start);
-        auto mrowit = m[0];
+        auto mrowit = m.begin();
         for (size_t r2 = 0; r2 < m.rows(); ++r2,++mrowit)
             if (m(r2,pivot_start))
-                mrowit.vxor(pivotrow);
+                mrowit.v_xor(pivotrow);
         // now just set pivotrow to zero except for column pivot_start
-        pivotrow.clear();
+        pivotrow.v_clear();
         pivotrow.setbit(pivot_start);
         // increase pivot_start for next row
         ++pivot_start;
@@ -212,12 +212,12 @@ size_t echelonize_col_rev(matrix_t& m, size_t row_start = 0, size_t row_end = ~s
         // note: first clear bit pivot_start in row r to prevent row r & column pivot_start to be changed
         vec_view pivotrow(m[r]);
         pivotrow.clearbit(pivot_start);
-        auto mrowit = m[0];
+        auto mrowit = m.begin();
         for (size_t r2 = 0; r2 < m.rows(); ++r2,++mrowit)
             if (m(r2,pivot_start))
-                mrowit.vxor(pivotrow);
+                mrowit.v_xor(pivotrow);
         // now just set pivotrow to zero except for column pivot_start
-        pivotrow.clear();
+        pivotrow.v_clear();
         pivotrow.setbit(pivot_start);
         // need to decrease pivot_start by 1 for next row, but already done
     }
@@ -226,7 +226,8 @@ size_t echelonize_col_rev(matrix_t& m, size_t row_start = 0, size_t row_end = ~s
 
 
 
-inline mat dual_matrix(const cmat_view& m)
+template<typename matrix_t, MCCL_ENABLE_IF_MATRIX(matrix_t)>
+mat dual_matrix(const matrix_t& m)
 {
         mat msf(m);
         // echelonize msf
@@ -263,7 +264,7 @@ inline mat dual_matrix(const cmat_view& m)
         // msf = (I_n | P), so msfdual = ( P^T | I_(n-k) )
         mat dual(columns - rows, columns);
         // write P^T
-        dual.submatrix(0, dual.rows(), 0, msf.rows()) = m_copy( msfT.submatrix(msf.rows(), dual.rows(), 0, msf.rows()));
+        dual.submatrix(0, dual.rows(), msf.rows()) = m_copy( msfT.submatrix(msf.rows(), dual.rows(), msf.rows()));
         // write I_(n-k)
         for (size_t r = 0; r < dual.rows(); ++r)
                 dual.setbit(r, rows + r, true);
@@ -280,8 +281,8 @@ inline mat dual_matrix(const cmat_view& m)
 inline mat prepend_identity(const cmat_view& m)
 {
         mat retT(m.rows() + m.columns(), m.rows());
-        retT.setidentity();
-        retT.submatrix(m.rows(), m.columns(), 0, m.rows()) = m_transpose(m);
+        retT.set_identity();
+        retT.submatrix(m.rows(), m.columns(), m.rows()) = m_transpose(m);
         mat ret = m_transpose(retT);
         return ret;
 }

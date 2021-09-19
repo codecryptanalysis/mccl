@@ -126,8 +126,8 @@ public:
         {
             firstwords.resize(rows);
             for (unsigned i = 0; i < rows; ++i)
-                firstwords[i] = *H12T.wordptr(i);
-            curpath[0] = *S.wordptr();
+                firstwords[i] = *H12T.word_ptr(i);
+            curpath[0] = *S.word_ptr();
             curpath[1] = curpath[0] ^ firstwords[0];
         }
     }

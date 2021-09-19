@@ -364,9 +364,11 @@ void block_transpose(uint64_t* dst, size_t dststride, const uint64_t* src, size_
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
 		uint64_t val = tmp[k] ^ (t<<1);
-		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		*dst ^= (*dst ^ val) & bitmask;
+		dst+=dststride;
 		val = tmp[k+1] ^ t;
-		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		*dst ^= (*dst ^ val) & bitmask;
+		dst+=dststride;
 	}
 }
 
@@ -419,9 +421,11 @@ inline void block_transpose2(uint64_t* dst, size_t dststride, const uint64_t* sr
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
 		uint64_t val = tmp[k] ^ (t<<1);
-		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		*dst ^= (*dst ^ val) & bitmask;
+		dst+=dststride;
 		val = tmp[k+1] ^ t;
-		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		*dst ^= (*dst ^ val) & bitmask;
+		dst+=dststride;
 	}
 }
 
@@ -479,9 +483,11 @@ inline void block_transpose(uint64_t* dst, size_t dststride, size_t dstrows, con
 	{
 		uint64_t t = ((tmp[k]>>1) ^ tmp[k+1]) & m;
 		uint64_t val = tmp[k] ^ (t<<1);
-		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		*dst ^= (*dst ^ val) & bitmask;
+		 dst+=dststride;
 		val = tmp[k+1] ^ t;
-		*dst ^= (*dst ^ val) & bitmask; dst+=dststride;
+		*dst ^= (*dst ^ val) & bitmask;
+		 dst+=dststride;
 	}
 	// note both k and bits are even and k < dstrows <= bits
 	// so k+1 < bits as well, nevertheless compilers may warn

@@ -57,19 +57,19 @@ public:
     	max_update_rows = size_t( float(echelon_rows) * float(ISD_rows) / float(echelon_rows+ISD_rows) );
 
     	HST.resize(HTrows + 1, HTcols);
-    	HST.clear();
+    	HST.m_clear();
 
     	// create views
-    	_HT        .reset(HST.submatrix(0, HTrows, 0, HTcols, this_block_tag()));
-    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, HTcols, this_block_tag()));
-    	_S         .reset(HST[HTrows].subvector(0, HTcols, this_block_tag()));
+    	_HT        .reset(HST.submatrix(0, HTrows, HTcols));
+    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows, HTcols));
+    	_S         .reset(HST[HTrows].subvector(HTcols));
 
-	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, H2T_columns, this_block_tag()));
-	_S2       .reset(_S.subvector(0, H2T_columns, this_block_tag()));
+	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, H2T_columns));
+	_S2       .reset(_S.subvector(H2T_columns));
 
     	// copy H and S into HST using block_tag<bits,true> to force clearing out trailing bits
     	_HT.as(block_tag<bit_alignment,true>()).transpose(H_);
-    	_S.as(block_tag<bit_alignment,true>()).copy(S_);
+    	_S.as(block_tag<bit_alignment,true>()).v_copy(S_);
 
     	// setup HT row perm
     	perm.resize(HTrows);
@@ -132,17 +132,17 @@ public:
     		throw std::runtime_error("HST_ISD_form_t::swap_echelon(): bad input index");
 	// swap rows
 	std::swap(perm[echelon_idx], perm[echelon_rows + ISD_idx]);
-	HST[echelon_idx].swap(HST[echelon_rows + ISD_idx]);
+	HST[echelon_idx].v_swap(HST[echelon_rows + ISD_idx]);
 
 	// bring HST back in echelon form
 	size_t pivotcol = HT_columns - echelon_idx - 1;
 	auto pivotrow = HST[echelon_idx];
 	pivotrow.clearbit(pivotcol);
-	auto HSTrowit = HST[echelon_start];
+	auto HSTrowit = HST.begin() + echelon_start;
 	for (size_t r2 = echelon_start; r2 < HST.rows(); ++r2,++HSTrowit)
 		if (HST(r2,pivotcol))
-			HSTrowit.vxor(pivotrow);
-	pivotrow.clear();
+			HSTrowit.v_xor(pivotrow);
+	pivotrow.v_clear();
 	pivotrow.setbit(pivotcol);
     }
     // update 1 echelon row
