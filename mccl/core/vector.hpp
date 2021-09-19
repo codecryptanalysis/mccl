@@ -460,14 +460,16 @@ public:
     using this_view = base_vector_t<block_tag, is_const, is_iterator, false>;
     template<typename block_tag>
     using this_view_const = base_vector_t<block_tag, is_const||is_owner, is_iterator, false>;
+    
+    typedef block_tag<bits,true> this_block_tag_masked;
 
     // whole subvector maintains block_tag
     this_view      <this_block_tag>    subvector()       { return this_view      <this_block_tag>( ptr() ); }
     this_view_const<this_block_tag>    subvector() const { return this_view_const<this_block_tag>( ptr() ); }
-    // subvector starting from 0 maintains block_tag
-    this_view      <this_block_tag>    subvector(size_t cols)       { return this_view      <this_block_tag>( ptr().subvector(0,cols) ); }
-    this_view_const<this_block_tag>    subvector(size_t cols) const { return this_view_const<this_block_tag>( ptr().subvector(0,cols) ); }
-    // otherwise returned view has default_block_tag
+    // subvector starting from 0 maintains block_tag::bits, but maskedlastblock = true
+    this_view      <this_block_tag_masked>    subvector(size_t cols)       { return this_view      <this_block_tag_masked>( ptr().subvector(0,cols) ); }
+    this_view_const<this_block_tag_masked>    subvector(size_t cols) const { return this_view_const<this_block_tag_masked>( ptr().subvector(0,cols) ); }
+    // otherwise returned view has default_block_tag = block_tag<64,true>
     this_view      <default_block_tag> subvector(size_t coloff, size_t cols)       { return this_view      <default_block_tag>( ptr().subvector(coloff,cols) ); }
     this_view_const<default_block_tag> subvector(size_t coloff, size_t cols) const { return this_view_const<default_block_tag>( ptr().subvector(coloff,cols) ); }
 

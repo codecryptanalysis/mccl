@@ -439,14 +439,17 @@ public:
     template<typename block_tag>
     using this_vector_view_const = base_vector_t<block_tag, is_const||is_owner, false, false>;
 
-    // subvector starting from 0 maintains block_tag
-    this_vector_view      <this_block_tag>    subvector(size_t row)                    { return this_vector_view      <this_block_tag>( ptr().subvector(row,0,columns()) ); }
-    this_vector_view_const<this_block_tag>    subvector(size_t row)              const { return this_vector_view_const<this_block_tag>( ptr().subvector(row,0,columns()) ); }
-    this_vector_view      <this_block_tag>    subvector(size_t row, size_t cols)       { return this_vector_view      <this_block_tag>( ptr().subvector(row,0,cols) ); }
-    this_vector_view_const<this_block_tag>    subvector(size_t row, size_t cols) const { return this_vector_view_const<this_block_tag>( ptr().subvector(row,0,cols) ); }
+    typedef block_tag<bits,true> this_block_tag_masked;
+    
+    // whole subvector maintains block_tag
+    this_vector_view      <this_block_tag>        subvector(size_t row)                    { return this_vector_view      <this_block_tag>( ptr().subvector(row,0,columns()) ); }
+    this_vector_view_const<this_block_tag>        subvector(size_t row)              const { return this_vector_view_const<this_block_tag>( ptr().subvector(row,0,columns()) ); }
+    // subvector starting from 0 maintains block_tag::bits but has maskedlastblock = true;
+    this_vector_view      <this_block_tag_masked> subvector(size_t row, size_t cols)       { return this_vector_view      <this_block_tag_masked>( ptr().subvector(row,0,cols) ); }
+    this_vector_view_const<this_block_tag_masked> subvector(size_t row, size_t cols) const { return this_vector_view_const<this_block_tag_masked>( ptr().subvector(row,0,cols) ); }
     // otherwise returned view has default_block_tag
-    this_vector_view      <default_block_tag> subvector(size_t row, size_t coloff, size_t cols)       { return this_vector_view      <default_block_tag>( ptr().subvector(row,coloff,cols) ); }
-    this_vector_view_const<default_block_tag> subvector(size_t row, size_t coloff, size_t cols) const { return this_vector_view_const<default_block_tag>( ptr().subvector(row,coloff,cols) ); }
+    this_vector_view      <default_block_tag>     subvector(size_t row, size_t coloff, size_t cols)       { return this_vector_view      <default_block_tag>( ptr().subvector(row,coloff,cols) ); }
+    this_vector_view_const<default_block_tag>     subvector(size_t row, size_t coloff, size_t cols) const { return this_vector_view_const<default_block_tag>( ptr().subvector(row,coloff,cols) ); }
 
     // unless the user overrides with a compatible tag
     template<size_t bits, bool masked>
@@ -523,14 +526,15 @@ public:
     template<typename block_tag>
     using this_matrix_view_const = base_matrix_t<block_tag, is_const||is_owner, false>;
 
-    // subvector starting from 0 maintains block_tag
-    this_matrix_view      <this_block_tag>    submatrix(size_t rowoff, size_t rows)                    { return this_matrix_view      <this_block_tag>( ptr().submatrix(rowoff,rows,0,columns()) ); }
-    this_matrix_view_const<this_block_tag>    submatrix(size_t rowoff, size_t rows)              const { return this_matrix_view_const<this_block_tag>( ptr().submatrix(rowoff,rows,0,columns()) ); }
-    this_matrix_view      <this_block_tag>    submatrix(size_t rowoff, size_t rows, size_t cols)       { return this_matrix_view      <this_block_tag>( ptr().submatrix(rowoff,rows,0,cols) ); }
-    this_matrix_view_const<this_block_tag>    submatrix(size_t rowoff, size_t rows, size_t cols) const { return this_matrix_view_const<this_block_tag>( ptr().submatrix(rowoff,rows,0,cols) ); }
+    // submatrix with whole rows maintains block_tag
+    this_matrix_view      <this_block_tag>        submatrix(size_t rowoff, size_t rows)                    { return this_matrix_view      <this_block_tag>( ptr().submatrix(rowoff,rows,0,columns()) ); }
+    this_matrix_view_const<this_block_tag>        submatrix(size_t rowoff, size_t rows)              const { return this_matrix_view_const<this_block_tag>( ptr().submatrix(rowoff,rows,0,columns()) ); }
+    // submatrix with rows starting at column 0 maintains block_tag::bits, but maskedlastblock = true
+    this_matrix_view      <this_block_tag_masked> submatrix(size_t rowoff, size_t rows, size_t cols)       { return this_matrix_view      <this_block_tag_masked>( ptr().submatrix(rowoff,rows,0,cols) ); }
+    this_matrix_view_const<this_block_tag_masked> submatrix(size_t rowoff, size_t rows, size_t cols) const { return this_matrix_view_const<this_block_tag_masked>( ptr().submatrix(rowoff,rows,0,cols) ); }
     // otherwise returned view has default_block_tag
-    this_matrix_view      <default_block_tag> submatrix(size_t rowoff, size_t rows, size_t coloff, size_t cols)       { return this_matrix_view      <default_block_tag>( ptr().submatrix(rowoff,rows,coloff,cols) ); }
-    this_matrix_view_const<default_block_tag> submatrix(size_t rowoff, size_t rows, size_t coloff, size_t cols) const { return this_matrix_view_const<default_block_tag>( ptr().submatrix(rowoff,rows,coloff,cols) ); }
+    this_matrix_view      <default_block_tag>     submatrix(size_t rowoff, size_t rows, size_t coloff, size_t cols)       { return this_matrix_view      <default_block_tag>( ptr().submatrix(rowoff,rows,coloff,cols) ); }
+    this_matrix_view_const<default_block_tag>     submatrix(size_t rowoff, size_t rows, size_t coloff, size_t cols) const { return this_matrix_view_const<default_block_tag>( ptr().submatrix(rowoff,rows,coloff,cols) ); }
 
     // unless the user overrides with a compatible tag
     template<size_t bits, bool masked>
