@@ -27,15 +27,20 @@ public:
 
     const uint64_t& prime() const { return _prime; }
 
-    // returns n % prime, using 2 multiplications, 1 shift, 1 subtraction
-    inline uint64_t mod(uint64_t n)
+    // returns n / prime, using 1 multiplication, 1 shift
+    inline uint64_t div(uint64_t n)
     {
         // get the top 64-bit of the 128-bit multiplication n * _muldiv
         uint64_t div = (uint128_t(n) * _muldiv) >> 64;
         // shift right by _shift
         div >>= _shift;
-        // now div==n/p, so n%p = n - div*p
-        return n - div * _prime;
+        return div;
+    }
+    // returns n % prime, using 2 multiplications, 1 shift, 1 subtraction
+    inline uint64_t mod(uint64_t n)
+    {
+        // n % p = n - div*p
+        return n - div(n) * _prime;
     }
     
 private:
@@ -59,6 +64,12 @@ hash_prime get_hash_prime_ge(uint64_t n);
 hash_prime get_hash_prime_lt(uint64_t n);
 // obtain largest internal hash_prime with prime <= n
 hash_prime get_hash_prime_le(uint64_t n);
+
+// create your own hash_prime for given p
+// by computing a suitable muldiv and shift value for the given p
+// (it does not do a prime check of p, though)
+// if dothrow == true then throws when it fails, otherwise it returns hash_prime(0,0,0)
+hash_prime create_hash_prime(uint64_t p, bool dothrow = true);
 
 MCCL_END_NAMESPACE
 

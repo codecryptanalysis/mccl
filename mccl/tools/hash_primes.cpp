@@ -457,6 +457,36 @@ void hash_prime::_check()
         throw std::runtime_error("hash_prime::_check(): invalid parameters (fail 8)");
 }
 
+// create your own hash_prime for given p
+// if dothrow == true then throws when it fails, otherwise it returns hash_prime(0,0,0)
+hash_prime create_hash_prime(uint64_t p, bool dothrow)
+{
+    typedef hash_prime::uint128_t uint128_t;
+    for (unsigned shift = 0; (uint64_t(1)<<shift) <= p; ++shift)
+    {
+        uint128_t n(uint64_t(1)<<shift);
+        n <<= 64;
+        uint64_t muldiv = uint64_t(n / p) + 1;
+        // check if muldiv and shift are correct for all input values
+        uint128_t check128 = uint128_t(muldiv) * p;
+        if (uint64_t(check128) > p)
+            continue;
+        if ((check128>>64) != (n>>64))
+            continue;
+        uint64_t check1 = ~uint64_t(0);
+        uint64_t check2 = check1 - (check1%p) - 1;
+        if ( (check1/p) != uint64_t( (uint128_t(muldiv)*check1)>> 64)>>shift )
+            continue;
+        if ( (check2/p) != uint64_t( (uint128_t(muldiv)*check2)>> 64)>>shift )
+            continue;
+        // muldiv and shift are fine, return hash_prime
+        return hash_prime(p, muldiv, shift);
+    }
+    if (dothrow)
+        throw std::runtime_error("create_hash_prime(): failed to create hash_prime");
+    return hash_prime(0,0,0);
+}
+
 // obtain smallest internal hash_prime with prime > n
 hash_prime get_hash_prime_gt(uint64_t n)
 {
@@ -502,5 +532,6 @@ hash_prime get_hash_prime_le(uint64_t n)
     --it;
     return hash_prime(it->prime, it->muldiv, it->shift);
 }
+
 
 MCCL_END_NAMESPACE
