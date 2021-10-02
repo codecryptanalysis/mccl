@@ -38,6 +38,7 @@ class HST_ISD_form_t
 public:
     static const size_t bit_alignment = _bits;
     typedef block_tag<bit_alignment, _masked> this_block_tag;
+    typedef block_tag<bit_alignment, true> this_block_tag_masked;
     
     HST_ISD_form_t() {}
     HST_ISD_form_t(const cmat_view& H_, const cvec_view& S_, size_t l_) { reset(H_, S_, l_); }
@@ -57,19 +58,19 @@ public:
     	max_update_rows = size_t( float(echelon_rows) * float(ISD_rows) / float(echelon_rows+ISD_rows) );
 
     	HST.resize(HTrows + 1, HTcols);
-    	HST.clear();
+    	HST.m_clear();
 
     	// create views
-    	_HT        .reset(HST.submatrix(0, HTrows, 0, HTcols, this_block_tag()));
-    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, HTcols, this_block_tag()));
-    	_S         .reset(HST[HTrows].subvector(0, HTcols, this_block_tag()));
+    	_HT        .reset(HST.submatrix(0, HTrows));
+    	_H12T      .reset(HST.submatrix(echelon_rows, ISD_rows));
+    	_S         .reset(HST[HTrows].subvector());
 
-	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, 0, H2T_columns, this_block_tag()));
-	_S2       .reset(_S.subvector(0, H2T_columns, this_block_tag()));
+	_H2T      .reset(HST.submatrix(echelon_rows, ISD_rows, H2T_columns));
+	_S2       .reset(_S.subvector(H2T_columns));
 
     	// copy H and S into HST using block_tag<bits,true> to force clearing out trailing bits
     	_HT.as(block_tag<bit_alignment,true>()).transpose(H_);
-    	_S.as(block_tag<bit_alignment,true>()).copy(S_);
+    	_S.as(block_tag<bit_alignment,true>()).v_copy(S_);
 
     	// setup HT row perm
     	perm.resize(HTrows);
@@ -120,10 +121,10 @@ public:
 
     const cmat_view_t<this_block_tag>& HT()   const { return _HT; }
     const cmat_view_t<this_block_tag>& H12T() const { return _H12T; }
-    const cmat_view_t<this_block_tag>& H2T()  const { return _H2T; }
+    const cmat_view_t<this_block_tag_masked>& H2T()  const { return _H2T; }
 
     const cvec_view_t<this_block_tag>& S()    const { return _S; }
-    const cvec_view_t<this_block_tag>& S2()   const { return _S2; }
+    const cvec_view_t<this_block_tag_masked>& S2()   const { return _S2; }
     
     // swap with random row outside echelon form and bring it back to echelon form
     void swap_echelon(size_t echelon_idx, size_t ISD_idx)
@@ -132,17 +133,17 @@ public:
     		throw std::runtime_error("HST_ISD_form_t::swap_echelon(): bad input index");
 	// swap rows
 	std::swap(perm[echelon_idx], perm[echelon_rows + ISD_idx]);
-	HST[echelon_idx].swap(HST[echelon_rows + ISD_idx]);
+	HST[echelon_idx].v_swap(HST[echelon_rows + ISD_idx]);
 
 	// bring HST back in echelon form
 	size_t pivotcol = HT_columns - echelon_idx - 1;
 	auto pivotrow = HST[echelon_idx];
 	pivotrow.clearbit(pivotcol);
-	auto HSTrowit = HST[echelon_start];
+	auto HSTrowit = HST.begin() + echelon_start;
 	for (size_t r2 = echelon_start; r2 < HST.rows(); ++r2,++HSTrowit)
 		if (HST(r2,pivotcol))
-			HSTrowit.vxor(pivotrow);
-	pivotrow.clear();
+			HSTrowit.v_xor(pivotrow);
+	pivotrow.v_clear();
 	pivotrow.setbit(pivotcol);
     }
     // update 1 echelon row
@@ -353,8 +354,8 @@ private:
     mat_view_t<this_block_tag> _HT, _H12T;
     vec_view_t<this_block_tag> _S;
 
-    mat_view_t<this_block_tag> _H2T;
-    vec_view_t<this_block_tag> _S2;
+    mat_view_t<this_block_tag_masked> _H2T;
+    vec_view_t<this_block_tag_masked> _S2;
 
     std::vector<uint32_t> perm;
     size_t HT_columns, H1T_columns, H2T_columns;

@@ -120,11 +120,11 @@ public:
 
         C.resize(HST.S().columns());
         
-        blocks_per_row = HST.H12T().rowblocks();
-        block_stride = HST.H12T().blockstride();
-        H12T_blockptr = HST.H12T().blockptr();
-        S_blockptr = HST.S().blockptr();
-        C_blockptr = C.blockptr();
+        blocks_per_row = HST.H12T().row_blocks();
+        block_stride = HST.H12T().block_stride();
+        H12T_blockptr = HST.H12T().block_ptr();
+        S_blockptr = HST.S().block_ptr();
+        C_blockptr = C.block_ptr();
         
         sol.clear();
         solution = vec();
@@ -161,7 +161,7 @@ public:
 
     cvec_view get_solution() const final
     {
-        return solution;
+        return cvec_view(solution);
     }
 
     // retrieve statistics
@@ -191,7 +191,6 @@ public:
                 return true;
 
             wsol = end - begin;
-            const uint32_t* e = end-1;
             if (begin == end)
             {
                 // case selection size 0
@@ -203,7 +202,7 @@ public:
                     if (wsol > w)
                         return true;
                 }
-            } else if (begin == e)
+            } else if (begin == end-1)
             {
                 // case selection size 1
                 auto Sptr = S_blockptr;
@@ -223,7 +222,7 @@ public:
                 {
                     const uint32_t* p = begin;
                     *Cptr = *Sptr ^ *(H12T_blockptr + block_stride*(*p) + i);
-                    for (++p; p != e; ++p)
+                    for (++p; p != end-1; ++p)
                     {
                         *Cptr = *Cptr ^ *(H12T_blockptr + block_stride*(*p) + i);
                     }
@@ -254,7 +253,6 @@ public:
             solution = vec(HST.HT().rows());
             for (unsigned i = 0; i < sol.size(); ++i)
                 solution.setbit(sol[i]);
-
             if (config.verify_solution && !check_solution())
                 throw std::runtime_error("ISD_generic::callback: internal error 3: solution is incorrect!");
             return false;

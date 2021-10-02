@@ -16,7 +16,7 @@ bool check_SD_solution(const cmat_view& H, const cvec_view& S, unsigned int w, c
     for (size_t i = 0; i < H.rows(); ++i)
         if (hammingweight_and(H[i], E) % 2)
             tmp.setbit(i);
-    return tmp == S;
+    return tmp.is_equal(S);
 }
 
 bool syndrome_decoding_problem::check_solution(const cvec_view& E) const

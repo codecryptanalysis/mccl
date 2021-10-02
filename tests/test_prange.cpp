@@ -45,11 +45,11 @@ int main(int, char**)
         vec r(Hraw.columns());
         for(size_t i = 0; i < Hraw.rows(); i++ ) 
         {
-            bool x = hammingweight(r.vand(Hraw[i],ISD_prange.get_solution()))%2;
+            bool x = hammingweight(r.v_and(Hraw[i],ISD_prange.get_solution()))%2;
             if(x)
                 eval_S.setbit(i);
         }
-        status |= not(eval_S==S);
+        status |= not(eval_S.is_equal(S));
     }
 
     // test subISD_LB
@@ -63,11 +63,11 @@ int main(int, char**)
         vec eval_S(Hraw.rows());
         vec r(Hraw.columns());
         for(size_t i = 0; i < Hraw.rows(); i++ ) {
-            bool x = hammingweight(r.vand(Hraw[i],ISD_single_LB.get_solution()))%2;
+            bool x = hammingweight(r.v_and(Hraw[i],ISD_single_LB.get_solution()))%2;
             if(x)
                 eval_S.setbit(i);
         }
-        status |= not(eval_S==S);
+        status |= not(eval_S.is_equal(S));
     }
 
     if (status == 0)

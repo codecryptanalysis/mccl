@@ -32,7 +32,7 @@ void SDP_generator::generate(int n, int k, int w)
 	
 	// now set left n-k by n-k submatrix to the identity
 	tmpI.resize(n-k,n-k);
-	tmpI.setidentity();
+	tmpI.set_identity();
 	_H.submatrix(0,n-k,0,n-k) = m_copy(tmpI);
 
 	// generate syndrome
