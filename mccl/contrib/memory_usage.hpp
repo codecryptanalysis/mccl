@@ -41,7 +41,7 @@
  * memory use) measured in bytes, or zero if the value cannot be
  * determined on this OS.
  */
-static size_t getPeakRSS()
+inline size_t getPeakRSS()
 {
 #if defined(_WIN32)
     /* Windows -------------------------------------------------- */
@@ -87,7 +87,7 @@ static size_t getPeakRSS()
  * Returns the current resident set size (physical memory use) measured
  * in bytes, or zero if the value cannot be determined on this OS.
  */
-static size_t getCurrentRSS()
+inline size_t getCurrentRSS()
 {
 #if defined(_WIN32)
     /* Windows -------------------------------------------------- */
