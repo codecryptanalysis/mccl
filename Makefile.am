@@ -40,22 +40,22 @@ libmccl_la_SOURCES=\
 	mccl/tools/generator.cpp \
 	mccl/tools/statistics.hpp \
 	mccl/tools/utils.hpp \
-	mccl/tools/hash_primes.hpp \
-	mccl/tools/hash_primes.cpp
+	mccl/tools/unordered_multimap.hpp \
+	mccl/tools/unordered_multimap.cpp
 
 
 bin_isdsolver_SOURCES= src/isdsolver.cpp
 bin_isdsolver_LDADD  = libmccl.la
 
-TESTS= tests/test_compile tests/test_hash_primes tests/test_matrix tests/test_parser tests/test_prange tests/test_hash_primes
+TESTS=          tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange
 
-check_PROGRAMS= tests/test_compile tests/test_hash_primes tests/test_matrix tests/test_parser tests/test_prange
+check_PROGRAMS= tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
 
-tests_test_hash_primes_SOURCES= tests/test_hash_primes.cpp
-tests_test_hash_primes_LDADD  = libmccl.la
+tests_test_unordered_multimap_SOURCES= tests/test_unordered_multimap.cpp
+tests_test_unordered_multimap_LDADD  = libmccl.la
 
 tests_test_matrix_SOURCES= tests/test_matrix.cpp
 tests_test_matrix_LDADD  = libmccl.la
