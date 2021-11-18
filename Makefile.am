@@ -41,7 +41,8 @@ libmccl_la_SOURCES=\
 	mccl/tools/statistics.hpp \
 	mccl/tools/utils.hpp \
 	mccl/tools/unordered_multimap.hpp \
-	mccl/tools/unordered_multimap.cpp
+	mccl/tools/unordered_multimap.cpp \
+	mccl/tools/bitfield.hpp
 
 
 bin_isdsolver_SOURCES= src/isdsolver.cpp
