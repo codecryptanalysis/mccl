@@ -1,5 +1,8 @@
-# mccl
-modular code cryptanalysis library
+# M C C L
+
+Modular Code Cryptanalysis Library
+
+[![C++ CI](https://github.com/cr-marcstevens/mccl/actions/workflows/cpp-ci.yml/badge.svg)](https://github.com/cr-marcstevens/mccl/actions/workflows/cpp-ci.yml)
 
 # Documentation
 
