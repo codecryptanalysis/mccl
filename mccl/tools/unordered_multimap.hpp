@@ -93,9 +93,9 @@ hash_prime create_hash_prime(uint64_t p, bool dothrow = true);
 
 
 // hash function that returns uint64_t hash
-uint64_t hash(uint64_t x) { return x; }
+inline uint64_t hash(uint64_t x) { return x; }
 // overloads for custom types may use hash_combine:
-uint64_t hash_combine(uint64_t x, uint64_t y) { return 4611686018427388039ULL * x + 268435459ULL * y + 2147483659; }
+inline uint64_t hash_combine(uint64_t x, uint64_t y) { return 4611686018427388039ULL * x + 268435459ULL * y + 2147483659; }
 
 
 /*
@@ -161,7 +161,7 @@ struct default_unordered_multimap_traits
     static constexpr float default_scale_factor = 1.5f;
 
     // automatic grow parameters
-    static constexpr bool is_auto_grow = false;
+    static constexpr bool is_auto_grow = true;
     static constexpr float default_grow_factor = 1.4f;
 
     // default queue size for insert & match operations

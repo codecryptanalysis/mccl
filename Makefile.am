@@ -32,7 +32,8 @@ libmccl_la_SOURCES=\
 	mccl/algorithm/prange.cpp \
 	mccl/algorithm/lee_brickell.hpp \
 	mccl/algorithm/lee_brickell.cpp \
-	mccl/algorithm/dumer.hpp \
+	mccl/algorithm/stern_dumer.hpp \
+	mccl/algorithm/stern_dumer.cpp \
 	\
 	mccl/tools/parser.hpp \
 	mccl/tools/parser.cpp \
@@ -49,9 +50,9 @@ libmccl_la_SOURCES=\
 bin_isdsolver_SOURCES= src/isdsolver.cpp
 bin_isdsolver_LDADD  = libmccl.la
 
-TESTS=          tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange
+TESTS=          tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer
 
-check_PROGRAMS= tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange
+check_PROGRAMS= tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
@@ -67,6 +68,9 @@ tests_test_parser_LDADD  = libmccl.la
 
 tests_test_prange_SOURCES= tests/test_prange.cpp
 tests_test_prange_LDADD  = libmccl.la
+
+tests_test_dumer_SOURCES= tests/test_dumer.cpp
+tests_test_dumer_LDADD  = libmccl.la
 
 
 if HAVE_M4RI

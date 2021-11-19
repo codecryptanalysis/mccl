@@ -5,6 +5,7 @@
 #include <mccl/algorithm/isdgeneric.hpp>
 #include <mccl/algorithm/prange.hpp>
 #include <mccl/algorithm/lee_brickell.hpp>
+#include <mccl/algorithm/stern_dumer.hpp>
 
 #include <mccl/tools/parser.hpp>
 #include <mccl/tools/generator.hpp>
@@ -150,7 +151,7 @@ try
       ;
     // these are other configuration options
     auxopts.add_options()
-      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB")
+      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, SDv0")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("quiet,q", po::bool_switch(&quiet), "Quiet: reduce verbosity of trials")
       ("printinput", po::bool_switch(&print_input), "Print input H & S")
@@ -177,6 +178,7 @@ try
     // ========== ADD MODULE DEFAULT CONFIGURATIONS HERE ===============
     modules.emplace_back( make_module_configuration( ISD_generic_config_default ) );
     modules.emplace_back( make_module_configuration( lee_brickell_config_default ) );
+    modules.emplace_back( make_module_configuration( stern_dumer_config_default ) );
     // =================================================================
     
     //  if there are common options then only the first description is used
@@ -269,6 +271,11 @@ try
     {
       algo = "Lee-Brickell";
       INITIALIZE_ALGO( subISDT_lee_brickell );
+    }
+    else if (algo == "STERNDUMERV0" || algo == "SDV0")
+    {
+      algo = "Stern-Dumer v0";
+      INITIALIZE_ALGO( subISDT_stern_dumer );
     }
     else
     {

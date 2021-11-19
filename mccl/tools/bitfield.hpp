@@ -63,33 +63,33 @@ struct staged_bitfield
         filter2.resize(size_t(1) << (filter2addressbits - 6));
         addressmask_filter2 = uint64_t(filter2.size() - 1);
 
-        // always call cleanup
-        cleanup();
+        // always call clear
+        clear();
     }
         
     inline void filter1set(uint64_t L1val)
     {
         if (!usefilter1)
             return;
-        filter1[ (L1val/64) & addressmask_filter1 ] |= uint64_t1(1) << (L1val%64);
+        filter1[ (L1val/64) & addressmask_filter1 ] |= uint64_t(1) << (L1val%64);
     }
     inline void filter2set(uint64_t L2val)
     {
         if (!usefilter2)
             return;
-        filter2[ (L2val/64) & addressmask_filter2 ] |= uint64_t1(1) << (L2val%64);
+        filter2[ (L2val/64) & addressmask_filter2 ] |= uint64_t(1) << (L2val%64);
     }
     inline bool filter1get(uint64_t L2val)
     {
         if (!usefilter1)
             return true;
-        return 0 != (filter1[ (L2val/64) & addressmask_filter1 ] |= uint64_t1(1) << (L2val%64));
+        return 0 != (filter1[ (L2val/64) & addressmask_filter1 ] |= uint64_t(1) << (L2val%64));
     }
     inline bool filter2get(uint64_t L1val)
     {
         if (!usefilter2)
             return true;
-        return 0 != (filter2[ (L1val/64) & addressmask_filter2 ] |= uint64_t1(1) << (L1val%64));
+        return 0 != (filter2[ (L1val/64) & addressmask_filter2 ] |= uint64_t(1) << (L1val%64));
     }
     
     inline void stage1(uint64_t L1val)

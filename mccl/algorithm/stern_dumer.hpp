@@ -4,10 +4,15 @@
 #include <mccl/config/config.hpp>
 #include <mccl/algorithm/decoding.hpp>
 #include <mccl/algorithm/isdgeneric.hpp>
+#include <mccl/tools/unordered_multimap.hpp>
+#include <mccl/tools/bitfield.hpp>
+#include <mccl/tools/enumerate.hpp>
+
+#include <unordered_map>
 
 MCCL_BEGIN_NAMESPACE
 
-struct lee_brickell_config_t
+struct stern_dumer_config_t
 {
     const std::string modulename = "stern_dumer";
     const std::string description = "Stern/Dumer configuration";
@@ -18,12 +23,12 @@ struct lee_brickell_config_t
         "\t\tPartition columns of H2 into two sets.\n\t\tCompare p/2-columns sums from both sides.\n\t\tReturn pairs that sum up to S2.\n"
         ;
 
-    unsigned int p = 3;
+    unsigned int p = 4;
 
     template<typename Container>
     void process(Container& c)
     {
-        c(p, "p", 3, "subISDT parameter p");
+        c(p, "p", 4, "subISDT parameter p");
     }
 };
 
@@ -31,168 +36,6 @@ struct lee_brickell_config_t
 // at construction of subISDT_stern_dumer the current global default values will be loaded
 extern stern_dumer_config_t stern_dumer_config_default;
 
-
-// three stage collision bitfield:
-// stage 1: compute all L1 values and set the first bit of the 2-bit value at the corresponding address
-// stage 2: compute all L2 values, check the address. if the first bit is set (a collision with L1) then set the second bit and store the L2 value
-// stage 3: compute all L1 values again, store the ones with second bit set at the corresponding address
-template<bool usefilter1 = false, bool usefilter2 = false>
-struct stern_dumer_bitfield
-{
-    // each 'address' is mapped to a bit position of a uint32_t word
-    // the hashmap actually consists of a vector of uint64_t
-    // the bottom half is the L1 uint32_t word
-    // the top half is the L2 uint32_t word
-    std::vector<uint64_t> hashmap;
-    // the filter is another hashmap, but with a shorter address space
-    // to obtain a speed-up:
-    //  (1) the hashmap should not fit any cachelevel
-    //  (2) it should be small enough to fit entirely in some cachelevel
-    //  (3) it should still be big enough to filter a significant factor of look-ups
-    // now each address uses only 1 bit, so filter1 for L1, filter2 for L2
-    // filter1 can be used in stage 2 to quickly filter non-collisions of L2 values
-    // filter2 can be used in stage 3 to quickly filter non-collisions of L1 values
-    std::vector<uint64_t> filter1;
-    std::vector<uint64_t> filter2;
-
-    uint64_t addressmask_hashmap;
-    uint64_t addressmask_filter1;
-    uint64_t addressmask_filter2;
-    uint32_t hashmap_bitshift;
-    
-    void clean()
-    {
-        std::fill(hashmap.begin(), hashmap.end(), uint64_t(0));
-        std::fill(filter1.begin(), filter1.end(), uint64_t(0));
-        std::fill(filter2.begin(), filter2.end(), uint64_t(0));
-    }
-
-    void resize(size_t hashmapaddressbits, size_t filter1addressbits = 0, size_t filter2addressbits = 0)
-    {
-        // check inputs
-        if (hashmapaddressbits < 5)
-            throw std::runtime_error("stern_dumer_map::resize(): hashmapaddressbits should be at least 5");
-        if (usefilter1 == true && filter1addressbits < 6)
-            throw std::runtime_error("stern_dumer_map::resize(): filter1 will be used, so filter1addressbits must be >= 6");
-        if (usefilter2 == true && filter2addressbits < 6)
-            throw std::runtime_error("stern_dumer_map::resize(): filter2 will be used, so filter2addressbits must be >= 6");
-        if (usefilter1 == false && filter1addressbits != 0)
-            throw std::runtime_error("stern_dumer_map::resize(): filter1 will NOT be used, so filter1addressbits must be 0");
-        if (usefilter2 == false && filter2addressbits != 0)
-            throw std::runtime_error("stern_dumer_map::resize(): filter2 will NOT be used, so filter2addressbits must be 0");
-
-        hashmap.resize(size_t(1) << (hashmapaddressbits - 5));
-        addressmask_hashmap = uint64_t(hashmap.size() - 1);
-
-        filter1.resize(size_t(1) << (filter1addressbits - 6));
-        addressmask_filter1 = uint64_t(filter1.size() - 1);
-
-        filter2.resize(size_t(1) << (filter2addressbits - 6));
-        addressmask_filter2 = uint64_t(filter2.size() - 1);
-
-        // always call cleanup
-        cleanup();
-    }
-        
-    inline void filter1set(uint64_t L1val)
-    {
-        if (!usefilter1)
-            return;
-        filter1[ (L1val/64) & addressmask_filter1 ] |= uint64_t1(1) << (L1val%64);
-    }
-    inline void filter2set(uint64_t L2val)
-    {
-        if (!usefilter2)
-            return;
-        filter2[ (L2val/64) & addressmask_filter2 ] |= uint64_t1(1) << (L2val%64);
-    }
-    inline bool filter1get(uint64_t L2val)
-    {
-        if (!usefilter1)
-            return true;
-        return 0 != (filter1[ (L2val/64) & addressmask_filter1 ] |= uint64_t1(1) << (L2val%64));
-    }
-    inline bool filter2get(uint64_t L1val)
-    {
-        if (!usefilter2)
-            return true;
-        return 0 != (filter2[ (L1val/64) & addressmask_filter2 ] |= uint64_t1(1) << (L1val%64));
-    }
-    
-    inline void stage1(uint64_t L1val)
-    {
-        hashmap[ (L1val/32) & addressmask_hashmap ] |= uint64_t(1) << (L1val%32);
-        filter1set(L1val);
-    }
-    inline bool stage2(uint64_t L2val)
-    {
-        if (!filter1get(L2val))
-            return false;
-        uint64_t& x = hashmap[ (L2val/32) & addressmask_hashmap ];
-        uint64_t L1bitval = uint64_t(1) << (L2val%32);
-        if (0 == (x & L1bitval))
-            return false;
-        x |= L1bitval<<32;
-        filter2set(L2val);
-        return true;
-    }
-    inline bool stage3(uint64_t L1val)
-    {
-        if (!filter2get(L1val))
-            return false;
-        return 0 != (hashmap[ (L1val/32) & addressmask_hashmap ] & ((uint64_t(1)<<32) << (L1val%32)));
-    }
-};
-
-// simple two-sided collision hashmap
-// only all values from one side are stored in hashmap
-// note that this expects each value to occur exactly once
-// thus also each value-match produces exactly 1 collision
-/* fastprimes[] = { 67, 131, 263, 521, 1031, 2053, 4099, 8209, 16417, 32771, 65539, 131113, 262147, 524309, 1048583, 2097169, 4194329, 8388617, 16777289, 33554473, 67108913, 134217989, 268435459, 536870923 }; */
-template<typename SelT = uint64_t, typename ValT = uint64_t>
-struct stern_dumer_hashmap_SC
-{
-    typedef SelT selection_type;
-    typedef ValT value_type;
-    
-    std::unordered_map<ValT,SelT> map;
-    size_t map_size;
-
-    // call at parameterization    
-    void reserve(size_t expected_elements, double scaling_factor = 2.0)
-    {
-        map_size = size_t(double(expected_elements) * scaling_factor);
-        clean();
-    }
-
-    // call at start of process
-    void clean()
-    {
-        index.clear();
-        index.reserve(map_size);
-    }    
-    
-    // call during phase 2
-    template<typename ST, typename VT>
-    void insert(ST&& s1, VT&& v1)
-    {
-        map.emplace(std::forward<VT>(v1), std::forward<ST>(s1));
-    }
-    
-    // call at end of phase 2
-    void optimize()
-    {
-    }
-
-    // call during phase 3
-    template<typename ST, typename VT, typename F>
-    void match(const ST& s2, const VT& v2, F& f)
-    {
-        auto it = map.find(v2);
-        if (it != map.end())
-            f(it->second, s2);
-    }
-};
 
 
 class subISDT_stern_dumer
@@ -257,12 +100,21 @@ public:
         if (p < 2)
             throw std::runtime_error("subISDT_stern_dumer::initialize: Stern/Dumer does not support p < 2");
         if (columns < 6)
-            throw std::runtime_error("subISDT_stern_dumer::initialize: Stern/Dumer does not support ell < 6");
+            throw std::runtime_error("subISDT_stern_dumer::initialize: Stern/Dumer does not support l < 6 (since we use bitfield)");
         if (words > 1)
-            throw std::runtime_error("subISDT_stern_dumer::initialize(): Stern/Dumer does not support l > 64");
+            throw std::runtime_error("subISDT_stern_dumer::initialize: Stern/Dumer does not support l > 64 (yet)");
+        if ( p > 8)
+            throw std::runtime_error("subISDT_stern_dumer::initialize: Stern/Dumer does not support p > 8 (yet)");
+        if (rows1 >= 65535 || rows2 >= 65535)
+            throw std::runtime_error("subISDT_stern_dumer::initialize: Stern/Dumer does not support rows1 or rows2 >= 65535");
 
         firstwordmask = detail::lastwordmask(columns);
         padmask = ~firstwordmask;
+        
+        bitfield.resize(columns);
+
+        // TODO: compute a reasonable reserve size
+        // hashmap.reserve(...);
     }
 
     // API member function
@@ -270,16 +122,8 @@ public:
     {
         stats.cnt_solve.inc();
         prepare_loop();
-        if (words == 0)
-        {
-            while (_loop_next<false>())
-                ;
-        }
-        else
-        {
-            while (_loop_next<true>())
-                ;
-        }
+        while (loop_next())
+            ;
     }
     
     // API member function
@@ -288,96 +132,96 @@ public:
         stats.cnt_prepare_loop.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_prepareloop);
         
-        curidx.resize(p);
-        curpath.resize(p+1, 0);
-            
-        cp = 1;
-        curidx[0] = 0;
-        if (words > 0)
-        {
-            firstwords.resize(rows);
-            for (unsigned i = 0; i < rows; ++i)
-                firstwords[i] = *H12T.word_ptr(i);
-            curpath[0] = *S.word_ptr();
-            curpath[1] = curpath[0] ^ firstwords[0];
-        }
+        firstwords.resize(rows);
+        for (unsigned i = 0; i < rows; ++i)
+            firstwords[i] = (*H12T.word_ptr(i)) & firstwordmask;
+        Sval = (*S.word_ptr()) & firstwordmask;
+        
+        bitfield.clear();
+        hashmap.clear();
     }
 
     // API member function
     bool loop_next() final
     {
-        if (words == 0)
-            return _loop_next<false>();
-        else
-            return _loop_next<true>();
-    }
-    
-    template<bool use_curpath>
-    bool _loop_next()
-    {
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
-        
-        if (use_curpath)
-        {
-            if ((curpath[cp] & firstwordmask) == 0) // unlikely
+
+//        std::cout << "1" << std::flush;
+        // stage 1: store left-table in bitfield
+        enumerate.enumerate_val(firstwords.data()+0, firstwords.data()+rows1, p1,
+            [this](uint64_t val)
+            { 
+                bitfield.stage1(val); 
+            });
+//        std::cout << "2" << std::flush;
+        // stage 2: compare right-table with bitfield: store matches
+        enumerate.enumerate(firstwords.data()+rows1, firstwords.data()+rows, p2,
+            [this](const uint32_t* idxbegin, const uint32_t* idxend, uint64_t val)
             {
-                unsigned int w = hammingweight(curpath[cp] & padmask);
-                if (cp + w <= wmax)
+                val ^= Sval;
+                if (bitfield.stage2(val))
                 {
-                    MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-                    if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, w))
-                        return false;
+//                    std::cout << "a" << std::flush;
+                    hashmap.emplace(val, pack_indices(idxbegin,idxend) );
                 }
+            });
+//        std::cout << "3" << std::flush;
+        // stage 3: retrieve matches from left-table and process
+        enumerate.enumerate(firstwords.data()+0, firstwords.data()+rows1, p1,
+            [this](const uint32_t* idxbegin, const uint32_t* idxend, uint64_t val)
+            {
+                if (bitfield.stage3(val))
+                {
+//                    std::cout << "b" << std::flush;
+                    uint32_t idx[16];
+                    uint32_t* it = idx+0;
+                    for (auto it2 = idxbegin; it2 != idxend; ++it2,++it)
+                        *it = *it2;
+                    auto range = hashmap.equal_range(val);
+                    for (auto valit = range.first; valit != range.second; ++valit)
+                    {
+//                        std::cout << "c" << std::flush;
+                        
+                        uint64_t packed_indices = valit->second;
+                        auto it2 = unpack_indices(packed_indices, it);
+
+                        MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
+                        if (!(*callback)(ptr, idx+0, it2, 0))
+                            return false;
+                    }
+                }
+                return true;
+            });
+        return false;
+    }
+    
+    static uint64_t pack_indices(const uint32_t* begin, const uint32_t* end)
+    {
+        uint64_t x = ~uint64_t(0);
+        for (; begin != end; ++begin)
+        {
+            x <<= 16;
+            x |= uint64_t(*begin);
+        }
+        return x;
+    }
+    
+    static uint32_t* unpack_indices(uint64_t x, uint32_t* first)
+    {
+        for (size_t i = 0; i < 4; ++i)
+        {
+            uint16_t y = uint16_t(x & 0xFFFF);
+            if (y != 0xFFFF)
+            {
+                *first = y;
+                ++first;
+                x >>= 16;
             }
         }
-        else
-        {
-            MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-            if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, 0))
-                return false;
-        }
-        return next<use_curpath>();
+        return first;
     }
 
-    template<bool use_curpath>
-    inline bool next()
-    {
-        if (++curidx[cp - 1] < rows) // likely
-        {
-            if (use_curpath)
-                curpath[cp] = curpath[cp-1] ^ firstwords[ curidx[cp-1] ];
-            return true;
-        }
-        unsigned i = cp - 1;
-        while (i >= 1)
-        {
-            if (++curidx[i-1] >= rows - (cp-i)) // unlikely
-                --i;
-            else
-            {
-                if (use_curpath)
-                    curpath[i] = curpath[i-1] ^ firstwords[ curidx[i-1] ];
-                break;
-            }
-        }
-        if (i == 0)
-        {
-            if (++cp > p) // unlikely
-                return false;
-            curidx[0] = 0;
-            if (use_curpath)
-                curpath[1] = curpath[0] ^ firstwords[0];
-            i = 1;
-        }
-        for (; i < cp; ++i)
-        {
-            curidx[i] = curidx[i-1] + 1;
-            if (use_curpath)
-                curpath[i+1] = curpath[i] ^ firstwords[ curidx[i] ];
-        }
-        return true;
-    }
     decoding_statistics get_stats() const { return stats; };
 
 private:
@@ -388,21 +232,22 @@ private:
     size_t columns, words;
     unsigned int wmax;
     
-    std::vector<uint32_t> curidx;
-    std::vector<uint64_t> curpath;
-    std::vector<uint64_t> firstwords;
+    staged_bitfield<false,false> bitfield;
+    std::unordered_multimap<uint64_t, uint64_t> hashmap;
     
-    uint64_t firstwordmask, padmask;
+    enumerate_t<uint32_t> enumerate;
+
+    std::vector<uint64_t> firstwords;
+    uint64_t firstwordmask, padmask, Sval;
     
     size_t p, p1, p2, rows, rows1, rows2;
-    
-    size_t cp;
-    
     
     stern_dumer_config_t config;
     decoding_statistics stats;
     cpucycle_statistic cpu_prepareloop, cpu_loopnext, cpu_callback;
 };
+
+
 
 template<size_t _bit_alignment = 64>
 using ISD_stern_dumer = ISD_generic<subISDT_stern_dumer,_bit_alignment>;
