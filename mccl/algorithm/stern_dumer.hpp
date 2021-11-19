@@ -147,42 +147,36 @@ public:
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
 
-//        std::cout << "1" << std::flush;
         // stage 1: store left-table in bitfield
-        enumerate.enumerate_val(firstwords.data()+0, firstwords.data()+rows1, p1,
+        enumerate.enumerate_val(firstwords.data()+rows2, firstwords.data()+rows, p1,
             [this](uint64_t val)
             { 
                 bitfield.stage1(val); 
             });
-//        std::cout << "2" << std::flush;
         // stage 2: compare right-table with bitfield: store matches
-        enumerate.enumerate(firstwords.data()+rows1, firstwords.data()+rows, p2,
+        // note we keep the packed indices at offset 0 in firstwords for right-table
+        enumerate.enumerate(firstwords.data()+0, firstwords.data()+rows2, p2,
             [this](const uint32_t* idxbegin, const uint32_t* idxend, uint64_t val)
             {
                 val ^= Sval;
                 if (bitfield.stage2(val))
-                {
-//                    std::cout << "a" << std::flush;
                     hashmap.emplace(val, pack_indices(idxbegin,idxend) );
-                }
             });
-//        std::cout << "3" << std::flush;
         // stage 3: retrieve matches from left-table and process
-        enumerate.enumerate(firstwords.data()+0, firstwords.data()+rows1, p1,
+        enumerate.enumerate(firstwords.data()+rows2, firstwords.data()+rows, p1,
             [this](const uint32_t* idxbegin, const uint32_t* idxend, uint64_t val)
             {
                 if (bitfield.stage3(val))
                 {
-//                    std::cout << "b" << std::flush;
-                    uint32_t idx[16];
                     uint32_t* it = idx+0;
+                    // note that left-table indices are offset rows2 in firstwords
                     for (auto it2 = idxbegin; it2 != idxend; ++it2,++it)
-                        *it = *it2;
+                        *it = *it2 + rows2;
                     auto range = hashmap.equal_range(val);
                     for (auto valit = range.first; valit != range.second; ++valit)
                     {
-//                        std::cout << "c" << std::flush;
-                        
+                        if (valit->first != val)
+                            throw;
                         uint64_t packed_indices = valit->second;
                         auto it2 = unpack_indices(packed_indices, it);
 
@@ -207,17 +201,16 @@ public:
         return x;
     }
     
-    static uint32_t* unpack_indices(uint64_t x, uint32_t* first)
+    uint32_t* unpack_indices(uint64_t x, uint32_t* first)
     {
         for (size_t i = 0; i < 4; ++i)
         {
-            uint16_t y = uint16_t(x & 0xFFFF);
-            if (y != 0xFFFF)
-            {
-                *first = y;
-                ++first;
-                x >>= 16;
-            }
+            uint32_t y = uint32_t(x & 0xFFFF);
+            if (y == 0xFFFF)
+                break;
+            *first = y;
+            ++first;
+            x >>= 16;
         }
         return first;
     }
@@ -236,6 +229,7 @@ private:
     std::unordered_multimap<uint64_t, uint64_t> hashmap;
     
     enumerate_t<uint32_t> enumerate;
+    uint32_t idx[16];
 
     std::vector<uint64_t> firstwords;
     uint64_t firstwordmask, padmask, Sval;

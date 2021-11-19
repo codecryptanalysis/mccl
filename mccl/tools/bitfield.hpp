@@ -57,11 +57,17 @@ struct staged_bitfield
         bitfield.resize(size_t(1) << (bitfieldaddressbits - 5));
         addressmask_bitfield = uint64_t(bitfield.size() - 1);
 
-        filter1.resize(size_t(1) << (filter1addressbits - 6));
-        addressmask_filter1 = uint64_t(filter1.size() - 1);
-
-        filter2.resize(size_t(1) << (filter2addressbits - 6));
-        addressmask_filter2 = uint64_t(filter2.size() - 1);
+        if (usefilter1)
+        {
+            filter1.resize(size_t(1) << (filter1addressbits - 6));
+            addressmask_filter1 = uint64_t(filter1.size() - 1);
+        }
+    
+        if (usefilter2)
+        {
+            filter2.resize(size_t(1) << (filter2addressbits - 6));
+            addressmask_filter2 = uint64_t(filter2.size() - 1);
+        }
 
         // always call clear
         clear();
