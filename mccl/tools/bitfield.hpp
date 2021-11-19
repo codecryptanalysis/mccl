@@ -1,5 +1,5 @@
-#ifndef MCCL_ALGORITHM_BITFIELD_HPP
-#define MCCL_ALGORITHM_BITFIELD_HPP
+#ifndef MCCL_TOOLS_BITFIELD_HPP
+#define MCCL_TOOLS_BITFIELD_HPP
 
 #include <mccl/config/config.hpp>
 

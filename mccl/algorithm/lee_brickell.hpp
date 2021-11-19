@@ -4,6 +4,7 @@
 #include <mccl/config/config.hpp>
 #include <mccl/algorithm/decoding.hpp>
 #include <mccl/algorithm/isdgeneric.hpp>
+#include <mccl/tools/enumerate.hpp>
 
 MCCL_BEGIN_NAMESPACE
 
@@ -99,16 +100,8 @@ public:
     {
         stats.cnt_solve.inc();
         prepare_loop();
-        if (words == 0)
-        {
-            while (_loop_next<false>())
-                ;
-        }
-        else
-        {
-            while (_loop_next<true>())
-                ;
-        }
+        while (loop_next())
+            ;
     }
     
     // API member function
@@ -116,97 +109,48 @@ public:
     {
         stats.cnt_prepare_loop.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_prepareloop);
-        
-        curidx.resize(p);
-        curpath.resize(p+1, 0);
-            
-        cp = 1;
-        curidx[0] = 0;
+
+        firstwords.resize(rows);
         if (words > 0)
         {
-            firstwords.resize(rows);
             for (unsigned i = 0; i < rows; ++i)
                 firstwords[i] = *H12T.word_ptr(i);
-            curpath[0] = *S.word_ptr();
-            curpath[1] = curpath[0] ^ firstwords[0];
+            Sval = (*S.word_ptr()) & firstwordmask;
         }
     }
 
     // API member function
     bool loop_next() final
     {
-        if (words == 0)
-            return _loop_next<false>();
-        else
-            return _loop_next<true>();
-    }
-    
-    template<bool use_curpath>
-    bool _loop_next()
-    {
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
-        
-        if (use_curpath)
+
+        if (words == 0)
         {
-            if ((curpath[cp] & firstwordmask) == 0) // unlikely
-            {
-                unsigned int w = hammingweight(curpath[cp] & padmask);
-                if (cp + w <= wmax)
+            enumerate.enumerate(firstwords.data()+0, firstwords.data()+rows, p, 
+                [this](uint32_t* begin, uint32_t* end, uint64_t)
                 {
                     MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-                    if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, w))
-                        return false;
-                }
-            }
+                    return (*callback)(ptr, begin, end, 0);
+                });
         }
         else
         {
-            MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-            if (!(*callback)(ptr, &curidx[0], &curidx[0] + cp, 0))
-                return false;
+            enumerate.enumerate(firstwords.data()+0, firstwords.data()+rows, p, 
+                [this](uint32_t* begin, uint32_t* end, uint64_t val)
+                {
+                    if ((val & firstwordmask) == Sval)
+                    {
+                        unsigned int w = hammingweight(val & padmask);
+                        MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
+                        return (*callback)(ptr, begin, end, w);
+                    }
+                    return true;
+                });
         }
-        return next<use_curpath>();
+        return false;
     }
-
-    template<bool use_curpath>
-    inline bool next()
-    {
-        if (++curidx[cp - 1] < rows) // likely
-        {
-            if (use_curpath)
-                curpath[cp] = curpath[cp-1] ^ firstwords[ curidx[cp-1] ];
-            return true;
-        }
-        unsigned i = cp - 1;
-        while (i >= 1)
-        {
-            if (++curidx[i-1] >= rows - (cp-i)) // unlikely
-                --i;
-            else
-            {
-                if (use_curpath)
-                    curpath[i] = curpath[i-1] ^ firstwords[ curidx[i-1] ];
-                break;
-            }
-        }
-        if (i == 0)
-        {
-            if (++cp > p) // unlikely
-                return false;
-            curidx[0] = 0;
-            if (use_curpath)
-                curpath[1] = curpath[0] ^ firstwords[0];
-            i = 1;
-        }
-        for (; i < cp; ++i)
-        {
-            curidx[i] = curidx[i-1] + 1;
-            if (use_curpath)
-                curpath[i+1] = curpath[i] ^ firstwords[ curidx[i] ];
-        }
-        return true;
-    }
+    
     decoding_statistics get_stats() const { return stats; };
 
 private:
@@ -217,13 +161,12 @@ private:
     size_t columns, words;
     unsigned int wmax;
     
-    std::vector<uint32_t> curidx;
-    std::vector<uint64_t> curpath;
     std::vector<uint64_t> firstwords;
+    uint64_t firstwordmask, padmask, Sval;
     
-    uint64_t firstwordmask, padmask;
+    enumerate_t<uint32_t> enumerate;
     
-    size_t p, cp, rows;
+    size_t p, rows;
     
     lee_brickell_config_t config;
     decoding_statistics stats;
