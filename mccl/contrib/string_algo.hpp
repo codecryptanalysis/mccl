@@ -525,7 +525,7 @@ namespace string_algo {
 	template<typename String, typename StringIterator>
 	StringIterator find(String& str, const char* csubstr, StringIterator pos)
 	{
-		return sa::find(str, String(csubstr), str.begin());
+		return sa::find(str, String(csubstr), pos);
 	}
 	template<typename String>
 	auto find(String& str, const char* substr) -> decltype(str.begin())
@@ -535,7 +535,7 @@ namespace string_algo {
 	template<typename String, typename StringIterator>
 	StringIterator find(String& str, const wchar_t* csubstr, StringIterator pos)
 	{
-		return sa::find(str, String(csubstr), str.begin());
+		return sa::find(str, String(csubstr), pos);
 	}
 	template<typename String>
 	auto find(String& str, const wchar_t* substr) -> decltype(str.begin())

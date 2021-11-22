@@ -169,7 +169,7 @@ struct matrix_result
     matrix_result& operator=(const matrix_result&) = default;
     matrix_result& operator=(matrix_result&&) = default;
     template<typename... Args>
-    matrix_result(Args&&... args...): r(std::forward<Args>(args)...) {}
+    matrix_result(Args&&... args): r(std::forward<Args>(args)...) {}
 };
 
 

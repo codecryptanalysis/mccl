@@ -73,7 +73,7 @@ extern ISD_generic_config_t ISD_generic_config_default;
 
 template<typename subISDT_t = subISDT_API, size_t _bit_alignment = 256, bool _masked = false>
 class ISD_generic
-    : public syndrome_decoding_API
+    final : public syndrome_decoding_API
 {
 public:
     typedef typename subISDT_t::callback_t callback_t;
@@ -89,21 +89,21 @@ public:
         n = k = w = 0;
     }
 
-    ~ISD_generic() final
+    ~ISD_generic()
     {
     }
 
-    void load_config(const configmap_t& configmap) final
+    void load_config(const configmap_t& configmap)
     {
         mccl::load_config(config, configmap);
     }
-    void save_config(configmap_t& configmap) final
+    void save_config(configmap_t& configmap)
     {
         mccl::save_config(config, configmap);
     }
 
     // deterministic initialization for given parity check matrix H0 and target syndrome s0
-    void initialize(const cmat_view& _H, const cvec_view& _S, unsigned int _w) final
+    void initialize(const cmat_view& _H, const cvec_view& _S, unsigned int _w)
     {
         stats.cnt_initialize.inc();
         // set parameters according to current config
@@ -131,7 +131,7 @@ public:
     }
 
     // probabilistic preparation of loop invariant
-    void prepare_loop(bool _benchmark = false) final
+    void prepare_loop(bool _benchmark = false)
     {
         stats.cnt_prepare_loop.inc();
         benchmark = _benchmark;
@@ -139,7 +139,7 @@ public:
     }
 
     // perform one loop iteration, return true if successful and store result in e
-    bool loop_next() final
+    bool loop_next()
     {
         stats.cnt_loop_next.inc();
         // swap u rows in HST & bring in echelon form
@@ -150,7 +150,7 @@ public:
     }
 
     // run loop until a solution is found
-    void solve() final
+    void solve()
     {
         stats.cnt_solve.inc();
         prepare_loop();
@@ -159,13 +159,13 @@ public:
         stats.refresh();
     }
 
-    cvec_view get_solution() const final
+    cvec_view get_solution() const
     {
         return cvec_view(solution);
     }
 
     // retrieve statistics
-    decoding_statistics get_stats() const final
+    decoding_statistics get_stats() const
     {
         return stats;
     };

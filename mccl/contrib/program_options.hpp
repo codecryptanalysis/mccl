@@ -290,7 +290,7 @@ namespace program_options {
 	}
 	/* wrapper for boolean variables without value argument (argument passed or not) */
 	class bool_switch
-		: public detail::value_base
+		final : public detail::value_base
 	{
 	public:
 		bool_switch(): _target(nullptr) {}
@@ -298,24 +298,24 @@ namespace program_options {
 		{
 			*target = false;
 		}
-		~bool_switch() final {}
+		~bool_switch() {}
 
-		bool _takesvalue() final
+		bool _takesvalue()
 		{
 			return false;
 		}
 
-		bool _hasdefaultvalue() final
+		bool _hasdefaultvalue()
 		{
 			return false;
 		}
 
-		std::vector<std::string> _defaultvaluestr() final
+		std::vector<std::string> _defaultvaluestr()
 		{
 			return std::vector<std::string>();
 		}
 
-		void _parse(const detail::parser&) final
+		void _parse(const detail::parser&)
 		{
 			if (_target != nullptr)
 				*_target = true;
@@ -328,12 +328,12 @@ namespace program_options {
 	/* wrapper around variables and default values */
 	template<typename Type>
 	class value
-		: public detail::value_base
+		final : public detail::value_base
 	{
 	public:
 		value(): _target(nullptr) {}
 		value(Type* target): _target(target) {}
-		~value() final {}
+		~value() {}
 
 		value* operator->() { return this; }
 
@@ -345,23 +345,23 @@ namespace program_options {
 			return *this;
 		}
 
-		bool _takesvalue() final
+		bool _takesvalue()
 		{
 			return true;
 		}
 
-		bool _hasdefaultvalue() final
+		bool _hasdefaultvalue()
 		{
 			return _defaultvalue.get() != nullptr;
 		}
-		std::vector<std::string> _defaultvaluestr() final
+		std::vector<std::string> _defaultvaluestr()
 		{
 			if (_defaultvalue.get() != nullptr)
 				return detail::to_string(*_defaultvalue);
 			return std::vector<std::string>();
 		}
 
-		void _parse(const detail::parser& arg) final
+		void _parse(const detail::parser& arg)
 		{
 			if (_target != nullptr)
 				arg.to(*_target);

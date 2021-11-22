@@ -174,7 +174,7 @@ struct vector_result
     vector_result& operator=(const vector_result&) = default;
     vector_result& operator=(vector_result&&) = default;
     template<typename... Args>
-    vector_result(Args&&... args...): r(std::forward<Args>(args)...) {}
+    vector_result(Args&&... args): r(std::forward<Args>(args)...) {}
 };
 
 

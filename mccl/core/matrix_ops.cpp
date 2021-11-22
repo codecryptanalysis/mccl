@@ -725,7 +725,8 @@ void m_ ## func (const m_ptr& dst, const cm_ptr& m2, block_tag<bits,masked>) \
         { \
 	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2) \
 	        { \
-	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2; \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+	        	auto first2r = first2; \
 		        for (; first1r != last1r; ++first1r,++first2r) \
 		        	*first1r = expr ; \
 		} \
@@ -733,7 +734,8 @@ void m_ ## func (const m_ptr& dst, const cm_ptr& m2, block_tag<bits,masked>) \
                 auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
 	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2) \
 	        { \
-	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2; \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+	        	auto first2r = first2; \
 		        for (; first1r != last1r; ++first1r,++first2r) \
 		        	*first1r = expr ; \
 			auto diff = lwm & (( expr ) ^ *first1r); \
@@ -783,7 +785,9 @@ void m_ ## func (const m_ptr& dst, const cm_ptr& m2, const cm_ptr& m3, block_tag
         { \
 	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2, first3 += stride3) \
 	        { \
-	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2, first3r = first3; \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+	        	auto first2r = first2; \
+	        	auto first3r = first3; \
 		        for (; first1r != last1r; ++first1r,++first2r,++first3r) \
 		        	*first1r = expr ; \
 		} \
@@ -791,7 +795,9 @@ void m_ ## func (const m_ptr& dst, const cm_ptr& m2, const cm_ptr& m3, block_tag
                 auto lwm = lastwordmask(dst.columns, block_tag<bits,masked>()); \
 	        for (size_t r = 0; r < dst.rows; ++r, first1+=stride1, first2+=stride2, first3 += stride3) \
 	        { \
-	        	auto first1r = first1, last1r = first1r + blocks, first2r = first2, first3r = first3; \
+	        	auto first1r = first1, last1r = first1r + blocks; \
+	        	auto first2r = first2; \
+	        	auto first3r = first3; \
 		        for (; first1r != last1r; ++first1r,++first2r,++first3r) \
 		        	*first1r = expr ; \
 			auto diff = lwm & (( expr ) ^ *first1r); \
