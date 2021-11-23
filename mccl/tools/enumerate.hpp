@@ -269,7 +269,7 @@ public:
         }
         // second half iteration: loop 2nd value from middle to end
         // iterate on 1st in inner loop, 3rd+4th value in outer loop
-        for (auto it2 = mid; it2 != end-2; ++it2)
+        for (auto it2 = mid; it2 != end-2; ++it2,++idx[1])
         {
             idx[2] = idx[1]+1;
             for (auto it3 = it2+1; it3 != end-1; ++it3,++idx[2])
