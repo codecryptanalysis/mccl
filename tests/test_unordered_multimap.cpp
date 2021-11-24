@@ -11,6 +11,7 @@
 //#include <mccl/contrib/robin_hood.h>
 
 #include <iostream>
+#include <iomanip>
 #include <vector>
 #include <unordered_map>
 #include <set>
@@ -97,7 +98,15 @@ template<typename HT>
     double ms2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2-end1).count();
     size_t used_mem = getCurrentRSS();
     size_t hs = h.size();
-    std::cout << HT_name << ": " << ms0 << " \t" << ms1 << " \t" << ms2 << " \t" << hs << " \t" << c.c << " \t" << double(test_numbers.size())*double(c.c) * (ms0+ms1+ms2) * sf << " \t mem: " << ((used_mem - before_mem)>>20) << "MB (" << (before_mem>>20) << "MB->" << (used_mem>>20) << "MB)" << std::endl;
+    std::cout << std::setw(30) << HT_name << " : "
+        << std::setw(8) << ms0 << " | "
+        << std::setw(9) << ms1 << " | "
+        << std::setw(8) << ms2 << " | "
+        << std::setw(11) << hs << " | "
+        << std::setw(11) << c.c << " | "
+        << std::setw(11) << double(test_numbers.size())*double(c.c) * (ms0+ms1+ms2) * sf << " | "
+        << ((used_mem - before_mem)>>20) << "MB (" << (before_mem>>20) << "MB->" << (used_mem>>20) << "MB)"
+        << std::endl;
     return 0;
 }
 
@@ -132,7 +141,15 @@ template<typename HT>
     double ms2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2-end1).count();
     size_t used_mem = getCurrentRSS();
     size_t hs = h.size();
-    std::cout << HT_name << ": " << ms0 << " \t" << ms1 << " \t" << ms2 << " \t" << hs << " \t" << c.c << " \t" << double(test_numbers.size())*double(c.c) * (ms0+ms1+ms2) * sf << " \t mem: " << ((used_mem - before_mem)>>20) << "MB (" << (before_mem>>20) << "MB->" << (used_mem>>20) << "MB) (*prefetched*)" << std::endl;
+    std::cout << std::setw(30) << HT_name << " : "
+        << std::setw(8) << ms0 << " | "
+        << std::setw(9) << ms1 << " | "
+        << std::setw(8) << ms2 << " | "
+        << std::setw(11) << hs << " | "
+        << std::setw(11) << c.c << " | "
+        << std::setw(11) << double(test_numbers.size())*double(c.c) * (ms0+ms1+ms2) * sf << " | "
+        << ((used_mem - before_mem)>>20) << "MB (" << (before_mem>>20) << "MB->" << (used_mem>>20) << "MB)"
+        << std::endl;
     return 0;
 }
 
@@ -146,6 +163,7 @@ template<typename HT>
 
     auto start = bench_clock_t::now();
     h.clear();
+    h.reserve(test_numbers.size(), sf);
     auto end0 = bench_clock_t::now();
     for (auto& n : test_numbers)
         h.queue_insert(n, 1);
@@ -158,12 +176,21 @@ template<typename HT>
     while (!h.process_match_queue(c))
     {}
     auto end2 = bench_clock_t::now();
+
     double ms0 = std::chrono::duration_cast<std::chrono::milliseconds>(end0-start).count();
     double ms1 = std::chrono::duration_cast<std::chrono::milliseconds>(end1-end0).count();
     double ms2 = std::chrono::duration_cast<std::chrono::milliseconds>(end2-end1).count();
     size_t used_mem = getCurrentRSS();
     size_t hs = h.size();
-    std::cout << HT_name << ": " << ms0 << " \t" << ms1 << " \t" << ms2 << " \t" << hs << " \t" << c.c << " \t" << double(test_numbers.size())*double(c.c) * (ms0+ms1+ms2) * sf << " \t mem: " << ((used_mem - before_mem)>>20) << "MB (" << (before_mem>>20) << "MB->" << (used_mem>>20) << "MB)" << std::endl;
+    std::cout << std::setw(30) << HT_name << " : "
+        << std::setw(8) << ms0 << " | "
+        << std::setw(9) << ms1 << " | "
+        << std::setw(8) << ms2 << " | "
+        << std::setw(11) << hs << " | "
+        << std::setw(11) << c.c << " | "
+        << std::setw(11) << double(test_numbers.size())*double(c.c) * (ms0+ms1+ms2) * sf << " | "
+        << ((used_mem - before_mem)>>20) << "MB (" << (before_mem>>20) << "MB->" << (used_mem>>20) << "MB)"
+        << std::endl;
     return 0;
 }
 
@@ -224,19 +251,30 @@ int main(int argc, char** argv)
                     test_numbers.push_back( mt() );
 
                 std::cout << "=== Collection size: " << test_numbers.size() << " reserve scale factor: sf=" << sf << std::endl;
-                std::cout << "   HASH TABLE            : C ms \tST ms \tL ms \tstored   \trating      \tmemory usage" << std::endl;
-                test_hash_table< cacheline_unordered_multimap<uint64_t,uint8_t> >                  ("cacheline_unordered_mmap ", sf);
-                test_hash_table_prefetch< cacheline_unordered_multimap<uint64_t,uint8_t> >         ("cacheline_unordered_mmap ", sf);
-                test_queued_hash_table< batch_unordered_multimap<uint64_t,uint8_t> >               ("batch_unordered_mmap     ", sf);
+                std::cout << std::setw(30) << "HASH TABLE" << " : "
+                    << std::setw(8) << "clear ms" << " | "
+                    << std::setw(9) << "insert ms" << " | "
+                    << std::setw(8) << "match ms" << " | "
+                    << std::setw(11) << "stored" << " | "
+                    << std::setw(11) << "retrieved" << " | "
+                    << std::setw(11) << "rating" << " | "
+                    << std::setw(15) << "memory usage"
+                    << std::endl;
+
+                test_hash_table< cacheline_unordered_multimap<uint64_t,uint8_t> >          ("cacheline_unordered_multimap", sf);
+
+                test_hash_table_prefetch< cacheline_unordered_multimap<uint64_t,uint8_t> > ("cacheline_unordered_multimap", sf);
+
+                test_queued_hash_table< batch_unordered_multimap<uint64_t,uint8_t> >       ("batch_unordered_multimap", sf);
         
                 // only test other unordered_map once as last
                 // parameter sf is actually unused for these
                 if (sf >= 1.95)
                 {
-                    test_hash_table< ht_wrapper<std::unordered_multimap<uint64_t,uint8_t>>   >          ("unordered_mmap           ", sf);
-                    test_hash_table_prefetch< ht_wrapper<std::unordered_multimap<uint64_t,uint8_t>>   >          ("unordered_mmap           ", sf);
-//                    test_hash_table< ht_wrapper<phmap::flat_hash_map<uint64_t,uint8_t>> >          ("phmap::flat_hash_map     ", sf);
-//                    test_hash_table< ht_wrapper<robin_hood::unordered_flat_map<uint64_t,uint8_t>> >("rh unordered_flat_map    ", sf);
+                    test_hash_table< ht_wrapper<std::unordered_multimap<uint64_t,uint8_t>> >          ("unordered_multimap", sf);
+                    test_hash_table_prefetch< ht_wrapper<std::unordered_multimap<uint64_t,uint8_t>> > ("unordered_multimap", sf);
+//                    test_hash_table< ht_wrapper<phmap::flat_hash_map<uint64_t,uint8_t>> >             ("phmap::flat_hash_map", sf);
+//                    test_hash_table< ht_wrapper<robin_hood::unordered_flat_map<uint64_t,uint8_t>> >   ("rh unordered_flat_map", sf);
                 }
             }
         }
