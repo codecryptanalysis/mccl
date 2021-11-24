@@ -7,6 +7,7 @@ Modular Code Cryptanalysis Library
 # Documentation
 
 Please review documentation and help improve it!
+We're also looking for tutorials by and for people that are new to the project.
 
 https://github.com/cr-marcstevens/mccl/tree/main/doc
 
