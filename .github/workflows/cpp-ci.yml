@@ -2,7 +2,10 @@ name: C++ CI
 
 on:
   push:
-    branches: [ main ]
+    paths-ignore:
+    - 'doc/**'
+    - 'README.md'
+    - 'LICENSE'
   pull_request:
     branches: [ main ]
   
