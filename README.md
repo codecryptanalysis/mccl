@@ -32,9 +32,11 @@ See https://github.com/cr-marcstevens/mccl-wiki
   - `update_contrib.sh`: update contrib files
 - `m4`, `configure.ac`, `Makefile.am`: autotools build system files
 
-# Building
+# Getting started
 
 ```
+git clone git@github.com:cr-marcstevens/mccl.git mccl
+cd mccl
 autoreconf --install
 ./configure
 make
