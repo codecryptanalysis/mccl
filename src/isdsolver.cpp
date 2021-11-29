@@ -22,10 +22,6 @@
 
 using namespace mccl;
 
-namespace po = program_options;
-namespace sa = string_algo;
-
-
 /* run Trials */
 
 void run_ISD(syndrome_decoding_API& ISD, cmat_view& H, cvec_view& S, size_t w, bool quiet)
