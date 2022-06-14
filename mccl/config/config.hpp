@@ -21,6 +21,14 @@
 #define MCCL_END_NAMESPACE }
 #endif
 
+#ifdef MCCL_HAVE_FUNC_ATTRIBUTE_FALLTHROUGH
+#define MCCL_FALLTHROUGH __attribute__((fallthrough))
+#elif defined(__has_cpp_attribute) && __has_cpp_attribute(fallthrough)
+#define MCCL_FALLTHROUGH [[fallthrough]]
+#else
+#define MCCL_FALLTHROUGH
+#endif
+
 #define MCCL_VECTOR_NO_SANITY_CHECKS 0
 #define MCCL_VECTOR_ASSUME_EQUAL_DIMENSIONS 0
 #define MCCL_VECTOR_ASSUME_NONEMPTY 0
