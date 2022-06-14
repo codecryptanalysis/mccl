@@ -194,6 +194,8 @@ class base_vector_t
 public:
     /* TYPEDEFS */
     typedef base_vector_t<_block_tag, _const_view, _iterator_view, _allocate> this_type;
+    typedef detail::core_vector_t<_block_tag,_const_view,_iterator_view,_allocate> base_type;
+
     // vector pointer type to (const) data
     typedef typename detail::vector_pointer_t<_const_view,_iterator_view>::type pointer_t;
     // vector pointer type to const data
@@ -272,7 +274,7 @@ private:
     void _assign(V& v)
     {
         if (is_view) throw;
-        this->_assign(v);
+        this->base_type::_assign(v);
     }
     // if owner then call resize_me on result r, otherwise ignore
     template<typename R>
