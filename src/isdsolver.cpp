@@ -16,7 +16,6 @@
 #include <mccl/contrib/string_algo.hpp>
 
 #include <iostream>
-#include <unistd.h>
 #include <cstdlib>
 #include <memory>
 

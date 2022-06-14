@@ -68,17 +68,26 @@ inline uint64_t firstwordmask(size_t cols)
 }
 
 // return the smallest 2^t >= n
+template<unsigned bits, typename Int, bool b = (bits < sizeof(Int) * 8)>
+struct _next_pow2_helper {
+	static void op(Int& n) { n |= n >> bits; }
+};
+template<unsigned bits, typename Int>
+struct _next_pow2_helper<bits, Int, false> {
+	static void op(Int& n) { }
+};
 template<typename Int>
 inline Int next_pow2(Int n)
 {
-	const unsigned bits = sizeof(Int)*8;
+	const unsigned bits = sizeof(Int) * 8;
 	--n;
-	n |= n >> 1;
-	n |= n >> 2;
-	n |= n >> 4;
-	if (8 < bits) n |= n >> 8;
-	if (16 < bits) n |= n >> 16;
-	if (32 < bits) n |= n >> 32;
+	_next_pow2_helper<1, Int>::op(n);
+	_next_pow2_helper<2, Int>::op(n);
+	_next_pow2_helper<4, Int>::op(n);
+	_next_pow2_helper<8, Int>::op(n);
+	_next_pow2_helper<16, Int>::op(n);
+	_next_pow2_helper<32, Int>::op(n);
+	_next_pow2_helper<64, Int>::op(n);
 	return ++n;
 }
 

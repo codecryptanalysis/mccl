@@ -79,8 +79,8 @@ inline size_t d_gilbert_varshamov(size_t n, size_t k)
   while(aux >= 0) {
     aux -= b;
     d++;
-    b *= (n-d+1);
-    b /= d;
+    b *= (unsigned long)(n-d+1);
+    b /= (unsigned long)(d);
   }
   return d;
 }

@@ -272,8 +272,8 @@ namespace string_algo {
 	template<typename Container> is_any_of_impl<Container> is_any_of(const Container& cont) { return is_any_of_impl<Container>(cont); }
 	template<typename Container> is_any_of_impl<Container> is_any_of(Container&& cont) { return is_any_of_impl<Container>(std::move(cont)); }
 
-	is_any_of_impl<std::string> is_any_of(const char* str) { return is_any_of_impl<std::string>(std::string(str)); }
-	is_any_of_impl<std::wstring> is_any_of(const wchar_t* str) { return is_any_of_impl<std::wstring>(std::wstring(str)); }
+	static inline is_any_of_impl<std::string> is_any_of(const char* str) { return is_any_of_impl<std::string>(std::string(str)); }
+	static inline is_any_of_impl<std::wstring> is_any_of(const wchar_t* str) { return is_any_of_impl<std::wstring>(std::wstring(str)); }
 
 	/* ALL/ANY CHARACTER CLASS */
 
@@ -334,14 +334,14 @@ namespace string_algo {
 	/* MAKE PREDICATE IS SPACE/PRINT/CNTRL/UPPER/LOWER/ALPHA/DIGIT/PUNCT/XDIGIT/BLANK/ALNUM/GRAPH */
 
 #define STRING_ALGO_ALL_CLASS(NAME,MASK) \
-	all_character_class NAME (const std::locale& loc = std::locale()) \
+	static inline all_character_class NAME (const std::locale& loc = std::locale()) \
 	{ \
 		return all_character_class( MASK , loc); \
 	} \
 	template<typename String> bool NAME (const String& str, const std::locale& loc = std::locale()) { return NAME (loc)(str); }
 
 #define STRING_ALGO_ANY_CLASS(NAME,MASK) \
-	any_character_class NAME (const std::locale& loc = std::locale()) \
+	static inline any_character_class NAME (const std::locale& loc = std::locale()) \
 	{ \
 		return any_character_class( MASK , loc); \
 	} \
@@ -410,10 +410,10 @@ namespace string_algo {
 		return sa::modify_copy(str, [&loc](CharT& c){ sa::to_lower(c, loc); });
 	}
 
-	template<> void to_lower<char>(char& c, const std::locale& loc) { c = std::tolower(c, loc); }
-	template<> void to_lower<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::tolower(c, loc); }
-	template<> char to_lower_copy<char>(const char& c, const std::locale& loc) { return std::tolower(c, loc); }
-	template<> wchar_t to_lower_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::tolower(c, loc); }
+	template<> static inline void to_lower<char>(char& c, const std::locale& loc) { c = std::tolower(c, loc); }
+	template<> static inline void to_lower<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::tolower(c, loc); }
+	template<> static inline char to_lower_copy<char>(const char& c, const std::locale& loc) { return std::tolower(c, loc); }
+	template<> static inline wchar_t to_lower_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::tolower(c, loc); }
 
 	template<typename String>
 	void to_upper(String& str, const std::locale& loc = std::locale())
@@ -429,10 +429,10 @@ namespace string_algo {
 		return sa::modify_copy(str, [&loc](CharT& c){ sa::to_upper(c, loc); });
 	}
 
-	template<> void to_upper<char>(char& c, const std::locale& loc) { c = std::toupper(c, loc); }
-	template<> void to_upper<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::toupper(c, loc); }
-	template<> char to_upper_copy<char>(const char& c, const std::locale& loc) { return std::toupper(c, loc); }
-	template<> wchar_t to_upper_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::toupper(c, loc); }
+	template<> static inline void to_upper<char>(char& c, const std::locale& loc) { c = std::toupper(c, loc); }
+	template<> static inline void to_upper<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::toupper(c, loc); }
+	template<> static inline char to_upper_copy<char>(const char& c, const std::locale& loc) { return std::toupper(c, loc); }
+	template<> static inline wchar_t to_upper_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::toupper(c, loc); }
 
 	/* LEFT / MID / RIGHT COPY */
 

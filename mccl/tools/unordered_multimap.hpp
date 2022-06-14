@@ -10,6 +10,10 @@
 #include <cstdlib>
 #include <memory>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
 MCCL_BEGIN_NAMESPACE
 
 namespace detail
@@ -47,6 +51,18 @@ public:
     {
         uint128_t n = high; n <<= 64;
         return uint64_t(n/div);
+    }
+#elif defined(_MSC_VER)
+    static std::pair<uint64_t, uint64_t> umul128(uint64_t x, uint64_t y)
+    {
+        std::pair<uint64_t, uint64_t> res;
+        res.first = _umul128(x, y, &res.second);
+        return res;
+    }
+    static uint64_t udiv128(uint64_t high, uint64_t d)
+    {
+        uint64_t rem = 0;
+        return uint64_t(_udiv128(high, 0, d, &rem));
     }
 #else
 #error "fast native 128bit unsigned integer multiplication & division: no fallback implementation yet"
