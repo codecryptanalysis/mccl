@@ -74,12 +74,11 @@ struct _next_pow2_helper {
 };
 template<unsigned bits, typename Int>
 struct _next_pow2_helper<bits, Int, false> {
-	static void op(Int& n) { }
+	static void op(Int&) { }
 };
 template<typename Int>
 inline Int next_pow2(Int n)
 {
-	const unsigned bits = sizeof(Int) * 8;
 	--n;
 	_next_pow2_helper<1, Int>::op(n);
 	_next_pow2_helper<2, Int>::op(n);

@@ -410,10 +410,10 @@ namespace string_algo {
 		return sa::modify_copy(str, [&loc](CharT& c){ sa::to_lower(c, loc); });
 	}
 
-	template<> static inline void to_lower<char>(char& c, const std::locale& loc) { c = std::tolower(c, loc); }
-	template<> static inline void to_lower<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::tolower(c, loc); }
-	template<> static inline char to_lower_copy<char>(const char& c, const std::locale& loc) { return std::tolower(c, loc); }
-	template<> static inline wchar_t to_lower_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::tolower(c, loc); }
+	template<> inline void to_lower<char>(char& c, const std::locale& loc) { c = std::tolower(c, loc); }
+	template<> inline void to_lower<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::tolower(c, loc); }
+	template<> inline char to_lower_copy<char>(const char& c, const std::locale& loc) { return std::tolower(c, loc); }
+	template<> inline wchar_t to_lower_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::tolower(c, loc); }
 
 	template<typename String>
 	void to_upper(String& str, const std::locale& loc = std::locale())
@@ -429,10 +429,10 @@ namespace string_algo {
 		return sa::modify_copy(str, [&loc](CharT& c){ sa::to_upper(c, loc); });
 	}
 
-	template<> static inline void to_upper<char>(char& c, const std::locale& loc) { c = std::toupper(c, loc); }
-	template<> static inline void to_upper<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::toupper(c, loc); }
-	template<> static inline char to_upper_copy<char>(const char& c, const std::locale& loc) { return std::toupper(c, loc); }
-	template<> static inline wchar_t to_upper_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::toupper(c, loc); }
+	template<> inline void to_upper<char>(char& c, const std::locale& loc) { c = std::toupper(c, loc); }
+	template<> inline void to_upper<wchar_t>(wchar_t& c, const std::locale& loc) { c = std::toupper(c, loc); }
+	template<> inline char to_upper_copy<char>(const char& c, const std::locale& loc) { return std::toupper(c, loc); }
+	template<> inline wchar_t to_upper_copy<wchar_t>(const wchar_t& c, const std::locale& loc) { return std::toupper(c, loc); }
 
 	/* LEFT / MID / RIGHT COPY */
 
