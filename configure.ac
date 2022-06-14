@@ -30,6 +30,10 @@ AC_TYPE_UINT8_T
 AC_TYPE_INT64_T
 AC_TYPE_INT8_T
 
+AX_HAVE_INT128
+
+AX_GCC_FUNC_ATTRIBUTE(fallthrough)
+
 AS_IF([test "x$cross_compiling" != "xyes" && test "x$usedefaultcxxflags" = "xyes" ],
     [AX_CHECK_COMPILE_FLAG([-march=native], [CXXFLAGS="$CXXFLAGS -march=native"], [])])
 
