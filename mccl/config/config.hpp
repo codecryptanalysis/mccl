@@ -1,7 +1,15 @@
 #ifndef MCCL_CONFIG_CONFIG_HPP
 #define MCCL_CONFIG_CONFIG_HPP
 
+#ifndef _MSC_VER
 #include <mccl/config/config.h>
+#else
+#include <intrin.h>
+#include <nmmintrin.h>
+#define __builtin_popcount __popcnt
+#define __builtin_popcountl __popcnt
+#define __builtin_popcountll _mm_popcnt_u64
+#endif
 
 #include <sstream>
 #include <string>
