@@ -28,11 +28,29 @@ namespace detail
 class hash_prime
 {
 public:
+
+#ifdef MCCL_HAVE_INT128
 // use __int128 without throwing a compiler warning
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
+private:
     typedef unsigned __int128 uint128_t;
+public:
 #pragma GCC diagnostic pop
+
+    static inline std::pair<uint64_t,uint64_t> umul128(uint64_t x, uint64_t y)
+    {
+        uint128_t n = x; n *= y;
+        return std::pair<uint64_t,uint64_t>(uint64_t(n>>64), uint64_t(n));
+    }
+    static inline uint64_t udiv128(uint64_t high, uint64_t div)
+    {
+        uint128_t n = high; n <<= 64;
+        return uint64_t(n/div);
+    }
+#else
+#error "fast native 128bit unsigned integer multiplication & division: no fallback implementation yet"
+#endif
 
     hash_prime(uint64_t prime = 0, uint64_t muldiv = 0, unsigned shift = 0)
         : _prime(prime), _muldiv(muldiv), _shift(shift)
@@ -51,7 +69,7 @@ public:
     inline uint64_t div(uint64_t n) const
     {
         // get the top 64-bit of the 128-bit multiplication n * _muldiv
-        uint64_t div = (uint128_t(n) * _muldiv) >> 64;
+        uint64_t div = umul128(n, _muldiv).first;
         // shift right by _shift
         div >>= _shift;
         return div;
