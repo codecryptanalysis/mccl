@@ -26,10 +26,11 @@ void hash_prime::_check()
     // basically _muldiv must satisfy the equation
     //   _muldiv = ((uint128_t(1)<<(64+_shift)) / _prime) + 1
     // but must also pass the following tests to ensure correctness for all uint64_t input values
-    uint128_t bigint = uint128_t(_muldiv) * _prime;
-    if (uint64_t(bigint>>64) != (uint64_t(1)<<_shift))
+    auto bigint = umul128(_muldiv, _prime);
+    auto high = bigint.first, low = bigint.second;
+    if (high != (uint64_t(1)<<_shift))
         throw std::runtime_error("hash_prime::_check(): invalid parameters (fail 1)");
-    if (uint64_t(bigint) >= _prime)
+    if (low >= _prime)
         throw std::runtime_error("hash_prime::_check(): invalid parameters (fail 2)");
     // check validity by checking correct results for 6 specific values
     if (mod(1) != 1)
@@ -53,23 +54,20 @@ void hash_prime::_check()
 // if dothrow == true then throws when it fails, otherwise it returns hash_prime(0,0,0)
 hash_prime create_hash_prime(uint64_t p, bool dothrow)
 {
-    typedef hash_prime::uint128_t uint128_t;
     for (unsigned shift = 0; (uint64_t(1)<<shift) <= p; ++shift)
     {
-        uint128_t n(uint64_t(1)<<shift);
-        n <<= 64;
-        uint64_t muldiv = uint64_t(n / p) + 1;
+        uint64_t muldiv = hash_prime::udiv128( uint64_t(1)<<shift, p) + 1;
         // check if muldiv and shift are correct for all input values
-        uint128_t check128 = uint128_t(muldiv) * p;
-        if (uint64_t(check128) > p)
+        auto check128 = hash_prime::umul128(muldiv, p);
+        if (check128.second > p)
             continue;
-        if ((check128>>64) != (n>>64))
+        if ((check128.first) != (uint64_t(1)<<shift))
             continue;
         uint64_t check1 = ~uint64_t(0);
         uint64_t check2 = check1 - (check1%p) - 1;
-        if ( (check1/p) != uint64_t( (uint128_t(muldiv)*check1)>> 64)>>shift )
+        if ((check1 / p) != (hash_prime::umul128(muldiv, check1).first >> shift))
             continue;
-        if ( (check2/p) != uint64_t( (uint128_t(muldiv)*check2)>> 64)>>shift )
+        if ((check2 / p) != (hash_prime::umul128(muldiv, check2).first >> shift))
             continue;
         // muldiv and shift are fine, return hash_prime
         return hash_prime(p, muldiv, shift);
