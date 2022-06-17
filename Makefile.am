@@ -23,6 +23,7 @@ libmccl_la_SOURCES=\
 	mccl/core/matrix_ops.cpp \
 	mccl/core/matrix_m4ri.hpp \
 	mccl/core/matrix_isdform.hpp \
+	mccl/core/collection.hpp \
 	\
 	mccl/algorithm/decoding.hpp \
 	mccl/algorithm/decoding.cpp \
@@ -50,9 +51,9 @@ libmccl_la_SOURCES=\
 bin_isdsolver_SOURCES= src/isdsolver.cpp
 bin_isdsolver_LDADD  = libmccl.la
 
-TESTS=          tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer
+TESTS=          tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer tests/test_collection
 
-check_PROGRAMS= tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer
+check_PROGRAMS= tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer tests/test_collection
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
@@ -71,6 +72,9 @@ tests_test_prange_LDADD  = libmccl.la
 
 tests_test_dumer_SOURCES= tests/test_dumer.cpp
 tests_test_dumer_LDADD  = libmccl.la
+
+tests_test_collection_SOURCES= tests/test_collection.cpp
+tests_test_collection_LDADD  = libmccl.la
 
 
 if HAVE_M4RI
