@@ -60,3 +60,7 @@ tests/test_parser
 tests/test_permute
 tests/test_prange
 tests/test_marc
+/.vs
+/vs2022/.vs/isdsolver
+Debug
+Release

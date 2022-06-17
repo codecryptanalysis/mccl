@@ -16,7 +16,7 @@ public:
 	const cvec_view& S() const { return _S; }
 	size_t n()           const { return _H.columns(); }
 	size_t k()           const { return _H.columns() - _H.rows(); }
-	int w()              const { return _w; }
+	int w()              const { return int(_w); }
 	int64_t fileseed()   const { return _fileseed; }
 
 	void reset();

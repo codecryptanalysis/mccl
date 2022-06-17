@@ -55,12 +55,12 @@ struct number_statistic
     if (e-b == 0)
       throw std::runtime_error("number_statistic::_mid(): no samples!");
     if (e-b == 1)
-      return samples[b];
+      return double(samples[b]);
     if (!std::is_sorted(samples.begin(), samples.end()))
       std::sort(samples.begin(), samples.end());
     if ((e-b)%2 == 0)
       return double(samples[b + (e-b)/2 - 1] + samples[b + (e-b)/2])/double(2.0);
-    return samples[b + (e-b)/2];
+    return double(samples[b + (e-b)/2]);
   }
   double median()
   {
@@ -69,7 +69,7 @@ struct number_statistic
   double Q1()
   {
     if (size() == 1)
-      return samples[0];
+      return double(samples[0]);
     return _mid(0, size()/2);
   }
   double Q3()

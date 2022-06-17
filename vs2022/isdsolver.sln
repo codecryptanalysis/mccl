@@ -4,23 +4,26 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.2.32526.322
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "isdsolver", "isdsolver.vcxproj", "{DD320A69-3D3A-49B5-8430-4B650D136A34}"
+	ProjectSection(ProjectDependencies) = postProject
+		{B2F8D91F-CA20-4499-9D88-FB7844B73904} = {B2F8D91F-CA20-4499-9D88-FB7844B73904}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libmccl", "libmccl.vcxproj", "{B2F8D91F-CA20-4499-9D88-FB7844B73904}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
 		Release|x64 = Release|x64
-		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Debug|x64.ActiveCfg = Debug|x64
 		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Debug|x64.Build.0 = Debug|x64
-		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Debug|x86.ActiveCfg = Debug|Win32
-		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Debug|x86.Build.0 = Debug|Win32
 		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Release|x64.ActiveCfg = Release|x64
 		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Release|x64.Build.0 = Release|x64
-		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Release|x86.ActiveCfg = Release|Win32
-		{DD320A69-3D3A-49B5-8430-4B650D136A34}.Release|x86.Build.0 = Release|Win32
+		{B2F8D91F-CA20-4499-9D88-FB7844B73904}.Debug|x64.ActiveCfg = Debug|x64
+		{B2F8D91F-CA20-4499-9D88-FB7844B73904}.Debug|x64.Build.0 = Debug|x64
+		{B2F8D91F-CA20-4499-9D88-FB7844B73904}.Release|x64.ActiveCfg = Release|x64
+		{B2F8D91F-CA20-4499-9D88-FB7844B73904}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

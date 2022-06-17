@@ -1,0 +1,149 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="algorithm">
+      <UniqueIdentifier>{6763a38e-f45a-4aee-bfca-8d0d04d8c38d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{061dea06-de89-4feb-af21-6041419dc542}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="config">
+      <UniqueIdentifier>{de540ed2-fe73-4c87-a175-c3dbbd3a6f9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="contrib">
+      <UniqueIdentifier>{e3de0fd6-2cff-4f7f-9fa5-d884bc2ed135}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="tools">
+      <UniqueIdentifier>{7570e7c9-6912-4477-9e5e-59136d6cbae6}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\mccl\algorithm\decoding.cpp">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\algorithm\isdgeneric.cpp">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\algorithm\lee_brickell.cpp">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\algorithm\prange.cpp">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\algorithm\stern_dumer.cpp">
+      <Filter>algorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\core\matrix_m4ri.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\core\matrix_ops.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\tools\generator.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\tools\parser.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+    <ClCompile Include="..\mccl\tools\unordered_multimap.cpp">
+      <Filter>tools</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\mccl\algorithm\decoding.hpp">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\algorithm\isdgeneric.hpp">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\algorithm\lee_brickell.hpp">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\algorithm\prange.hpp">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\algorithm\stern_dumer.hpp">
+      <Filter>algorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\collection.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\matrix.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\matrix_algorithms.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\matrix_base.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\matrix_isdform.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\matrix_m4ri.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\matrix_ops.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\random.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\core\vector.hpp">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\config\config.hpp">
+      <Filter>config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\config\utils.hpp">
+      <Filter>config</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\contrib\json.hpp">
+      <Filter>contrib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\contrib\memory_usage.hpp">
+      <Filter>contrib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\contrib\parallel_algorithms.hpp">
+      <Filter>contrib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\contrib\program_options.hpp">
+      <Filter>contrib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\contrib\string_algo.hpp">
+      <Filter>contrib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\contrib\thread_pool.hpp">
+      <Filter>contrib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\aligned_vector.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\bitfield.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\enumerate.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\generator.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\parser.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\statistics.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\unordered_multimap.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\tools\utils.hpp">
+      <Filter>tools</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\mccl\core\matrix_ops.inl">
+      <Filter>core</Filter>
+    </None>
+  </ItemGroup>
+</Project>

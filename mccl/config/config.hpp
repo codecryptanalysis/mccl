@@ -8,14 +8,28 @@
 #include <nmmintrin.h>
 #define __builtin_popcount __popcnt
 #define __builtin_popcountl __popcnt
-#define __builtin_popcountll _mm_popcnt_u64
+#ifdef _M_AMD64
+#define __builtin_popcountll __popcnt64
+#endif
+#pragma warning( disable : 4267)
 #endif
 
 #include <sstream>
 #include <string>
 #include <map>
 #include <cstdint>
+
+#ifdef _MSC_VER
+#pragma warning( push )
+#pragma warning( disable : 4146)
+#pragma warning( disable : 4244)
+#endif
+
 #include <gmpxx.h>
+
+#ifdef _MSC_VER
+#pragma warning( pop ) 
+#endif
 
 #ifndef MCCL_NAMESPACE
 #define MCCL_NAMESPACE mccl
