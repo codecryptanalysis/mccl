@@ -25,12 +25,14 @@ while read url; do
 done
 }
 
-cat <<EOT | process_url
-https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_cxx_compile_stdcxx.m4
-https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_prefix_config_h.m4
-https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_pthread.m4
-https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_int128.m4
-https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_gcc_func_attribute.m4
-EOT
 
-# https://raw.githubusercontent.com/malb/m4rie/master/m4/ax_m4ri_flags.m4 <= has hardcoded M4RIE_M4RI_CFLAGS
+grep autoconf-archive $dir/* -l | grep -o "m4/ax.*.m4" | sed "s|m4/|https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/|" | process_url
+#cat <<EOT | process_url
+#https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_cxx_compile_stdcxx.m4
+#https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_prefix_config_h.m4
+#https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_pthread.m4
+#https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_int128.m4
+#https://git.savannah.gnu.org/gitweb/?p=autoconf-archive.git;a=blob_plain;f=m4/ax_gcc_func_attribute.m4
+#EOT
+
+# https://raw.githubusercontent.com/malb/m4rie/master/m4/ax_m4ri_flags.m4 <= has hardcoded M4RIE_M4RI_CFLAGS, needs manual updating
