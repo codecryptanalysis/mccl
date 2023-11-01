@@ -76,6 +76,15 @@ tests_test_dumer_LDADD  = libmccl.la
 tests_test_collection_SOURCES= tests/test_collection.cpp
 tests_test_collection_LDADD  = libmccl.la
 
+CLANGFORMAT ?= clang-format
+.PHONY: check-style
+check-style:
+	-bash tools/update_m4.sh
+	-bash tools/update_contrib.sh
+	$(CLANGFORMAT) -i --style=file `find -name "*.{cpp,hpp,h,inl}"`
+
+
+###################### M4RI conditional support ###############
 
 if HAVE_M4RI
 
@@ -89,10 +98,31 @@ tests_test_m4ri_LDADD  = libmccl.la
 
 endif
 
+###############################################################
+
+
+#################### CUDA conditional support #################
+
+if HAVE_CUDA
+
+TESTS += tests/test_cuda
+check_PROGRAMS += tests/test_cuda
+
+tests_test_cuda_SOURCES= tests/test_cuda.cu tests/test_cuda_dummy.cpp
+tests_test_cuda_LDADD  = libmccl.la $(CUDA_LIBS)
+
+endif
+
+NVCCFLAGS=-ccbin $(CXX) -O2 -v --maxrregcount=64 --ptxas-options=-v -Xcompiler -mcmodel=medium
+
+CUDA_SMS=70 75
+GENCODE_FLAGS=
+$(foreach sm,$(CUDA_SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
+HIGHEST_SM:=$(lastword $(sort $(CUDA_SMS)))
+GENCODE_FLAGS+= -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
+
+.cu.o:
+	$(NVCC) $(GENCODE_FLAGS) $(NVCCFLAGS) $(CUDA_CFLAGS) $(addprefix -Xcompiler ,$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS) -I $(top_srcdir) -Wno-pedantic ) -o $@ -c $<
+
+###############################################################
 		
-CLANGFORMAT ?= clang-format
-.PHONY: check-style
-check-style:
-	-bash tools/update_m4.sh
-	-bash tools/update_contrib.sh
-	$(CLANGFORMAT) -i --style=file `find -name "*.{cpp,hpp,h,inl}"`

@@ -1,11 +1,9 @@
 AC_PREREQ([2.68])
-# Important: DBLPBIBTEX version needs to match with: ./version src/core.hpp
 AC_INIT([mccl], [0.1], [marc@marc-stevens.nl],[mccl],[https://github.com/cr-marcstevens/mccl])
 AC_CONFIG_SRCDIR([README.md])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
-
 
 DEFAULT_CXXFLAGS="-O2"
 AS_IF([test "x$CXXFLAGS" = "x"],
@@ -22,7 +20,8 @@ AC_PROG_MAKE_SET
 AC_PROG_LN_S
 AC_PROG_MKDIR_P
 AC_PROG_CXX
-AX_CXX_COMPILE_STDCXX([11],[noext],[mandatory])
+
+AX_CXX_COMPILE_STDCXX([17],[noext],[mandatory])
 
 AC_TYPE_SIZE_T
 AC_TYPE_UINT64_T
@@ -34,13 +33,18 @@ AX_HAVE_INT128
 
 AX_GCC_FUNC_ATTRIBUTE(fallthrough)
 
+CHECK_ATOMIC()
+
+CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wpedantic"
+
 AS_IF([test "x$cross_compiling" != "xyes" && test "x$usedefaultcxxflags" = "xyes" ],
     [AX_CHECK_COMPILE_FLAG([-march=native], [CXXFLAGS="$CXXFLAGS -march=native"], [])])
 
 
 AX_PTHREAD()
+LIBS="$PTHREAD_LIBS $LIBS"
+CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 
-CHECK_ATOMIC()
 
 AC_ARG_WITH(gmp,
    AS_HELP_STRING([--with-gmp=@<:@=DIR@:>@], [GMP install directory]),
@@ -53,13 +57,8 @@ AC_CHECK_HEADERS(gmp.h, , AC_MSG_ERROR([GMP is required]))
 AC_CHECK_LIB(gmpxx, __gmpz_init, , [AC_MSG_ERROR([GMPXX GMP C++ wrapper library needed])])
 AC_CHECK_HEADERS(gmpxx.h, , AC_MSG_ERROR([GMPxx is required]))
 
-#AC_ARG_WITH(mpfr,
-#   AS_HELP_STRING([--with-mpfr=@<:@=DIR@:>@], [MPFR install directory]),
-#   [
-#      CPPFLAGS="$CPPFLAGS -I$withval/include"
-#       LDFLAGS="$LDFLAGS -L$withval/lib"
-#   ])
-#AC_CHECK_LIB(mpfr, mpfr_fms, , [AC_MSG_ERROR([MPFR version >= 2.3.0 needed, see http://www.mpfr.org])])
+
+AX_CUDA
 
 
 AC_ARG_WITH([m4ri],
@@ -91,8 +90,9 @@ AS_IF([test "x$usem4ri" = "x1"],
 AM_CONDITIONAL([HAVE_M4RI],[test "x$usem4ri" = "x1"])
 
 CPPFLAGS="$CPPFLAGS $M4RI_CPPFLAGS"
-CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS $M4RI_CFLAGS -Wall -Wextra -Wpedantic"
-LIBS="$M4RI_LIBS $PTHREAD_LIBS $LIBS"
+CXXFLAGS="$CXXFLAGS $M4RI_CFLAGS"
+LIBS="$M4RI_LIBS $LIBS"
+
 
 AC_CONFIG_HEADERS([config.h])
 AX_PREFIX_CONFIG_H([mccl/config/config.h])
