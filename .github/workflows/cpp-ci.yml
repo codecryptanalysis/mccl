@@ -20,7 +20,7 @@ jobs:
     env:
       CXX: ${{ matrix.compiler }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Install dependencies (macos)
       run: brew install automake gmp
       if: matrix.os == 'macos-latest'
