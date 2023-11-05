@@ -32,6 +32,15 @@ See https://github.com/cr-marcstevens/mccl-wiki
   - `update_contrib.sh`: update contrib files
 - `m4`, `configure.ac`, `Makefile.am`: autotools build system files
 
+# Prerequisites
+
+Libtool library:
+
+```
+sudo apt-get install libtool
+```
+
+
 # Getting started
 
 ```
