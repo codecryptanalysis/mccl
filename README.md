@@ -34,12 +34,26 @@ See https://github.com/cr-marcstevens/mccl-wiki
 
 # Prerequisites
 
-Libtool library:
+Autoconf:
+```
+sudo apt install autoconf
+```
 
+Libtool library:
 ```
 sudo apt-get install libtool
 ```
 
+Building tools (GCC and the rest):
+```
+sudo apt update
+sudo apt install build-essential
+```
+
+GMP:
+```
+sudo apt-get install libgmp3-dev
+```
 
 # Getting started
 
