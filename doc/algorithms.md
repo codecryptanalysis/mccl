@@ -274,7 +274,7 @@ list Sub_ISD_sieving(matrix H, vector s, int w, int N):
 			if H[:i] * e = s[:i]:
 				L_out.append(e)
 
-		// near neighbour search:
+		// near neighbour search
 		Centers = Sample_Filters() // version dependent (GJN, Hash, RPC)
 		Pairs = Near_Neighbour_Search(L_ini, Centers, alpha, w)
 
