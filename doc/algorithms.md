@@ -268,17 +268,21 @@ list Sub_ISD_sieving(matrix H, vector s, int w, int N):
 	// sieving
 	L_out = list()
 	for i in 0..n-k-1:
+
 		// check if any of the previously sampled e satisfy the first i constraints
 		for e in L_ini:
 			if H[:i] * e = s[:i]:
 				L_out.append(e)
+
 		// near neighbour search:
 		Centers = Sample_Filters() // version dependent (GJN, Hash, RPC)
-		Pairs = Near_Neighbour_Search(L_ini, Centers, alpha, w):
+		Pairs = Near_Neighbour_Search(L_ini, Centers, alpha, w)
+
 		// check if any of the summed vectors from NNS satisfy the first i constraints
 		for (e1, e2) in Pairs:
 			if H[:i] * (e1 + e2) = s[:i]:
 				L_out.append(e1 + e2)
+
 		L_ini.copy(L')
 		L_out.empty()
 		
