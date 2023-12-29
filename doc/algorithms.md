@@ -257,7 +257,7 @@ vector Sub_ISD_BJMM(matrix H2, vector s2, int p, int p1, int p2, int ell, int r1
 ### Sieving
 ``` cpp
 // solves an instance of Sub_ISD and returns a list of potential solutions
-list Sub_ISD_sieving(matrix H, vector s, int w, int N, vector (...) callback):
+list Sub_ISD_sieving(matrix H, vector s, int w, int N):
 	
 	// sampling N random vectors of weight w
 	L_ini = list()
@@ -282,5 +282,30 @@ list Sub_ISD_sieving(matrix H, vector s, int w, int N, vector (...) callback):
 		L_ini.copy(L')
 		L_out.empty()
 		
-	return L'
+	return L_out // Should be modified in order to just check the solution not to return a list.
+```
+``` cpp
+// solves the near neighbour search problem and return a list of solutions pairs	
+list Near_Neighbour_Search(list L, list Centers, int alpha, int w):
+	
+	// initialize buckets
+	Buckets = map()
+	for c in Centers:
+		Buckets.key.add(c)
+	
+	// bucketing
+	for x in L:
+		for c in Valid_Filters(Centers, x, alpha):
+			Buckets[c].value.append(x)
+				
+	// checking
+	Pairs = list()
+	for x in L:
+		for for c in Valid_Filters(Centers, x, alpha):
+			for y in Buckets[c].value:
+				if x & y = w/2:
+					Pairs.append(x, y)
+					
+	// return
+	return Pairs
 ```
