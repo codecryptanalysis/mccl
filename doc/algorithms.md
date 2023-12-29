@@ -284,9 +284,10 @@ list Sub_ISD_sieving(matrix H, vector s, int w, int N):
 		
 	return L_out // Should be modified in order to just check the solution not to return a list.
 ```
+
 ``` cpp
-// solves the near neighbour search problem and return a list of solutions pairs	
-list Near_Neighbour_Search(list L, list Centers, int alpha, int w):
+// solves an instance of the near neighbour search problem and return a list of solutions pairs	
+list Near_Neighbour_Search(list L, list Centers, int alpha):
 	
 	// initialize buckets
 	Buckets = map()
@@ -309,3 +310,16 @@ list Near_Neighbour_Search(list L, list Centers, int alpha, int w):
 	// return
 	return Pairs
 ```
+
+``` cpp
+// returns valid filters correspoding to an element from a list
+list Valid_Filters(list Centers, vector x, int alpha):
+	
+	L_out.list()
+	for c in Centers:
+		if x & c == alpha:
+			L_out.append(c)
+			
+	return L_out
+```
+
