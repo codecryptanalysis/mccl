@@ -110,16 +110,16 @@ try
     /* Configuration variables */
     std::string filepath, algo;
     size_t trials;
-    bool quiet = false;
-    bool print_stats = false;
-    bool print_input = false;
+    bool quiet = true;
+    bool print_stats = true;
+    bool print_input = true;
     
     // generator options
     int n = 0, k, w;
     uint64_t genseed;
     
     // benchmark options
-    bool benchmark = false;
+    bool benchmark = true;
     size_t min_bench_iterations;
     double min_bench_time;
     

@@ -48,6 +48,9 @@
     <ClCompile Include="..\mccl\tools\unordered_multimap.cpp">
       <Filter>tools</Filter>
     </ClCompile>
+    <ClCompile Include="..\mccl\algorithm\sieving.cpp">
+      <Filter>algorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\mccl\algorithm\decoding.hpp">
@@ -139,6 +142,9 @@
     </ClInclude>
     <ClInclude Include="..\mccl\tools\utils.hpp">
       <Filter>tools</Filter>
+    </ClInclude>
+    <ClInclude Include="..\mccl\algorithm\sieving.hpp">
+      <Filter>algorithm</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

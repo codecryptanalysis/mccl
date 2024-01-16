@@ -15,6 +15,7 @@
     <ClCompile Include="..\mccl\algorithm\isdgeneric.cpp" />
     <ClCompile Include="..\mccl\algorithm\lee_brickell.cpp" />
     <ClCompile Include="..\mccl\algorithm\prange.cpp" />
+    <ClCompile Include="..\mccl\algorithm\sieving.cpp" />
     <ClCompile Include="..\mccl\algorithm\stern_dumer.cpp" />
     <ClCompile Include="..\mccl\core\matrix_m4ri.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
@@ -30,6 +31,7 @@
     <ClInclude Include="..\mccl\algorithm\isdgeneric.hpp" />
     <ClInclude Include="..\mccl\algorithm\lee_brickell.hpp" />
     <ClInclude Include="..\mccl\algorithm\prange.hpp" />
+    <ClInclude Include="..\mccl\algorithm\sieving.hpp" />
     <ClInclude Include="..\mccl\algorithm\stern_dumer.hpp" />
     <ClInclude Include="..\mccl\config\config.hpp" />
     <ClInclude Include="..\mccl\config\utils.hpp" />
@@ -112,6 +114,7 @@
       <PreprocessorDefinitions>_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>C:\Users\etinski\Programs\vcpkg\packages\gmp_x64-windows-static\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -128,6 +131,7 @@
       <PreprocessorDefinitions>NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>Default</ConformanceMode>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <AdditionalIncludeDirectories>C:\Users\etinski\Programs\vcpkg\packages\gmp_x64-windows-static\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
