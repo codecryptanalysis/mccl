@@ -19,12 +19,12 @@ struct sieving_config_t
         "\t\tReturns all sets of at most p column indices of H2 that sum up to S2\n"
         ;
 
-    unsigned int p = 3; // SE: potentially to change.
+    unsigned int p = 3; // SE: Potentially change.
 
     template<typename Container>
     void process(Container& c)
     {
-        c(p, "p", 3, "subISDT parameter p"); // SE: potentially to change.
+        c(p, "p", 3, "subISDT parameter p"); // SE: Potentially change.
     }
 };
 
@@ -85,12 +85,12 @@ public:
         wmax = w;
 
         rows = H12T.rows();
-        words = (columns + 63) / 64;
+        words = (columns + 63) / 64; //
 
         if (words > 1)
             throw std::runtime_error("subISDT_sieving::initialize(): sieving does not support l > 64");
 
-        // SD: Potentially add check configuration.
+        // SE: Potentially add check configuration.
         firstwordmask = detail::lastwordmask(columns);
         padmask = ~firstwordmask;
     }
@@ -126,7 +126,7 @@ public:
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
 
-        if (words == 0) // Solving the sub-instance.
+        if (words == 0) // If l = 0.
         {
             enumerate.enumerate(firstwords.data() + 0, firstwords.data() + rows, p,
                 [this](uint32_t* begin, uint32_t* end, uint64_t)
@@ -135,7 +135,7 @@ public:
                     return (*callback)(ptr, begin, end, 0);
                 });
         }
-        else // Checking if a solution to the sub-instance yields a solution to the original problem.
+        else // Otherwise.
         {
             enumerate.enumerate(firstwords.data() + 0, firstwords.data() + rows, p,
                 [this](uint32_t* begin, uint32_t* end, uint64_t val)
