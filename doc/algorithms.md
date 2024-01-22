@@ -257,9 +257,9 @@ vector Sub_ISD_BJMM(matrix H2, vector s2, int p, int p1, int p2, int ell, int r1
 ### Sieving
 ``` cpp
 // solves an instance of Sub_ISD and returns a list of potential solutions
-list Sub_ISD_sieving(matrix H, vector s, int w, int N):
+list Sub_ISD_sieving(matrix H2, vector s2, int p, int N):
 	
-	// sampling N random vectors of weight w
+	// sampling N random vectors of weight p
 	L_ini = list()
 	for i in 0..N-1:
 		e.sample(w)
@@ -269,16 +269,16 @@ list Sub_ISD_sieving(matrix H, vector s, int w, int N):
 	L_out = list()
 	for i in 0..n-k-1:
 
-		// check if any of the previously sampled e satisfy the first i constraints
+		// check if any of the previously sampled e satisfy the ith constraint
 		for e in L_ini:
 			if H[i] * e = s[i]:
 				L_out.append(e)
 
-		// near neighbour search
+		// near neighbor search
 		Centers = Sample_Filters() // version dependent (GJN, Hash, RPC)
 		Pairs = Near_Neighbour_Search(L_ini, Centers, alpha, w)
 
-		// check if any of the summed vectors from NNS satisfy the first i constraints
+		// check if any of the summed vectors from NNS satisfy the first ith constraints
 		for (e1, e2) in Pairs:
 			if H[i] * (e1 + e2) = s[i]:
 				L_out.append(e1 + e2)
