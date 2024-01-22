@@ -275,7 +275,7 @@ list Sub_ISD_sieving(matrix H2, vector s2, int p, int N):
 				L_out.append(e)
 
 		// near neighbor search
-		Centers = Sample_Filters() // version dependent (GJN, Hash, RPC)
+		Centers = Sample_Centers() // version dependent (GJN, Hash, RPC)
 		Pairs = Near_Neighbour_Search(L_ini, Centers, alpha, w)
 
 		// check if any of the summed vectors from NNS satisfy the first ith constraints
