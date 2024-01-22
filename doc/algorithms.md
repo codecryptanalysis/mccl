@@ -271,7 +271,7 @@ list Sub_ISD_sieving(matrix H, vector s, int w, int N):
 
 		// check if any of the previously sampled e satisfy the first i constraints
 		for e in L_ini:
-			if H[:i] * e = s[:i]:
+			if H[i] * e = s[i]:
 				L_out.append(e)
 
 		// near neighbour search
@@ -280,7 +280,7 @@ list Sub_ISD_sieving(matrix H, vector s, int w, int N):
 
 		// check if any of the summed vectors from NNS satisfy the first i constraints
 		for (e1, e2) in Pairs:
-			if H[:i] * (e1 + e2) = s[:i]:
+			if H[i] * (e1 + e2) = s[i]:
 				L_out.append(e1 + e2)
 
 		L_ini.copy(L')
