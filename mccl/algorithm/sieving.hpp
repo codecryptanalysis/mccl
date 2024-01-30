@@ -5,8 +5,13 @@
 #include <mccl/algorithm/decoding.hpp>
 #include <mccl/algorithm/isdgeneric.hpp>
 #include <mccl/tools/enumerate.hpp>
+#include <unordered_set>
 
 MCCL_BEGIN_NAMESPACE
+
+typedef std::array<uint32_t, 4> indexarray_t;
+typedef std::pair<indexarray_t, uint64_t> element_t;
+typedef std::vector<element_t> database;
 
 struct sieving_config_t
 {
@@ -25,7 +30,9 @@ struct sieving_config_t
     template<typename Container>
     void process(Container& c)
     {
-        c(p, "p", 3, "subISDT parameter p"); // SE: Potentially change.
+        c(p, "p", 3, "subISDT parameter p");
+        c(alpha, "alpha", 1, "subISDT parameter alpha");
+        c(N, "N", 100, "subISDT parameter N");
     }
 };
 
@@ -81,6 +88,7 @@ public:
         H12T.reset(_H12T);
         S.reset(_S);
         columns = _H2Tcolumns;
+        // SE: if columns == 0, throw runtime err
         callback = _callback;
         ptr = _ptr;
         wmax = w;
@@ -88,6 +96,7 @@ public:
         rows = H12T.rows();
         words = (columns + 63) / 64; // SE: Potentially change.
         N = config.N;
+        alpha = config.alpha;
 
         if (words > 1)
             throw std::runtime_error("subISDT_sieving::initialize(): sieving does not support l > 64");
@@ -113,55 +122,66 @@ public:
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_prepareloop);
 
         firstwords.resize(rows);
-        // SE: Potentially change as in Stern/Dumer.
-        if (words > 0)
-        {
-            for (unsigned i = 0; i < rows; ++i)
+        for (unsigned i = 0; i < rows; ++i)
                 firstwords[i] = *H12T.word_ptr(i); // SE: Why we don't apply mask to this part, too?
-            Sval = (*S.word_ptr()) & firstwordmask;
-        }
+        Sval = (*S.word_ptr()) & firstwordmask;
     }
 
     // sampling N random vectors of weight w
-    void enumerate_vec(size_t element_weight, size_t output_length, std::vector<uint64_t>& output)
+    void enumerate_vec(size_t element_weight,
+        size_t output_length, std::unordered_set<uint64_t>& output)
     {
-        uint64_t element, rnd_val;
+        output.clear();
+
+        uint64_t rnd_val, val = 0;
+        indexarray_t indices;
         mccl_base_random_generator rnd = mccl_base_random_generator();
-        // SE: add check that randomly sampled elements are not the same
-        for (size_t i = 0; i < output_length; ++i)
+        while (output.size() < output_length)
         {
-            element = 0;
-            while (hammingweight(element) < element_weight)
+            for (unsigned k = 0; k < element_weight; ++k)
             {
-                rnd_val = rnd() % columns;
-                ((element >> rnd_val) & 1);
-                element |= uint64_t(1) << rnd_val;
+                indices[k] = rnd() % columns;
+                val ^= firstwords[indices[k]];
             }
-            output.push_back(element);
+            output.insert(val);
         }
+        
+
+        //element_t element;
+        //for (size_t i = 0; i < output_length; ++i) // to modify
+        //{
+        //    element = 0;
+        //    while (hammingweight(element) < element_weight)
+        //    {
+        //        rnd_val = rnd() % columns;
+        //        //((element >> rnd_val) & 1);
+        //        element |= uint64_t(1) << rnd_val;
+        //    }
+        //    output.push_back(element);
+        //}
     }
 
     // API member function
-    bool loop_next() final // SE: To be changed.
+    bool loop_next() final
     {
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
 
         // sampling N random vectors of weight p
-        std::vector<uint64_t> listini;
+        std::unordered_set<uint64_t> listini;
         enumerate_vec(p, N, listini);
 
         // sieving part
-        std::vector<uint64_t> listout;
+        std::unordered_set<uint64_t> listout;
         for (unsigned int i = 0; i < rows; ++i)
         {
             uint64_t Si = (Sval >> i) & 1;
 
             // check if any of the previously sampled e satisfy the first i constraints
-            for (const auto& e : listini)
+            for (const auto& val : listini)
             {
-                if((hammingweight(firstwords[i] & e & firstwordmask) & 1) == Si)
-                    listout.push_back(e);
+                if((val & 1) == Si)
+                    listout.insert(val);
             }
 
             // bucketing
@@ -179,9 +199,8 @@ public:
                     for (auto& y : bucket)
                     {
                         if (hammingweight(x & y) == (p - alpha) &&
-                            (hammingweight(firstwords[i] & (x + y) & firstwordmask) & 1) == Si)
-                            listout.push_back(x + y);
-                        // SE: Find a way to get rid of the duplicates
+                            (hammingweight(firstwords[i] & (x + y) & firstwordmask) & 1) == Si) // modify the check so that only val is checked against & 1
+                            listout.insert(x + y);
                     }
                 }
             }
@@ -190,16 +209,14 @@ public:
             listout.clear();
         }
 
-        // check if the solutions of the sub-instance yields a solution of the full instance
-        // SE: I am not sure on this one
         for (auto& val : listini)
         {
             if ((val & firstwordmask) == Sval)
             {
                 unsigned int w = hammingweight(val & padmask);
                 MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-                //return (*callback)(ptr, begin, end, w);
-                return false;
+                // SE: to check???
+                return (*callback)(ptr, element.first + 0, element.first + element_weight, w);
             }
             return true;
         }
@@ -208,7 +225,7 @@ public:
     }
 
     // bucketing routine
-    void bucketing(const std::vector<uint64_t>& listin,
+    void bucketing(const std::unordered_set<uint64_t>& listin,
             const std::vector<uint64_t>& centers,
             std::vector< std::vector<uint64_t> >& output)
     {
