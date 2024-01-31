@@ -11,7 +11,7 @@ MCCL_BEGIN_NAMESPACE
 
 typedef std::array<uint32_t, 4> indexarray_t;
 typedef std::pair<indexarray_t, uint64_t> element_t;
-typedef std::vector<element_t> database;
+typedef std::unordered_set<element_t> database;
 
 struct sieving_config_t
 {
@@ -28,11 +28,11 @@ struct sieving_config_t
     std::string alg = "GJN";
 
     template<typename Container>
-    void process(Container& c1, Container& c2, Container& c3)
+    void process(Container& c)
     {
-        c1(p, "p", 3, "subISDT parameter p");
-        c2(alpha, "alpha", 1, "subISDT parameter alpha");
-        c3(N, "N", 100, "subISDT parameter N");
+        c(p, "p", 3, "subISDT parameter p");
+        c(alpha, "alpha", 1, "subISDT parameter alpha");
+        c(N, "N", 100, "subISDT parameter N");
     }
 };
 
@@ -129,23 +129,31 @@ public:
     }
 
     // sampling N random vectors of weight w
-    void sample_vec(size_t element_weight,
-        size_t output_length,
-        std::unordered_set<uint64_t>& output)
+    void sample_vec(size_t element_weight, size_t output_length, database output)
     {
         output.clear();
 
-        uint64_t rnd_val, val = 0;
-        indexarray_t indices;
+        uint64_t rnd_val;
+        element_t element;
         mccl_base_random_generator rnd = mccl_base_random_generator();
         while (output.size() < output_length)
         {
+            element.second = 0;
             for (unsigned k = 0; k < element_weight; ++k)
             {
-                indices[k] = rnd() % columns;
-                val ^= firstwords[indices[k]];
+                element.first[k] = rnd() % rows;
+                for (unsigned i = 0; i < k; ++i)
+                {
+                    while (element.first[i] == element.first[k])
+                    {
+                        element.first[k] = rnd() % rows;
+                        i = 0;
+                    }
+                }
+                element.second = firstwords[element.first[k]];
             }
-            output.insert(val);
+
+            output.insert(element);
         }
         
 
