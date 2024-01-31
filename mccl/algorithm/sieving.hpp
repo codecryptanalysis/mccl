@@ -28,11 +28,11 @@ struct sieving_config_t
     std::string alg = "GJN";
 
     template<typename Container>
-    void process(Container& c)
+    void process(Container& c1, Container& c2, Container& c3)
     {
-        c(p, "p", 3, "subISDT parameter p");
-        c(alpha, "alpha", 1, "subISDT parameter alpha");
-        c(N, "N", 100, "subISDT parameter N");
+        c1(p, "p", 3, "subISDT parameter p");
+        c2(alpha, "alpha", 1, "subISDT parameter alpha");
+        c3(N, "N", 100, "subISDT parameter N");
     }
 };
 
@@ -88,13 +88,14 @@ public:
         H12T.reset(_H12T);
         S.reset(_S);
         columns = _H2Tcolumns;
-        // SE: if columns == 0, throw runtime err
+        if (columns == 0)
+            throw std::runtime_error("subISDT_sieving::initialize: sieving does not support l = 0");
         callback = _callback;
         ptr = _ptr;
         wmax = w;
 
         rows = H12T.rows();
-        words = (columns + 63) / 64; // SE: Potentially change.
+        words = (columns + 63) / 64;
         N = config.N;
         alpha = config.alpha;
 
@@ -128,8 +129,9 @@ public:
     }
 
     // sampling N random vectors of weight w
-    void enumerate_vec(size_t element_weight,
-        size_t output_length, std::unordered_set<uint64_t>& output)
+    void sample_vec(size_t element_weight,
+        size_t output_length,
+        std::unordered_set<uint64_t>& output)
     {
         output.clear();
 
@@ -169,7 +171,7 @@ public:
 
         // sampling N random vectors of weight p
         std::unordered_set<uint64_t> listini;
-        enumerate_vec(p, N, listini);
+        sample_vec(p, N, listini);
 
         // sieving part
         std::unordered_set<uint64_t> listout;
@@ -177,10 +179,10 @@ public:
         {
             uint64_t Si = (Sval >> i) & 1;
 
-            // check if any of the previously sampled e satisfy the first i constraints
+            // check if any of the previously sampled e satisfy the first ith constraint
             for (const auto& val : listini)
             {
-                if((val & 1) == Si)
+                if((val & firstwordmask & 1) == Si)
                     listout.insert(val);
             }
 
@@ -199,7 +201,7 @@ public:
                     for (auto& y : bucket)
                     {
                         if (hammingweight(x & y) == (p - alpha) &&
-                            (hammingweight(firstwords[i] & (x + y) & firstwordmask) & 1) == Si) // modify the check so that only val is checked against & 1
+                            (hammingweight(firstwords[i] & (x + y) & firstwordmask) & 1) == Si) // SE: modify the check so that only val is checked against & 1
                             listout.insert(x + y);
                     }
                 }
@@ -263,38 +265,38 @@ public:
             size_t num = binomial_coeff(columns, p / 2);
             enumerate_vec(p / 2, num, centers);
         }
-        else if (alg.compare("Hash"))
-        {
-            // 1. sample a code, namely a parity-check matrix of size r x n (i.e. r x columns)
-            r = columns / 2;
-            // sample matrix
-            std::vector<uint64_t> code; // SE: How ??? (to fill in)
+        //else if (alg.compare("Hash"))
+        //{
+        //    // 1. sample a code, namely a parity-check matrix of size r x n (i.e. r x columns)
+        //    r = columns / 2;
+        //    // sample matrix
+        //    std::vector<uint64_t> code; // SE: How ??? (to fill in)
 
-            // 2. enumerate all vectors of weight v
-            v = alpha;
-            size_t num = binomial_coeff(columns, v);
-            enumerate_vec(v, num, centers);
-            for (size_t i = 0; i < centers.size(); ++i)
-            {
-                for (size_t j = 0; j < r; ++j)
-                {
-                    if ((hammingweight(centers[i] & code[j]) & 1) != 0)
-                    {
-                        centers.erase(centers.begin() + i);
-                        continue;
-                    }
+        //    // 2. enumerate all vectors of weight v
+        //    v = alpha;
+        //    size_t num = binomial_coeff(columns, v);
+        //    enumerate_vec(v, num, centers);
+        //    for (size_t i = 0; i < centers.size(); ++i)
+        //    {
+        //        for (size_t j = 0; j < r; ++j)
+        //        {
+        //            if ((hammingweight(centers[i] & code[j]) & 1) != 0)
+        //            {
+        //                centers.erase(centers.begin() + i);
+        //                continue;
+        //            }
 
-                }
-            }
+        //        }
+        //    }
 
-        }
-        else if (alg.compare("RPC"))
-        {
+        //}
+        //else if (alg.compare("RPC"))
+        //{
 
-        }
+        //}
         else
         {
-            throw std::runtime_error("subISDT_sieving::sample_centers: sieving does not support algorithms other than GJN, Hash or RPC.");
+            throw std::runtime_error("subISDT_sieving::sample_centers: sieving does not support algorithms other than GJN.");
         }
     }
 
