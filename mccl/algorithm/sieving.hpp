@@ -11,7 +11,18 @@ MCCL_BEGIN_NAMESPACE
 
 typedef std::array<uint32_t, 4> indexarray_t;
 typedef std::pair<indexarray_t, uint64_t> element_t;
-typedef std::unordered_set<element_t> database;
+// custom hash function for element_t
+struct element_hash_t
+{
+    std::size_t operator()(const element_t& e) const noexcept
+    {
+    	std::size_t h = e.first[0];
+	    for (unsigned i = 1; i < e.first.size(); ++i)
+		    h ^= e.first[i] + 0x9e3779b9 + (seed<<6) + (seed>>2);
+	    return h;
+    }
+};
+typedef std::unordered_set<element_t, element_hash_t> database;
 
 struct sieving_config_t
 {
