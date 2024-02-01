@@ -11,18 +11,101 @@ MCCL_BEGIN_NAMESPACE
 
 typedef std::array<uint32_t, 4> indexarray_t;
 typedef std::pair<indexarray_t, uint64_t> element_t;
+
 // custom hash function for element_t
 struct element_hash_t
 {
     std::size_t operator()(const element_t& e) const noexcept
     {
-    	std::size_t h = e.first[0];
-	    for (unsigned i = 1; i < e.first.size(); ++i)
-		    h ^= e.first[i] + 0x9e3779b9 + (seed<<6) + (seed>>2);
-	    return h;
+#if 1
+	// we assume that the XOR of the H21T firstwords acts random and for practical purposes acts as identifier for the selection of row indices in e.first
+	return e.second;
+#else
+	// compute a hash value from the indices in e.first
+	std::size_t h = e.first[0];
+	for (unsigned i = 1; i < e.first.size(); ++i)
+		h ^= e.first[i] + 0x9e3779b9 + (seed<<6) + (seed>>2);
+	return h;
+#endif	    
     }
 };
 typedef std::unordered_set<element_t, element_hash_t> database;
+
+// intersect element x and y: return true if intersection of x and y is of size exactly alpha 
+unsigned intersection_elements(const element_t& x, const element_t& y, unsigned element_weight)
+{
+	unsigned xi = 0, yi = 0, c = 0;
+	while (true)
+	{
+		// xi < element_weight AND yi < element_weight
+		if (x.first[xi] == y.first[yi])
+		{
+			++c; ++xi; ++yi;
+			if (xi == element_weight || yi == element_weight)
+				return c;
+			continue;
+		}
+		if (x.first[xi] < y.first[yi])
+		{
+			++xi;
+			if (xi == element_weight)
+				return c;
+			continue;
+		}
+		// (x.first[xi] > y.first[yi])
+		++yi;
+		if (yi == element_weight)
+			return c;
+	}
+}
+
+// combine element x and y into element dest: 
+// - assume x and y have element_weight indices
+// - returns true if intersection of x and y equals element_weight/2
+// - dest contains the indices from x and y that occur exactly once (essentially x XOR y)
+bool combine_elements(const element_t& x, const element_t& y, element_t& dest, unsigned element_weight)
+{
+	unsigned xi = 0, yi = 0, di = 0;
+	while (true)
+	{
+		if (xi >= element_weight)
+		{
+			if (yi != di)
+				return false;
+			for (; yi < element_weight; ++yi, ++di)
+				dest.first[di] = y.first[yi];
+			dest.second = x.second ^ y.second;
+			return true;
+		}
+		if (yi >= element_weight)
+		{
+			if (xi != di)
+				return false;
+			for (; xi < element_weight; ++xi, ++di)
+				dest.first[di] = x.first[xi];
+			dest.second = x.second ^ y.second;
+			return true;
+		}
+		if (x.first[xi] == y.first[yi])
+		{
+			++xi; ++yi;
+			continue;
+		}
+		if (x.first[xi] < y.first[yi])
+		{
+			if (di == element_weight)
+				return false;
+			dest.first[di] = x.first[xi];
+			++xi; ++di;
+			continue;
+		}
+		// x.first[xi] > y.first[yi]
+		if (di == element_weight)
+			return false;
+		dest.first[di] = y.first[yi];
+		++yi; ++di;
+	}
+}
 
 struct sieving_config_t
 {
@@ -146,7 +229,10 @@ public:
 
         uint64_t rnd_val;
         element_t element;
-        mccl_base_random_generator rnd = mccl_base_random_generator();
+	for (auto& i : element.first)
+	{
+		i = 0; i = ~i; // set all row indices to invalid positions
+	}
         while (output.size() < output_length)
         {
             element.second = 0;
@@ -376,6 +462,8 @@ private:
     sieving_config_t config;
     decoding_statistics stats;
     cpucycle_statistic cpu_prepareloop, cpu_loopnext, cpu_callback;
+
+	mccl_base_random_generator rnd;
 };
 
 template<size_t _bit_alignment = 64>
