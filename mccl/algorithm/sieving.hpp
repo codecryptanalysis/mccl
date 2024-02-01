@@ -124,7 +124,7 @@ public:
 
         firstwords.resize(rows);
         for (unsigned i = 0; i < rows; ++i)
-                firstwords[i] = *H12T.word_ptr(i); // SE: Why we don't apply mask to this part, too?
+                firstwords[i] = *H12T.word_ptr(i);
         Sval = (*S.word_ptr()) & firstwordmask;
     }
 
@@ -135,7 +135,7 @@ public:
 
         uint64_t rnd_val;
         element_t element;
-        mccl_base_random_generator rnd = mccl_base_random_generator();
+        mccl_base_random_generator rnd = mccl_base_random_generator(); // SE: Can we put it as global?
         while (output.size() < output_length)
         {
             element.second = 0;
@@ -191,20 +191,6 @@ public:
 #endif            
             output.insert(element);
         }
-        
-
-        //element_t element;
-        //for (size_t i = 0; i < output_length; ++i) // to modify
-        //{
-        //    element = 0;
-        //    while (hammingweight(element) < element_weight)
-        //    {
-        //        rnd_val = rnd() % columns;
-        //        //((element >> rnd_val) & 1);
-        //        element |= uint64_t(1) << rnd_val;
-        //    }
-        //    output.push_back(element);
-        //}
     }
 
     // API member function
@@ -214,39 +200,39 @@ public:
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
 
         // sampling N random vectors of weight p
-        std::unordered_set<uint64_t> listini;
+        database listini;
         sample_vec(p, N, listini);
 
         // sieving part
-        std::unordered_set<uint64_t> listout;
-        for (unsigned int i = 0; i < rows; ++i)
+        database listout;
+        for (unsigned int i = 0; i < rows; ++i) // SE: To check is it rows or columns?
         {
             uint64_t Si = (Sval >> i) & 1;
 
             // check if any of the previously sampled e satisfy the first ith constraint
-            for (const auto& val : listini)
+            for (const auto& element : listini)
             {
-                if((val & firstwordmask & 1) == Si)
-                    listout.insert(val);
+                if((element.second & firstwordmask & 1) == Si)
+                    listout.insert(element);
             }
 
             // bucketing
             std::vector<uint64_t> centers;
             sample_centers(centers, alg);
 
-            std::vector< std::vector<uint64_t> > output;
+            std::vector<database> output;
             bucketing(listini, centers, output);
 
             // check if any of the summed vectors from NNS satisfy the first i constraints
             for (auto& bucket : output)
             {
-                for (auto& x : bucket)
+                for (auto& element_x : bucket)
                 {
-                    for (auto& y : bucket)
+                    for (auto& element_y : bucket)
                     {
-                        if (hammingweight(x & y) == (p - alpha) &&
-                            (hammingweight(firstwords[i] & (x + y) & firstwordmask) & 1) == Si) // SE: modify the check so that only val is checked against & 1
-                            listout.insert(x + y);
+                        if (hammingweight(element_x.second & element_y.second) == (p - alpha) &&
+                            (hammingweight((element_x.second + element_x.second) & firstwordmask) & 1) == Si)
+                            listout.insert(element_x); // SE: to change
                     }
                 }
             }
@@ -255,14 +241,13 @@ public:
             listout.clear();
         }
 
-        for (auto& val : listini)
+        for (auto& element : listini)
         {
-            if ((val & firstwordmask) == Sval)
+            if ((element.second & firstwordmask) == Sval)
             {
-                unsigned int w = hammingweight(val & padmask);
+                unsigned int w = hammingweight(element.second & padmask);
                 MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-                // SE: to check???
-                return (*callback)(ptr, element.first + 0, element.first + element_weight, w);
+                return (*callback)(ptr, &element.first[0], &element.first[p-1], w);
             }
             return true;
         }
@@ -271,20 +256,18 @@ public:
     }
 
     // bucketing routine
-    void bucketing(const std::unordered_set<uint64_t>& listin,
-            const std::vector<uint64_t>& centers,
-            std::vector< std::vector<uint64_t> >& output)
+    void bucketing(database listin, const std::vector<uint64_t>& centers, std::vector<database>& output)
     {
         output.resize(centers.size());
         for (auto& x : output)
-            x.clear();
+            x.clear(); // SE: Check if it's going to work.
 
-        for (const auto& x : listin)
+        for (const auto& element : listin)
         {
             for (unsigned i = 0; i < centers.size(); ++i)
             {
-                if (hammingweight(x & centers[i]) == alpha)
-                    output[i].push_back(x);
+                if (hammingweight(element.second & centers[i]) == alpha)
+                    output[i].insert(element);
             }
         }
     }
@@ -307,7 +290,7 @@ public:
         if (alg.compare("GJN"))
         {
             size_t num = binomial_coeff(columns, p / 2);
-            enumerate_vec(p / 2, num, centers);
+            //enumerate_vec(p / 2, num, centers);
         }
         //else if (alg.compare("Hash"))
         //{
