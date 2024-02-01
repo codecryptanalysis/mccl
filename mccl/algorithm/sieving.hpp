@@ -16,9 +16,10 @@ struct element_hash_t
 {
     std::size_t operator()(const element_t& e) const noexcept
     {
+        return e.second;
     	std::size_t h = e.first[0];
 	    for (unsigned i = 1; i < e.first.size(); ++i)
-		    h ^= e.first[i] + 0x9e3779b9 + (seed<<6) + (seed>>2);
+		    h ^= e.first[i] + 0x9e3779b9 + (h << 6) + (h >> 2);
 	    return h;
     }
 };
@@ -183,6 +184,7 @@ public:
                         element.first[j] = element.first[j-1];
                     element.first[i] = firstk;
                 }
+                ++k;
             }
             // already sorted and unique indices now
 #if 0            
@@ -267,7 +269,7 @@ public:
     }
 
     // bucketing routine
-    void bucketing(database listin, const std::vector<uint64_t>& centers, std::vector<database>& output)
+    void bucketing(database listin, const std::vector<uint64_t>& centers, std::vector<database>& output) // use vector instead of database
     {
         output.resize(centers.size());
         for (auto& x : output)
