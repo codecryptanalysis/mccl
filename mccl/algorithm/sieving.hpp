@@ -37,7 +37,7 @@ size_t intersection_elements(const element_t&, const element_t&, size_t);
 
 // combine element x and y into element dest: 
 // - assume x and y have element_weight indices
-// - returns true if intersection of x and y equals element_weight/2
+// - returns true if intersection of x and y equals p - alpha
 // - dest contains the indices from x and y that occur exactly once (essentially x XOR y)
 bool combine_elements(const element_t&, const element_t&, element_t&, size_t);
 
@@ -270,10 +270,8 @@ public:
                 {
                     for (const auto& element_y : bucket)
                     {
-                        // SE: to change
-                        if (intersection_elements(element_x, element_y, p) == (p - alpha))
+                        if(combine_elements(element_x, element_y, element_xy, p))
                         {
-                            combine_elements(element_x, element_y, element_xy, p); // SE: to modify function
                             if ((element_xy.second & firstwordmask & 1) == Si)
                                 listout.insert(element_xy);
                         }
@@ -311,7 +309,6 @@ public:
             for (unsigned i = 0; i < centers.size(); ++i)
             {
                 if(intersection_elements(element, centers[i], p) == alpha)
-                //if (hammingweight(element.second & centers[i]) == alpha)
                     output[i].push_back(element);
             }
         }
@@ -322,38 +319,8 @@ public:
     {
         if (alg.compare("GJN"))
         {
-            size_t num = binomial_coeff(columns, p / 2);
-            //enumerate_vec(p / 2, num, centers);
+            
         }
-        //else if (alg.compare("Hash"))
-        //{
-        //    // 1. sample a code, namely a parity-check matrix of size r x n (i.e. r x columns)
-        //    r = columns / 2;
-        //    // sample matrix
-        //    std::vector<uint64_t> code; // SE: How ??? (to fill in)
-
-        //    // 2. enumerate all vectors of weight v
-        //    v = alpha;
-        //    size_t num = binomial_coeff(columns, v);
-        //    enumerate_vec(v, num, centers);
-        //    for (size_t i = 0; i < centers.size(); ++i)
-        //    {
-        //        for (size_t j = 0; j < r; ++j)
-        //        {
-        //            if ((hammingweight(centers[i] & code[j]) & 1) != 0)
-        //            {
-        //                centers.erase(centers.begin() + i);
-        //                continue;
-        //            }
-
-        //        }
-        //    }
-
-        //}
-        //else if (alg.compare("RPC"))
-        //{
-
-        //}
         else
         {
             throw std::runtime_error("subISDT_sieving::sample_centers: sieving does not support algorithms other than GJN.");
