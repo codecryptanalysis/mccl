@@ -11,19 +11,38 @@ MCCL_BEGIN_NAMESPACE
 
 typedef std::array<uint32_t, 4> indexarray_t;
 typedef std::pair<indexarray_t, uint64_t> element_t;
+
 // custom hash function for element_t
 struct element_hash_t
 {
     std::size_t operator()(const element_t& e) const noexcept
     {
-        return e.second;
-    	std::size_t h = e.first[0];
-	    for (unsigned i = 1; i < e.first.size(); ++i)
-		    h ^= e.first[i] + 0x9e3779b9 + (h << 6) + (h >> 2);
-	    return h;
+#if 1
+	// we assume that the XOR of the H21T firstwords acts random and for practical purposes acts as identifier for the selection of row indices in e.first
+	return e.second;
+#else
+	// compute a hash value from the indices in e.first
+	std::size_t h = e.first[0];
+	for (unsigned i = 1; i < e.first.size(); ++i)
+		h ^= e.first[i] + 0x9e3779b9 + (seed<<6) + (seed>>2);
+	return h;
+#endif	    
     }
 };
 typedef std::unordered_set<element_t, element_hash_t> database;
+
+// intersect element x and y and returns the size of intersection 
+size_t intersection_elements(const element_t&, const element_t&, size_t);
+
+
+// combine element x and y into element dest: 
+// - assume x and y have element_weight indices
+// - returns true if intersection of x and y equals element_weight/2
+// - dest contains the indices from x and y that occur exactly once (essentially x XOR y)
+bool combine_elements(const element_t&, const element_t&, element_t&, size_t);
+
+// calculate binomial coefficient ("n choose k")
+size_t binomial_coeff(size_t, size_t);
 
 struct sieving_config_t
 {
@@ -140,14 +159,21 @@ public:
         Sval = (*S.word_ptr()) & firstwordmask;
     }
 
-    // sampling N random vectors of weight w
+    // sampling N random vectors of weight w:
+    // INVARIANT1: element.second = xor_{i=0}^{elementweight-1} firstwords[element.first[i]];
+    // INVARIANT2: element.first[0, ..., elementweight - 1] is a sorted array with values in[0, ..., rows - 1]
     void sample_vec(size_t element_weight, size_t output_length, database output)
     {
         output.clear();
 
         uint64_t rnd_val;
         element_t element;
-        mccl_base_random_generator rnd = mccl_base_random_generator(); // SE: Can we put it as global?
+
+	    for (auto& i : element.first)
+	    {
+		    i = 0; i = ~i; // set all row indices to invalid positions
+	    }
+
         while (output.size() < output_length)
         {
             element.second = 0;
@@ -218,7 +244,7 @@ public:
 
         // sieving part
         database listout;
-        for (unsigned int i = 0; i < rows; ++i) // SE: To check is it rows or columns?
+        for (unsigned int i = 0; i < columns; ++i) // SE: To check is it rows or columns?
         {
             uint64_t Si = (Sval >> i) & 1;
 
@@ -230,37 +256,42 @@ public:
             }
 
             // bucketing
-            std::vector<uint64_t> centers;
+            std::vector<element_t> centers;
             sample_centers(centers, alg);
 
-            std::vector<database> output;
+            std::vector<std::vector<element_t>> output;
             bucketing(listini, centers, output);
 
             // check if any of the summed vectors from NNS satisfy the first i constraints
-            for (auto& bucket : output)
+            element_t element_xy;
+            for (const auto& bucket : output)
             {
-                for (auto& element_x : bucket)
+                for (const auto& element_x : bucket)
                 {
-                    for (auto& element_y : bucket)
+                    for (const auto& element_y : bucket)
                     {
-                        if (hammingweight(element_x.second & element_y.second) == (p - alpha) &&
-                            (hammingweight((element_x.second + element_x.second) & firstwordmask) & 1) == Si)
-                            listout.insert(element_x); // SE: to change
+                        // SE: to change
+                        if (intersection_elements(element_x, element_y, p) == (p - alpha))
+                        {
+                            combine_elements(element_x, element_y, element_xy, p); // SE: to modify function
+                            if ((element_xy.second & firstwordmask & 1) == Si)
+                                listout.insert(element_xy);
+                        }
                     }
                 }
             }
 
-            listini.swap(listout);
-            listout.clear();
+            listini.swap(listout); // SE: to check if it works
+            listout.clear(); // SE: to check if it works
         }
 
-        for (auto& element : listini)
+        for (const auto& element : listini)
         {
             if ((element.second & firstwordmask) == Sval)
             {
                 unsigned int w = hammingweight(element.second & padmask);
                 MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-                return (*callback)(ptr, &element.first[0], &element.first[p-1], w);
+                return (*callback)(ptr, &element.first[0], &element.first[p-1], w); // SE: to verify
             }
             return true;
         }
@@ -269,7 +300,7 @@ public:
     }
 
     // bucketing routine
-    void bucketing(database listin, const std::vector<uint64_t>& centers, std::vector<database>& output) // use vector instead of database
+    void bucketing(const database& listin, const std::vector<element_t>& centers, std::vector<std::vector<element_t>>& output)
     {
         output.resize(centers.size());
         for (auto& x : output)
@@ -279,26 +310,15 @@ public:
         {
             for (unsigned i = 0; i < centers.size(); ++i)
             {
-                if (hammingweight(element.second & centers[i]) == alpha)
-                    output[i].insert(element);
+                if(intersection_elements(element, centers[i], p) == alpha)
+                //if (hammingweight(element.second & centers[i]) == alpha)
+                    output[i].push_back(element);
             }
         }
     }
 
-    // calculate binomial coefficient ("n choose k")
-    size_t binomial_coeff(size_t n, size_t k)
-    {
-        if (k > n)
-            return 0;
-        if (k == 0 || k == n)
-            return 1;
-
-        return binomial_coeff(n - 1, k - 1)
-            + binomial_coeff(n - 1, k);
-    }
-
     // centers sampling routine
-    void sample_centers(std::vector<uint64_t>& centers, std::string alg)
+    void sample_centers(std::vector<element_t>& centers, std::string alg)
     {
         if (alg.compare("GJN"))
         {
@@ -361,6 +381,8 @@ private:
     sieving_config_t config;
     decoding_statistics stats;
     cpucycle_statistic cpu_prepareloop, cpu_loopnext, cpu_callback;
+
+	mccl_base_random_generator rnd;
 };
 
 template<size_t _bit_alignment = 64>
