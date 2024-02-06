@@ -60,6 +60,10 @@ tests/test_parser
 tests/test_permute
 tests/test_prange
 tests/test_marc
+tests/test_collect
+tests/test_mdeumer
+tests/test_unordered_multimap
+
 /.vs
 /vs2022/.vs/isdsolver
 Debug
