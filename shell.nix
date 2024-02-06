@@ -6,6 +6,7 @@ stdenv.mkDerivation {
   src = ./.;
 
   buildInputs = [ 
+    cmake
     gmp
 	libtool 
 	autoconf 
@@ -13,6 +14,7 @@ stdenv.mkDerivation {
 	autogen 
 	gnumake 
 	clang_16
+	llvm_16
 	gcc
   ] ++ (lib.optionals pkgs.stdenv.isLinux ([
 	flamegraph

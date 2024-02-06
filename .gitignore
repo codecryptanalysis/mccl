@@ -61,10 +61,16 @@ tests/test_permute
 tests/test_prange
 tests/test_marc
 tests/test_collect
-tests/test_mdeumer
+tests/test_dummer
 tests/test_unordered_multimap
+tests/test_mmt
 
 /.vs
 /vs2022/.vs/isdsolver
 Debug
 Release
+.idea/
+build/
+cmake-build-debug/
+cmake-build-release/
+CMakeLists.txt

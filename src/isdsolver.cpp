@@ -6,6 +6,7 @@
 #include <mccl/algorithm/prange.hpp>
 #include <mccl/algorithm/lee_brickell.hpp>
 #include <mccl/algorithm/stern_dumer.hpp>
+#include <mccl/algorithm/mmt.hpp>
 
 #include <mccl/tools/parser.hpp>
 #include <mccl/tools/generator.hpp>
@@ -174,6 +175,7 @@ try
     modules.emplace_back( make_module_configuration( ISD_generic_config_default ) );
     modules.emplace_back( make_module_configuration( lee_brickell_config_default ) );
     modules.emplace_back( make_module_configuration( stern_dumer_config_default ) );
+    modules.emplace_back( make_module_configuration( mmt_config_default ) );
     // =================================================================
     
     //  if there are common options then only the first description is used
