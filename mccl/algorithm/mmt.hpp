@@ -26,12 +26,16 @@ struct mmt_config_t
 
     unsigned int p = 4;
     unsigned int l1 = 6;
+	unsigned int bucketsize = 10;
 
     template<typename Container>
     void process(Container& c)
     {
         c(p, "p", 4, "subISDT parameter p");
         c(l1, "l1", 6, "subISDT parameter l1");
+
+		// TODO one can compute this directly. 
+        c(bucketsize, "bucketsize", 10, "subISDT parameter bucketsize");
     }
 };
 
@@ -49,7 +53,6 @@ class SimpleHashMap {
 public:
     typedef keyType 	T;
 
-    // TODO make sure that is general enough
     typedef size_t 		LoadType;
     typedef size_t 		IndexType;
 
@@ -73,12 +76,9 @@ public:
 
 	}
 
-    /// the simple hashmap ignores the thread id.
-    /// Which is nice.
     /// \param e key element (hashed down = index within the internal array)
     /// \param value element to insert
     /// \param tid (ignored) can be anything
-    /// \return
     void insert(const keyType &e,
                           const valueType value,
                           const uint32_t tid) noexcept {
@@ -86,9 +86,6 @@ public:
         insert(e, value);
     }
 
-    /// hashes down `e` (Element) to an index where to store
-    /// the element.
-    /// NOTE: Boundary checks are performed in debug mode.
     /// \param e element to insert
     /// \return nothing
     void insert(const keyType &e, const valueType value) noexcept {
@@ -115,8 +112,6 @@ public:
 
     }
 
-    /// Quite same to `probe` but instead it will directly return
-    /// the position of the element.
     /// \param e Element to hash down.
     /// \return the position within the internal const_array of `e`
     inline index_type find(const keyType &e) const noexcept {
@@ -232,7 +227,7 @@ public:
         l1mask = detail::lastwordmask(l1);
         helpermask = detail::lastwordmask(16*p1);
 		
-		hashmap_bucketsize = 10;
+		hashmap_bucketsize = config.bucketsize;
         hashmap = new HMType{hashmap_bucketsize, 1u << l1};
 
         // TODO: compute a reasonable reserve size
