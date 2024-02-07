@@ -75,3 +75,4 @@ cmake-build-debug/
 cmake-build-release/
 CMakeLists.txt
 .cache/
+shell.nix
