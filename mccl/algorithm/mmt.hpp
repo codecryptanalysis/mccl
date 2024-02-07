@@ -41,8 +41,7 @@ extern mmt_config_t mmt_config_default;
 
 template<
         typename keyType,
-        typename valueType,
-        class Hash>
+        typename valueType>
 class SimpleHashMap {
     using data_type          = valueType;
     using index_type         = size_t;
@@ -55,20 +54,24 @@ public:
     typedef size_t 		IndexType;
 
     // size per bucket
-    const static size_t bucketsize = 100u;
+    const size_t bucketsize;
 
     // number of buckets
-    const static size_t nrbuckets = 1u << 6u;
+    const size_t nrbuckets;
 
     // total number of elements in the HM
-    const static size_t total_size = bucketsize * nrbuckets;
+    const size_t total_size = bucketsize * nrbuckets;
 
     using load_type = uint16_t;
 
+	SimpleHashMap() = delete;
     /// constructor. Zero initializing everything
-    SimpleHashMap() noexcept :
-            __internal_hashmap_array(),
-            __internal_load_array() {}
+    SimpleHashMap(const size_t bucketsize, const size_t nrbuckets) noexcept :
+		bucketsize(bucketsize), nrbuckets(nrbuckets){
+    	__internal_hashmap_array.resize(total_size);
+    	__internal_load_array.resize(nrbuckets);
+
+	}
 
     /// the simple hashmap ignores the thread id.
     /// Which is nice.
@@ -91,7 +94,6 @@ public:
     void insert(const keyType &e, const valueType value) noexcept {
         // hash down the element to the index
         const size_t index = e;
-        assert(e < nrbuckets);
         size_t load = __internal_load_array[index];
 
         // early exit, if it's already full
@@ -117,36 +119,20 @@ public:
     /// the position of the element.
     /// \param e Element to hash down.
     /// \return the position within the internal const_array of `e`
-    index_type find(const keyType &e) const noexcept {
+    inline index_type find(const keyType &e) const noexcept {
         const index_type index = e;
-        assert(e < nrbuckets);
         // return the index instead of the actual element, to
         // reduce the size of the returned element.
         return index*nrbuckets;
     }
 
-    constexpr index_type find(const keyType &e, index_type &__load) const noexcept {
+    inline index_type find(const keyType &e, index_type &__load) const noexcept {
         const index_type index = e;
-        assert(e < nrbuckets);
         __load = __internal_load_array[index];
         // return the index instead of the actual element, to
         // reduce the size of the returned element.
         return index*nrbuckets;
     }
-
-    /// prints the content of each bucket
-    /// it with one thread.
-    /// \return nothing
-    void print() const noexcept {
-        for (index_type i = 0; i < nrbuckets; i++) {
-            std::cout << "Bucket: " << i << ", load: " << size_t(__internal_load_array[i]) << "\n";
-
-            for (index_type j = 0; j < bucketsize; j++) {
-                print(i*bucketsize + j);
-            }
-        }
-    }
-
 
     /// NOTE: can be called with only a single thread
     /// overwrites the internal data const_array
@@ -156,8 +142,8 @@ public:
     }
 
     // internal const_array
-    alignas(1024) std::array<data_type, total_size> __internal_hashmap_array;
-    alignas(1024) std::array<load_type, nrbuckets> __internal_load_array;
+    alignas(1024) std::vector<data_type> __internal_hashmap_array;
+    alignas(1024) std::vector<load_type> __internal_load_array;
 };
 
 
@@ -167,17 +153,8 @@ class subISDT_mmt
 {
 public:
     using subISDT_API::callback_t;
-
-
-    struct StupidHasher {
-        static std::size_t operator()(const uint32_t &k) {
-            return k&l1mask;
-        }
-
-        static const uint64_t l1mask = (1u << 6u) - 1u;
-    };
-
-    using HMType = SimpleHashMap<uint64_t, std::pair<uint32_t, uint32_t>, StupidHasher>;
+    using HMType = SimpleHashMap<uint64_t, 
+		  std::pair<uint32_t, uint32_t>>;
 
     // API member function
     ~subISDT_mmt() final
@@ -191,13 +168,13 @@ public:
             std::cerr << "nextloop: " << cpu_loopnext.total() - cpu_callback.total() << std::endl;
             std::cerr << "callback: " << cpu_callback.total() << std::endl;
         }
+
+		delete hashmap;
     }
     
     subISDT_mmt()
         : config(mmt_config_default), stats("MMT")
-    {
-        hashmap = new HMType{};
-    }
+    {}
 
     void load_config(const configmap_t& configmap) final
     {
@@ -254,7 +231,9 @@ public:
         firstwordmask = detail::lastwordmask(columns);
         l1mask = detail::lastwordmask(l1);
         helpermask = detail::lastwordmask(16*p1);
-
+		
+		hashmap_bucketsize = 10;
+        hashmap = new HMType{hashmap_bucketsize, 1u << l1};
 
         // TODO: compute a reasonable reserve size
         // hashmap.reserve(...);
@@ -321,7 +300,6 @@ public:
                      iter++) {
 
                     const uint64_t val3 = val ^ iter->first;
-                    assert((val3 & l1mask) == 0);
                     const uint64_t tmp2 = tmp ^ (iter->second & helpermask);
                     Ihashmap.emplace(val3 >> l1, tmp2);
                 }
@@ -346,21 +324,14 @@ public:
                      iter++) {
 
                     uint64_t val3 = val^iter->first;
-                    assert((val3 & l1mask) == 0);
                     val3 >>= l1;
                     auto *it2 = unpack_indices(iter->second, it, 1);
 
                     auto range = Ihashmap.equal_range(val3);
                     for (auto valit = range.first; valit != range.second; ++valit){
-                        assert((val3 ^ valit->first) == 0);
                         uint64_t packed_indices = valit->second;
                         auto *it3 = unpack_indices(packed_indices, it2, 2);
 
-                        uint64_t kek = 0;
-                        for (uint32_t i = 0; i < p; i++){
-                            kek ^= firstwords[idx[i]];
-                        }
-                        assert((kek ^ Sval) == 0);
                         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
                         if (!(*callback)(ptr, idx+0, it3, 0)) {
                             return false;
@@ -428,8 +399,7 @@ private:
     HMType *hashmap;
     std::unordered_multimap<uint64_t, uint64_t> Ihashmap;
 
-    /// TODO use it
-    uint32_t hashmap_bucketsize = 100;
+    size_t hashmap_bucketsize;
 };
 
 
