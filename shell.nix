@@ -2,7 +2,7 @@ with import <nixpkgs> {};
 { pkgs ? import <nixpkgs> {} }:
 
 stdenv.mkDerivation {
-  name = "cryptanalysislib";
+  name = "mccl";
   src = ./.;
 
   buildInputs = [ 
