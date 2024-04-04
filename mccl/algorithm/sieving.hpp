@@ -35,19 +35,19 @@ struct element_hash_t
 typedef std::unordered_set<element_t, element_hash_t> database;
 
 // intersect element x and y and returns the size of intersection 
-size_t intersection_elements(const element_t&, const element_t&, size_t);
-size_t intersection_elements(const element_t&, const center_t&, size_t, size_t);
+extern size_t intersection_elements(const element_t&, const element_t&, size_t);
+extern size_t intersection_elements(const element_t&, const center_t&, size_t, size_t);
 
 // combine element x and y into element dest: 
 // - assume x and y have element_weight indices
 // - returns true if intersection of x and y equals p - alpha
 // - dest contains the indices from x and y that occur exactly once (essentially x XOR y)
-bool combine_elements(const element_t&, const element_t&, element_t&, size_t);
+extern bool combine_elements(const element_t&, const element_t&, element_t&, size_t);
 
 // sampling N random vectors of weight w:
 // INVARIANT1: element.second = xor_{i=0}^{elementweight-1} firstwords[element.first[i]];
 // INVARIANT2: element.first[0, ..., elementweight - 1] is a sorted array with values in[0, ..., rows - 1]
-void sample_vec(size_t, size_t, size_t, const std::vector<uint64_t>&, mccl_base_random_generator, database&);
+extern void sample_vec(size_t, size_t, size_t, const std::vector<uint64_t>&, mccl_base_random_generator, database&);
 
 struct sieving_config_t
 {
