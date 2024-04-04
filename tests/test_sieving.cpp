@@ -18,7 +18,7 @@ int main(int, char**)
     int status = 0;
 
     file_parser parse;
-    status |= !parse.parse_file("C:/Users/etinski/Projects/GitProjects/setinski/mccl/tests/data/SD_100_0");
+    status |= !parse.parse_file("./tests/data/SD_100_0");
 
     auto Hraw = parse.H();
     auto S = parse.S();

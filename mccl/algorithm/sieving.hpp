@@ -179,7 +179,7 @@ public:
     // API member function
     bool loop_next() final
     {
-        std::cout << "Loop iteration: " << loop_it << std::endl;
+        // std::cout << "Loop iteration: " << loop_it << std::endl;
 
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
@@ -228,7 +228,7 @@ public:
                 }
             }
 #endif           
-            std::cout << "listout size: " << listout.size() << ", \t" << std::flush;
+            // std::cout << "listout size: " << listout.size() << ", \t" << std::flush;
 #if 0 
             listini.clear();
             size_t good = 0;
@@ -247,7 +247,7 @@ public:
             resample(listini, N);
             listout.clear();
 #endif
-            std::cout << "listin size: " << listini.size() << " " << std::endl << std::flush;
+            // std::cout << "listin size: " << listini.size() << " " << std::endl << std::flush;
         }
 
         loop_it++;
