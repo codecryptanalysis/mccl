@@ -274,6 +274,11 @@ try
       algo = "Stern-Dumer v0";
       INITIALIZE_ALGO( subISDT_stern_dumer );
     }
+    else if (algo == "Sieve" || algo == "Sieving")
+    {
+        algo = "Sieving";
+        INITIALIZE_ALGO(subISDT_sieving);
+    }
     else
     {
       std::cout << "Unknown algorithm: " << algo << std::endl;
