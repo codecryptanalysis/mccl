@@ -277,7 +277,7 @@ try
     else if (algo == "Sieve" || algo == "Sieving")
     {
         algo = "Sieving";
-        INITIALIZE_ALGO(subISDT_sieving);
+        INITIALIZE_ALGO( subISDT_sieving );
     }
     else
     {
