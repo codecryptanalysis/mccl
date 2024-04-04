@@ -3,8 +3,9 @@
 MCCL_BEGIN_NAMESPACE
 
 sieving_config_t sieving_config_default;
+size_t loop_it = 0;
 
-size_t intersection_elements(const element_t& x, const element_t& y, size_t element_weight)
+size_t intersection_elements(const element_t& x, const element_t& y, size_t w)
 {
 	unsigned xi = 0, yi = 0, c = 0;
 	while (true)
@@ -13,43 +14,70 @@ size_t intersection_elements(const element_t& x, const element_t& y, size_t elem
 		if (x.first[xi] == y.first[yi])
 		{
 			++c; ++xi; ++yi;
-			if (xi == element_weight || yi == element_weight)
+			if (xi == w || yi == w)
 				return c;
 			continue;
 		}
 		if (x.first[xi] < y.first[yi])
 		{
 			++xi;
-			if (xi == element_weight)
+			if (xi == w)
 				return c;
 			continue;
 		}
 		// (x.first[xi] > y.first[yi])
 		++yi;
-		if (yi == element_weight)
+		if (yi == w)
 			return c;
 	}
 }
 
-bool combine_elements(const element_t& x, const element_t& y, element_t& dest, size_t element_weight)
+size_t intersection_elements(const element_t& x, const center_t& y, size_t x_w, size_t y_w)
+{
+	unsigned xi = 0, yi = 0, c = 0;
+	while (true)
+	{
+		// xi < element_weight AND yi < element_weight
+		if (x.first[xi] == y.first[yi])
+		{
+			++c; ++xi; ++yi;
+			if (xi == x_w || yi == y_w)
+				return c;
+			continue;
+		}
+		if (x.first[xi] < y.first[yi])
+		{
+			++xi;
+			if (xi == x_w)
+				return c;
+			continue;
+		}
+		// (x.first[xi] > y.first[yi])
+		++yi;
+		if (yi == y_w)
+			return c;
+	}
+}
+
+bool combine_elements(const element_t& x, const element_t& y, element_t& dest, size_t w)
 {
 	unsigned xi = 0, yi = 0, di = 0;
 	while (true)
 	{
-		if (xi >= element_weight)
+		if (xi >= w)
 		{
 			if (yi != di)
 				return false;
-			for (; yi < element_weight; ++yi, ++di)
+			for (; yi < w; ++yi, ++di)
 				dest.first[di] = y.first[yi];
 			dest.second = x.second ^ y.second;
 			return true;
 		}
-		if (yi >= element_weight)
+		if (yi >= w)
 		{
 			if (xi != di)
 				return false;
-			for (; xi < element_weight; ++xi, ++di)
+			for (; xi < w; ++xi, ++di)
 				dest.first[di] = x.first[xi];
 			dest.second = x.second ^ y.second;
 			return true;
@@ -61,58 +89,90 @@ bool combine_elements(const element_t& x, const element_t& y, element_t& dest, s
 		}
 		if (x.first[xi] < y.first[yi])
 		{
-			if (di == element_weight)
+			if (di == w)
 				return false;
 			dest.first[di] = x.first[xi];
 			++xi; ++di;
 			continue;
 		}
 		// x.first[xi] > y.first[yi]
-		if (di == element_weight)
+		if (di == w)
 			return false;
 		dest.first[di] = y.first[yi];
 		++yi; ++di;
 	}
 }
 
-void combine_elements_v2(const element_t& x, const element_t& y, element_t& dest, size_t element_weight)
+void sample_vec(size_t element_weight, size_t rows, size_t output_length, const std::vector<uint64_t>& firstwords, mccl_base_random_generator rnd, database& output)
 {
-	unsigned xi = 0, yi = 0, di = 0;
-	while (true)
+	output.clear();
+
+	uint64_t rnd_val;
+	element_t element;
+
+	for (auto& i : element.first)
 	{
-		if (xi >= element_weight)
+		i = 0; i = ~i; // set all row indices to invalid positions
+	}
+
+	while (output.size() < output_length)
+	{
+		element.second = 0;
+		unsigned k = 0;
+		while (k < element_weight)
 		{
-			for (; yi < element_weight; ++yi, ++di)
-				dest.first[di] = y.first[yi];
-			dest.second = x.second ^ y.second;
-			return;
+			element.first[k] = rnd() % rows;
+			// try both pieces of code
+#if 0
+				// I think this obtains the same i as the code below, but with binary search and with a single line of code
+			unsigned i = std::lower_bound(element.first.begin(), element.first.begin() + k) - element.first.begin();
+#else
+				// I think this is correct, but linear search
+			unsigned i = k;
+			while (i > 0)
+			{
+				if (element.first[i - 1] < element.first[k])
+					break;
+				--i;
+			}
+#endif
+			// PROPERTY: i is largest i such that (i==0) OR (element.first[i-1] < element.first[k])
+			// that means is the smallest i such that element.first[i] >= element.first[k] (otherwise i should be at least 1 larger)
+			// if element.first[i] == element.first[k] then we sample the same index twice and we need to resample element.first[k]
+			if (i < k && element.first[i] == element.first[k])
+				continue;
+			// update value
+			element.second ^= firstwords[element.first[k]];
+			// now move k at position i
+			if (i < k)
+			{
+				auto firstk = element.first[k];
+				for (unsigned j = k; j > i; --j)
+					element.first[j] = element.first[j - 1];
+				element.first[i] = firstk;
+			}
+			++k;
 		}
-		if (yi >= element_weight)
-		{
-			for (; xi < element_weight; ++xi, ++di)
-				dest.first[di] = x.first[xi];
-			dest.second = x.second ^ y.second;
-			return;
-		}
-		if (x.first[xi] == y.first[yi])
-		{
-			++xi; ++yi;
+		// already sorted and unique indices now
+#if 0            
+			// sort indices
+		std::sort(element.first.begin(), element.first.begin() + element_weight);
+		// if there are any double occurences they appear next to each other
+		bool ok = true;
+		for (unsigned k = 1; k < element_weight; ++k)
+			if (element.first[k - 1] == element.first[k])
+			{
+				ok = false;
+				break;
+			}
+		// if there are double occurences we resample element
+		if (!ok)
 			continue;
-		}
-		if (x.first[xi] < y.first[yi])
-		{
-			
-			dest.first[di] = x.first[xi];
-			++xi; ++di;
-			continue;
-		}
-		else// x.first[xi] > y.first[yi]
-		{
-			dest.first[di] = y.first[yi];
-			++yi; ++di;
-		}
+#endif
+		output.insert(element);
 	}
 }
+
 
 size_t binomial_coeff(size_t n, size_t k)
 {

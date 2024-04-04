@@ -12,6 +12,11 @@ MCCL_BEGIN_NAMESPACE
 typedef std::array<uint32_t, 4> indexarray_t;
 typedef std::pair<indexarray_t, uint64_t> element_t;
 
+typedef std::array<uint32_t, 2> indexarray_t_center;
+typedef std::pair<indexarray_t_center, uint64_t> center_t;
+
+extern size_t loop_it;
+
 // custom hash function for element_t
 struct element_hash_t
 {
@@ -33,13 +38,18 @@ typedef std::unordered_set<element_t, element_hash_t> database;
 
 // intersect element x and y and returns the size of intersection 
 size_t intersection_elements(const element_t&, const element_t&, size_t);
-
+size_t intersection_elements(const element_t&, const center_t&, size_t, size_t);
 
 // combine element x and y into element dest: 
 // - assume x and y have element_weight indices
 // - returns true if intersection of x and y equals p - alpha
 // - dest contains the indices from x and y that occur exactly once (essentially x XOR y)
 bool combine_elements(const element_t&, const element_t&, element_t&, size_t);
+
+// sampling N random vectors of weight w:
+// INVARIANT1: element.second = xor_{i=0}^{elementweight-1} firstwords[element.first[i]];
+// INVARIANT2: element.first[0, ..., elementweight - 1] is a sorted array with values in[0, ..., rows - 1]
+void sample_vec(size_t, size_t, size_t, const std::vector<uint64_t>&, mccl_base_random_generator, database&);
 
 // calculate binomial coefficient ("n choose k")
 size_t binomial_coeff(size_t, size_t);
@@ -55,15 +65,16 @@ struct sieving_config_t
         "\t\tReturns all sets of at most p column indices of H2 that sum up to S2\n"
         ;
 
-    size_t p = 3, alpha = 1, N = 100; // SE: Potentially change.
+    size_t p = 4, alpha = 2, N = 400; // SE: Potentially change.
     std::string alg = "GJN";
 
     template<typename Container>
     void process(Container& c)
     {
-        c(p, "p", 3, "subISDT parameter p");
-        c(alpha, "alpha", 1, "subISDT parameter alpha");
-        c(N, "N", 100, "subISDT parameter N");
+        c(p, "p", 4, "subISDT parameter p");
+        c(alpha, "alpha", 2, "subISDT parameter alpha");
+        c(N, "N", 800, "subISDT parameter N");
+        c(alg, "alg", "GJN", "subISDT algorithm");
     }
 };
 
@@ -111,25 +122,31 @@ public:
         if (stats.cnt_initialize._counter != 0)
             stats.refresh();
         stats.cnt_initialize.inc();
-        // copy parameters from current config
+
         p = config.p;
         if (p == 0)
             throw std::runtime_error("subISDT_sieving::initialize: sieving does not support p = 0");
 
+
+        // copy initialization parameters
         H12T.reset(_H12T);
         S.reset(_S);
         columns = _H2Tcolumns;
-        if (columns == 0)
-            throw std::runtime_error("subISDT_sieving::initialize: sieving does not support l = 0");
         callback = _callback;
         ptr = _ptr;
         wmax = w;
-
         rows = H12T.rows();
         words = (columns + 63) / 64;
+
+        // copy parameters from current config
         N = config.N;
         alpha = config.alpha;
+        alg = config.alg;
 
+
+        // checks
+        if (columns == 0)
+            throw std::runtime_error("subISDT_sieving::initialize: sieving does not support l = 0");
         if (words > 1)
             throw std::runtime_error("subISDT_sieving::initialize(): sieving does not support l > 64");
 
@@ -158,173 +175,200 @@ public:
                 firstwords[i] = *H12T.word_ptr(i);
         Sval = (*S.word_ptr()) & firstwordmask;
     }
-
-    // sampling N random vectors of weight w:
-    // INVARIANT1: element.second = xor_{i=0}^{elementweight-1} firstwords[element.first[i]];
-    // INVARIANT2: element.first[0, ..., elementweight - 1] is a sorted array with values in[0, ..., rows - 1]
-    void sample_vec(size_t element_weight, size_t output_length, database output)
-    {
-        output.clear();
-
-        uint64_t rnd_val;
-        element_t element;
-
-	    for (auto& i : element.first)
-	    {
-		    i = 0; i = ~i; // set all row indices to invalid positions
-	    }
-
-        while (output.size() < output_length)
-        {
-            element.second = 0;
-            unsigned k = 0;
-            while (k < element_weight)
-            {
-                element.first[k] = rnd() % rows;
-                // try both pieces of code
-#if 0
-                // I think this obtains the same i as the code below, but with binary search and with a single line of code
-                unsigned i = std::lower_bound(element.first.begin(), element.first.begin() + k) - element.first.begin();
-#else
-                // I think this is correct, but linear search
-                unsigned i = k;
-                while (i > 0)
-                {
-                    if (element.first[i-1] < element.first[k])
-                        break;
-                    --i;
-                }
-#endif
-                // PROPERTY: i is largest i such that (i==0) OR (element.first[i-1] < element.first[k])
-                // that means is the smallest i such that element.first[i] >= element.first[k] (otherwise i should be at least 1 larger)
-                // if element.first[i] == element.first[k] then we sample the same index twice and we need to resample element.first[k]
-                if (i < k && element.first[i] == element.first[k])
-                    continue;
-                // update value
-                element.second ^= firstwords[element.first[k]];
-                // now move k at position i
-                if (i < k)
-                {
-                    auto firstk = element.first[k];
-                    for (unsigned j = k; j > i; --j)
-                        element.first[j] = element.first[j-1];
-                    element.first[i] = firstk;
-                }
-                ++k;
-            }
-            // already sorted and unique indices now
-#if 0            
-            // sort indices
-            std::sort(element.first.begin(), element.first.begin()+element_weight);
-            // if there are any double occurences they appear next to each other
-            bool ok = true;
-            for (unsigned k = 1; k < element_weight; ++k)
-                if (element.first[k-1] == element.first[k])
-                {
-                    ok = false;
-                    break;
-                }
-            // if there are double occurences we resample element
-            if (!ok)
-                continue;
-#endif            
-            output.insert(element);
-        }
-    }
-
+    
     // API member function
     bool loop_next() final
     {
+        std::cout << "Loop iteration: " << loop_it << std::endl;
+
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
 
         // sampling N random vectors of weight p
         database listini;
-        sample_vec(p, N, listini);
+        sample_vec(p, rows, N, firstwords, rnd, listini);
+
+        // sampling centers
+        std::vector<center_t> centers;
+        sample_centers(centers);
 
         // sieving part
         database listout;
-        for (unsigned int i = 0; i < columns; ++i) // SE: To check is it rows or columns?
+        std::vector<std::vector<element_t>> buckets;
+        for (unsigned int i = 0; i < columns; ++i)
         {
-            uint64_t Si = (Sval >> i) & 1;
+            listout.clear();
+            uint64_t Si_mask = (uint64_t(2) << i) - 1; //SE: why this?
+            uint64_t Si = Sval & Si_mask;
 
             // check if any of the previously sampled e satisfy the first ith constraint
             for (const auto& element : listini)
             {
-                if((element.second & firstwordmask & 1) == Si)
+                if ((element.second & Si_mask) == Si || (element.second & Si_mask) == 0)
                     listout.insert(element);
             }
 
-            // bucketing
-            std::vector<element_t> centers;
-            sample_centers(centers, alg);
-
-            std::vector<std::vector<element_t>> output;
-            bucketing(listini, centers, output);
-
-            // check if any of the summed vectors from NNS satisfy the first i constraints
-            element_t element_xy;
-            for (const auto& bucket : output)
+#if 1
+            // near neighbor search
+            bucketing(listini, centers, buckets);
+            checking(buckets, Si, Si_mask, listout);
+#else
+            element_t element_xy = *listini.begin(); //SE: Why this?
+            for (const auto& element_x : listini)
             {
-                for (const auto& element_x : bucket)
+                for (const auto& element_y : listini)
                 {
-                    for (const auto& element_y : bucket)
+                    if (combine_elements(element_x, element_y, element_xy, p))
                     {
-                        if(combine_elements(element_x, element_y, element_xy, p))
+                        if ((element_xy.second & Si_mask) == Si || (element_xy.second & Si_mask) == 0)
                         {
-                            if ((element_xy.second & firstwordmask & 1) == Si)
-                                listout.insert(element_xy);
+                            listout.insert(element_xy);
                         }
                     }
                 }
             }
-
-            listini.swap(listout); // SE: to check if it works
-            listout.clear(); // SE: to check if it works
+#endif           
+            std::cout << "listout size: " << listout.size() << ", \t" << std::flush;
+#if 0 
+            listini.clear();
+            size_t good = 0;
+            uint64_t goodmask = (uint64_t(2) << i) - 1;
+            for (database::iterator it = listout.begin(); it != listout.end(); ++it)
+            {
+                if (((it->second ^ Sval) & goodmask) == 0 || ((it->second) & goodmask) == 0)
+                    ++good;
+                listini.insert(*it);
+                if (listini.size() == N)
+                    break;
+            }
+            listout.clear();
+#else           
+            listini.swap(listout);
+            resample(listini, N);
+            listout.clear();
+#endif
+            std::cout << "listin size: " << listini.size() << " " << std::endl << std::flush;
         }
 
+        loop_it++;
+
+        size_t good = 0;
         for (const auto& element : listini)
         {
             if ((element.second & firstwordmask) == Sval)
             {
-                unsigned int w = hammingweight(element.second & padmask);
+                unsigned int wH1part = hammingweight(element.second & padmask);
                 MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
-                return (*callback)(ptr, &element.first[0], &element.first[p-1], w); // SE: to verify
+                {
+                    ++good;
+                    const uint32_t* beginptr = &element.first[0];
+                    if (!(*callback)(ptr, beginptr, beginptr + p, 0))
+                        return false;
+                }
             }
-            return true;
         }
-
+        std::cout << good << " " << std::endl;
         return false;
     }
 
-    // bucketing routine
-    void bucketing(const database& listin, const std::vector<element_t>& centers, std::vector<std::vector<element_t>>& output)
-    {
-        output.resize(centers.size());
-        for (auto& x : output)
-            x.clear(); // SE: Check if it's going to work.
-
-        for (const auto& element : listin)
-        {
-            for (unsigned i = 0; i < centers.size(); ++i)
-            {
-                if(intersection_elements(element, centers[i], p) == alpha)
-                    output[i].push_back(element);
-            }
-        }
-    }
-
     // centers sampling routine
-    void sample_centers(std::vector<element_t>& centers, std::string alg)
+    void sample_centers(std::vector<center_t>& centers)
     {
-        if (alg.compare("GJN"))
+        centers.clear();
+        center_t center;
+        if (alg.compare("GJN") == 0)
         {
-            
+            for (unsigned i = 0; i < rows - 1; i += 1)
+            {
+                center.first[0] = i;
+                for (unsigned j = i + 1; j < rows; j += 1)
+                {
+                    center.first[1] = j;
+                    center.second = firstwords[i] ^ firstwords[j];
+                    centers.push_back(center);
+                }    
+            }
         }
         else
         {
             throw std::runtime_error("subISDT_sieving::sample_centers: sieving does not support algorithms other than GJN.");
         }
+    }
+
+    // routine for determining valid centers
+    void find_valid_centers(const element_t& element, const std::vector<center_t>& centers, std::vector<size_t>& valid_centers)
+    {
+        valid_centers.clear();
+        if (alg.compare("GJN") == 0)
+        {
+            for (unsigned i = 0; i < centers.size(); ++i)
+            {
+                if(intersection_elements(element, centers[i], p, alpha) == alpha)
+                    //valid_centers.push_back(centers[i]);
+                    valid_centers.push_back(i);
+            }
+        }
+        else
+        {
+            throw std::runtime_error("subISDT_sieving::sample_centers: sieving does not support algorithms other than GJN.");
+        }
+    }
+
+    // bucketing routine
+    void bucketing(const database& listin, const std::vector<center_t>& centers, std::vector<std::vector<element_t>>& buckets)
+    {
+        buckets.resize(centers.size());
+        for (auto& b : buckets)
+            b.clear();
+
+        std::vector<size_t> valid_centers;
+        for (const auto& element : listin)
+        {
+            find_valid_centers(element, centers, valid_centers);
+            for (const auto& vc : valid_centers)
+            {
+                buckets[vc].push_back(element);
+            }
+        }
+    }
+
+    // checking routine
+    void checking(const std::vector<std::vector<element_t>>& buckets, uint64_t Si, uint64_t Si_mask, database& listout)
+    {
+        element_t element_new;
+        for (const auto& bucket : buckets)
+        {
+            if (bucket.size() == 0)
+                continue;
+            for (size_t j = 0; j < bucket.size() - 1; ++j)
+            {
+                for (size_t k = j + 1; k < bucket.size(); ++k)
+                {
+                    if (combine_elements(bucket[j], bucket[k], element_new, p))
+                    {
+                        if (listout.count(element_new) > 0)
+                            continue;
+                        if ((element_new.second & Si_mask) == Si || (element_new.second & Si_mask) == 0)
+                            listout.insert(element_new);
+                    }
+                }
+            }
+        }
+    }
+
+    // resampling
+    void resample(database& listout, size_t N)
+    {
+        if (listout.size() < N)
+            return;
+
+        while (listout.size() > N)
+        {
+            size_t random_ind = rnd() % listout.size();
+            auto random_it = std::next(listout.begin(), random_ind);
+            listout.erase(random_it);
+        }
+            
     }
 
     decoding_statistics get_stats() const { return stats; };
