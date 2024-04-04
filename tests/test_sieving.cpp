@@ -33,7 +33,7 @@ int main(int, char**)
     //    auto total_hw = hammingweight(Hraw);
 
     configmap_t configmap = { {"p", "4"}, {"l", "6"} };
-    // test subISD_stern_dumer
+    // test subISD_sieving
     {
         subISDT_sieving sieving;
         ISD_generic<subISDT_sieving> ISD_sieving(sieving);
@@ -44,7 +44,7 @@ int main(int, char**)
         ISD_sieving.initialize(Hraw, S, w);
         ISD_sieving.solve();
         status |= !(hammingweight(ISD_sieving.get_solution()) <= w);
-        std::cerr << hammingweight(ISD_sieving.get_solution()) << std::endl;
+        // std::cerr << hammingweight(ISD_sieving.get_solution()) << std::endl;
         vec eval_S(Hraw.rows());
         vec r(Hraw.columns());
         for (size_t i = 0; i < Hraw.rows(); i++)

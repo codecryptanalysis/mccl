@@ -15,8 +15,6 @@ typedef std::pair<indexarray_t, uint64_t> element_t;
 typedef std::array<uint32_t, 2> indexarray_t_center;
 typedef std::pair<indexarray_t_center, uint64_t> center_t;
 
-extern size_t loop_it;
-
 // custom hash function for element_t
 struct element_hash_t
 {
@@ -51,9 +49,6 @@ bool combine_elements(const element_t&, const element_t&, element_t&, size_t);
 // INVARIANT2: element.first[0, ..., elementweight - 1] is a sorted array with values in[0, ..., rows - 1]
 void sample_vec(size_t, size_t, size_t, const std::vector<uint64_t>&, mccl_base_random_generator, database&);
 
-// calculate binomial coefficient ("n choose k")
-size_t binomial_coeff(size_t, size_t);
-
 struct sieving_config_t
 {
     const std::string modulename = "sieving";
@@ -65,7 +60,7 @@ struct sieving_config_t
         "\t\tReturns all sets of at most p column indices of H2 that sum up to S2\n"
         ;
 
-    size_t p = 4, alpha = 2, N = 400; // SE: Potentially change.
+    size_t p = 4, alpha = 2, N = 400;
     std::string alg = "GJN";
 
     template<typename Container>
@@ -73,7 +68,7 @@ struct sieving_config_t
     {
         c(p, "p", 4, "subISDT parameter p");
         c(alpha, "alpha", 2, "subISDT parameter alpha");
-        c(N, "N", 800, "subISDT parameter N");
+        c(N, "N", 400, "subISDT parameter N");
         c(alg, "alg", "GJN", "subISDT algorithm");
     }
 };
@@ -143,7 +138,6 @@ public:
         alpha = config.alpha;
         alg = config.alg;
 
-
         // checks
         if (columns == 0)
             throw std::runtime_error("subISDT_sieving::initialize: sieving does not support l = 0");
@@ -179,8 +173,6 @@ public:
     // API member function
     bool loop_next() final
     {
-        // std::cout << "Loop iteration: " << loop_it << std::endl;
-
         stats.cnt_loop_next.inc();
         MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_loopnext);
 
@@ -197,11 +189,11 @@ public:
         std::vector<std::vector<element_t>> buckets;
         for (unsigned int i = 0; i < columns; ++i)
         {
-            listout.clear();
-            uint64_t Si_mask = (uint64_t(2) << i) - 1; //SE: why this?
+            //listout.clear();
+            uint64_t Si_mask = (uint64_t(2) << i) - 1;
             uint64_t Si = Sval & Si_mask;
 
-            // check if any of the previously sampled e satisfy the first ith constraint
+            // check if any of the previously sampled e satisfy the first i constraints
             for (const auto& element : listini)
             {
                 if ((element.second & Si_mask) == Si || (element.second & Si_mask) == 0)
@@ -213,7 +205,7 @@ public:
             bucketing(listini, centers, buckets);
             checking(buckets, Si, Si_mask, listout);
 #else
-            element_t element_xy = *listini.begin(); //SE: Why this?
+            element_t element_xy = *listini.begin();
             for (const auto& element_x : listini)
             {
                 for (const auto& element_y : listini)
@@ -228,7 +220,7 @@ public:
                 }
             }
 #endif           
-            // std::cout << "listout size: " << listout.size() << ", \t" << std::flush;
+
 #if 0 
             listini.clear();
             size_t good = 0;
@@ -247,12 +239,8 @@ public:
             resample(listini, N);
             listout.clear();
 #endif
-            // std::cout << "listin size: " << listini.size() << " " << std::endl << std::flush;
         }
 
-        loop_it++;
-
-        size_t good = 0;
         for (const auto& element : listini)
         {
             if ((element.second & firstwordmask) == Sval)
@@ -260,14 +248,12 @@ public:
                 unsigned int wH1part = hammingweight(element.second & padmask);
                 MCCL_CPUCYCLE_STATISTIC_BLOCK(cpu_callback);
                 {
-                    ++good;
                     const uint32_t* beginptr = &element.first[0];
                     if (!(*callback)(ptr, beginptr, beginptr + p, 0))
                         return false;
                 }
             }
         }
-        std::cout << good << " " << std::endl;
         return false;
     }
 
@@ -304,7 +290,6 @@ public:
             for (unsigned i = 0; i < centers.size(); ++i)
             {
                 if(intersection_elements(element, centers[i], p, alpha) == alpha)
-                    //valid_centers.push_back(centers[i]);
                     valid_centers.push_back(i);
             }
         }

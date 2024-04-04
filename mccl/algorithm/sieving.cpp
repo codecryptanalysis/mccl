@@ -3,7 +3,6 @@
 MCCL_BEGIN_NAMESPACE
 
 sieving_config_t sieving_config_default;
-size_t loop_it = 0;
 
 size_t intersection_elements(const element_t& x, const element_t& y, size_t w)
 {
@@ -124,10 +123,10 @@ void sample_vec(size_t element_weight, size_t rows, size_t output_length, const 
 			element.first[k] = rnd() % rows;
 			// try both pieces of code
 #if 0
-				// I think this obtains the same i as the code below, but with binary search and with a single line of code
+				// binary search and with a single line of code (to check)
 			unsigned i = std::lower_bound(element.first.begin(), element.first.begin() + k) - element.first.begin();
 #else
-				// I think this is correct, but linear search
+				// linear search
 			unsigned i = k;
 			while (i > 0)
 			{
@@ -155,7 +154,7 @@ void sample_vec(size_t element_weight, size_t rows, size_t output_length, const 
 		}
 		// already sorted and unique indices now
 #if 0            
-			// sort indices
+		// sort indices
 		std::sort(element.first.begin(), element.first.begin() + element_weight);
 		// if there are any double occurences they appear next to each other
 		bool ok = true;
@@ -172,19 +171,6 @@ void sample_vec(size_t element_weight, size_t rows, size_t output_length, const 
 		output.insert(element);
 	}
 }
-
-
-size_t binomial_coeff(size_t n, size_t k)
-{
-	if (k > n)
-		return 0;
-	if (k == 0 || k == n)
-		return 1;
-
-	return binomial_coeff(n - 1, k - 1)
-		+ binomial_coeff(n - 1, k);
-}
-
 
 vec solve_SD_sieving(const cmat_view& H, const cvec_view& S, unsigned int w)
 {
