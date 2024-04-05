@@ -21,7 +21,9 @@ struct mmt_config_t
         "MMT:\n"
         "\tParameters: p, l1\n"
         "\tAlgorithm:\n"
-        "\t\tPartition columns of H2 into two sets.\n\t\tCompare p/2-columns sums from both sides.\n\t\tReturn pairs that sum up to S2.\n"
+        "\t\tPartition columns of H2 into two sets.\n"
+	"\t\tCompare p/2-columns sums from both sides.\n"
+	"\t\tReturn pairs that sum up to S2.\n"
         ;
 
     unsigned int p = 4;
