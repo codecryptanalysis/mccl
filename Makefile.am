@@ -75,7 +75,7 @@ tests_test_prange_LDADD  = libmccl.la
 tests_test_dumer_SOURCES= tests/test_dumer.cpp
 tests_test_dumer_LDADD  = libmccl.la
 
-tests_test_sieving_SOURCES= tests/sieving.cpp
+tests_test_sieving_SOURCES= tests/test_sieving.cpp
 tests_test_sieving_LDADD  = libmccl.la
 
 tests_test_collection_SOURCES= tests/test_collection.cpp
