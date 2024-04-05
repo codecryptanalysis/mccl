@@ -6,6 +6,7 @@
 #include <mccl/algorithm/prange.hpp>
 #include <mccl/algorithm/lee_brickell.hpp>
 #include <mccl/algorithm/stern_dumer.hpp>
+#include <mccl/algorithm/sieving.hpp>
 
 #include <mccl/tools/parser.hpp>
 #include <mccl/tools/generator.hpp>
@@ -110,16 +111,16 @@ try
     /* Configuration variables */
     std::string filepath, algo;
     size_t trials;
-    bool quiet = false;
-    bool print_stats = false;
-    bool print_input = false;
+    bool quiet = true;
+    bool print_stats = true;
+    bool print_input = true;
     
     // generator options
     int n = 0, k, w;
     uint64_t genseed;
     
     // benchmark options
-    bool benchmark = false;
+    bool benchmark = true;
     size_t min_bench_iterations;
     double min_bench_time;
     
@@ -146,7 +147,7 @@ try
       ;
     // these are other configuration options
     auxopts.add_options()
-      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, SDv0")
+      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, SDv0, Sieve")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("quiet,q", po::bool_switch(&quiet), "Quiet: reduce verbosity of trials")
       ("printinput", po::bool_switch(&print_input), "Print input H & S")
@@ -174,6 +175,7 @@ try
     modules.emplace_back( make_module_configuration( ISD_generic_config_default ) );
     modules.emplace_back( make_module_configuration( lee_brickell_config_default ) );
     modules.emplace_back( make_module_configuration( stern_dumer_config_default ) );
+    modules.emplace_back( make_module_configuration( sieving_config_default) );
     // =================================================================
     
     //  if there are common options then only the first description is used
@@ -271,6 +273,11 @@ try
     {
       algo = "Stern-Dumer v0";
       INITIALIZE_ALGO( subISDT_stern_dumer );
+    }
+    else if (algo == "Sieve" || algo == "Sieving")
+    {
+        algo = "Sieving";
+        INITIALIZE_ALGO( subISDT_sieving );
     }
     else
     {

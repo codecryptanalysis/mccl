@@ -1,0 +1,70 @@
+// solves an instance of Sub_ISD and returns a list of potential solutions
+list Sub_ISD_sieving(matrix H, vector s, int w, int N, vector (...) callback):
+	
+	// sampling N random vectors of weight w
+	L = list()
+	for i in 0..N-1:
+		e.sample(w)
+		L.append(e)
+		
+	// sieving part
+	L' = list()
+	for i in 0..n-k-1:
+		// check if any of the previously sampled e satisfy the first i constraints
+		for e in L:
+			if H[:i] * e = s[:i]:
+				L'.append(e)
+		// near neighbour search:
+		C = Sample_Filters() // version dependent (GJN, Hash, RPC)
+		P = Near_Neighbour_Search(L, C, alpha, w):
+		// check if any of the summed vectors from NNS satisfy the first i constraints
+		for (e1, e2) in P:
+			if H[:i] * (e1 + e2) = s[:i]:
+				L'.append(e1 + e2)
+		L.copy(L')
+		L'.empty()
+		
+	// // checking part
+	// for e in L:
+	//	if H * e = s:
+	//		callback(e)
+	//	for (e1, e2) in LxL:
+	//		if H * (e1 + e2) = s:
+	//			callback(e1 + e2)
+	
+	// return
+	return L'
+
+// solves the near neighbour search problem and return a list of solutions	
+list Near_Neighbour_Search(list L, list C, int alpha, int w):
+	
+	// initialize buckets
+	buckets = map(size(C))
+	for c in C:
+		buckets.key.add(c)
+	
+	// bucketing phase
+	for x in L:
+		for c in Valid_Filters(C, x, alpha):
+			buckets[c].value.append(x)
+				
+	// checking phase
+	L'.list()
+	for x in L:
+		for for c in Valid_Filters(C, x, alpha):
+			for y in buckets[c].value:
+				if x & y = w/2:
+					L'.append(x, y)
+					
+	// return
+	return L'
+	
+// returns valid filters correspoding to an element from a list
+list Valid_Filters(list C, vector x, int alpha):
+	
+	L'.list()
+	for c in C:
+		if x & c == alpha:
+			L'.append(x)
+			
+	return L'
