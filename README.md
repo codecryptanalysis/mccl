@@ -11,6 +11,13 @@ We're also looking for tutorials by and for people that are new to the project.
 
 https://github.com/codecryptanalysis/mccl/tree/main/doc
 
+# Algorithms implemented
+
+- LeeBrickell
+- Prange
+- Stern/Dumer
+- MMT
+
 # Repository structure
 
 - `README.md`: this readme
