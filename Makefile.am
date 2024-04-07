@@ -37,6 +37,8 @@ libmccl_la_SOURCES=\
 	mccl/algorithm/stern_dumer.cpp \
 	mccl/algorithm/mmt.hpp \
 	mccl/algorithm/mmt.cpp \
+	mccl/algorithm/sieving.hpp \
+	mccl/algorithm/sieving.cpp \
 	\
 	mccl/tools/parser.hpp \
 	mccl/tools/parser.cpp \
@@ -53,9 +55,9 @@ libmccl_la_SOURCES=\
 bin_isdsolver_SOURCES= src/isdsolver.cpp
 bin_isdsolver_LDADD  = libmccl.la
 
-TESTS=          tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer tests/test_mmt tests/test_collection
+TESTS=          tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer tests/test_mmt tests/test_sieving tests/test_collection
 
-check_PROGRAMS= tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer tests/test_mmt tests/test_collection
+check_PROGRAMS= tests/test_compile tests/test_unordered_multimap tests/test_matrix tests/test_parser tests/test_prange tests/test_dumer tests/test_mmt tests/test_sieving tests/test_collection
 
 tests_test_compile_SOURCES= tests/test_compile.cpp
 tests_test_compile_LDADD  = libmccl.la
@@ -77,6 +79,9 @@ tests_test_dumer_LDADD  = libmccl.la
 
 tests_test_mmt_SOURCES= tests/test_mmt.cpp
 tests_test_mmt_LDADD  = libmccl.la
+
+tests_test_sieving_SOURCES= tests/test_sieving.cpp
+tests_test_sieving_LDADD  = libmccl.la
 
 tests_test_collection_SOURCES= tests/test_collection.cpp
 tests_test_collection_LDADD  = libmccl.la
