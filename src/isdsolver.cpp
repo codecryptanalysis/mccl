@@ -6,6 +6,7 @@
 #include <mccl/algorithm/prange.hpp>
 #include <mccl/algorithm/lee_brickell.hpp>
 #include <mccl/algorithm/stern_dumer.hpp>
+#include <mccl/algorithm/mmt.hpp>
 #include <mccl/algorithm/sieving.hpp>
 
 #include <mccl/tools/parser.hpp>
@@ -147,7 +148,8 @@ try
       ;
     // these are other configuration options
     auxopts.add_options()
-      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, SDv0, Sieve")
+      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, SDv0, MMT, Sieve")
+      ("algo,a", po::value<std::string>(&algo)->default_value("P"), "Specify algorithm: P, LB, SDv0, MMT")
       ("trials,t", po::value<size_t>(&trials)->default_value(1), "Number of ISD trials")
       ("quiet,q", po::bool_switch(&quiet), "Quiet: reduce verbosity of trials")
       ("printinput", po::bool_switch(&print_input), "Print input H & S")
@@ -175,6 +177,7 @@ try
     modules.emplace_back( make_module_configuration( ISD_generic_config_default ) );
     modules.emplace_back( make_module_configuration( lee_brickell_config_default ) );
     modules.emplace_back( make_module_configuration( stern_dumer_config_default ) );
+    modules.emplace_back( make_module_configuration( mmt_config_default ) );
     modules.emplace_back( make_module_configuration( sieving_config_default) );
     // =================================================================
     
@@ -274,7 +277,12 @@ try
       algo = "Stern-Dumer v0";
       INITIALIZE_ALGO( subISDT_stern_dumer );
     }
-    else if (algo == "Sieve" || algo == "Sieving")
+    else if (algo == "MMT")
+    {
+      algo = "MMT";
+      INITIALIZE_ALGO( subISDT_mmt );
+    }
+    else if (algo == "SIEVE" || algo == "SIEVING")
     {
         algo = "Sieving";
         INITIALIZE_ALGO( subISDT_sieving );

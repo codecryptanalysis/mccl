@@ -2,18 +2,21 @@
 
 Modular Code Cryptanalysis Library
 
-[![C++ CI](https://github.com/cr-marcstevens/mccl/actions/workflows/cpp-ci.yml/badge.svg)](https://github.com/cr-marcstevens/mccl/actions/workflows/cpp-ci.yml)
+[![C++ CI](https://github.com/codecryptanalysis/mccl/actions/workflows/cpp-ci.yml/badge.svg)](https://github.com/codecryptanalysis/mccl/actions/workflows/cpp-ci.yml)
 
 # Documentation
 
 Please review documentation and help improve it!
 We're also looking for tutorials by and for people that are new to the project.
 
-https://github.com/cr-marcstevens/mccl/tree/main/doc
+https://github.com/codecryptanalysis/mccl/tree/main/doc
 
-# Workshops
+# Algorithms implemented
 
-See https://github.com/cr-marcstevens/mccl-wiki
+- LeeBrickell
+- Prange
+- Stern/Dumer
+- MMT
 
 # Repository structure
 
