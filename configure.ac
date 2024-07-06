@@ -1,5 +1,5 @@
 AC_PREREQ([2.68])
-AC_INIT([mccl], [0.1], [marc@marc-stevens.nl],[mccl],[https://github.com/cr-marcstevens/mccl])
+AC_INIT([mccl], [0.1], [marc@marc-stevens.nl],[mccl],[https://github.com/codecryptanalysis/mccl])
 AC_CONFIG_SRCDIR([README.md])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
