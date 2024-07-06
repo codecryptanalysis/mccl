@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies (macos)
-      run: brew install automake gmp
+      run: brew install automake libtool gmp
       if: matrix.os == 'macos-latest'
     - name: Prepare
       run: autoreconf --install
