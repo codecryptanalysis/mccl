@@ -1,7 +1,6 @@
 #include <mccl/config/config.hpp>
 #include <mccl/core/matrix_ops.hpp>
 
-#include <nmmintrin.h>
 #include <cassert>
 
 MCCL_BEGIN_NAMESPACE
