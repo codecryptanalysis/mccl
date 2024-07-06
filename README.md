@@ -61,10 +61,10 @@ sudo apt-get install libgmp3-dev
 # Getting started
 
 ```
-git clone git@github.com:cr-marcstevens/mccl.git mccl
+git clone git@github.com:codecryptanalysis/mccl.git mccl
 cd mccl
 autoreconf --install
-./configure
+./configure --without-cuda
 make
 make check
 ```
