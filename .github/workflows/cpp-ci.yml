@@ -22,7 +22,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies (macos)
-      run: brew install automake gmp
+      run: |
+        brew install automake libtool gmp
+        echo "CPATH=$CPATH:$(brew --prefix)/include" >> "$GITHUB_ENV" &&
+        echo "LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
       if: matrix.os == 'macos-latest'
     - name: Prepare
       run: autoreconf --install

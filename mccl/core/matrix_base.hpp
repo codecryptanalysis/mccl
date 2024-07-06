@@ -3,7 +3,6 @@
 
 #include <mccl/config/config.hpp>
 
-#include <nmmintrin.h>
 #include <stdexcept>
 #include <cstdint>
 #include <array>
